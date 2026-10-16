@@ -18,7 +18,7 @@ You need [uv](https://docs.astral.sh/uv/) and Python 3.12 or newer, which uv ins
 claude mcp add showntell -- uvx showntell mcp
 ```
 
-Then ask Claude Code: *"walk me through how authentication works in this repo"*.
+Then ask Claude Code: *"show me how a request gets retried in this codebase"*.
 
 The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model, from Hugging Face and GitHub. After that, everything works offline.
 
