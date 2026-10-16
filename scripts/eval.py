@@ -48,6 +48,7 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
     player_task = None
     url = None
     tool_names: dict[str, str] = {}
+    tool_inputs: dict[str, dict] = {}
     async for raw in proc.stdout:
         now = time.time() - t0
         try:
@@ -59,6 +60,7 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
                 if block.get("type") == "tool_use":
                     name = block["name"].split("__")[-1]
                     tool_names[block["id"]] = name
+                    tool_inputs[block["id"]] = block.get("input", {})
                     marks["tool_calls"].append((round(now, 2), name))
                     if name == "start_walkthrough":
                         marks.setdefault("start_call", now)
@@ -74,7 +76,7 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
                 marks["issues"] += len(re.findall(r"^- ", text.split("The open player reported")[0], re.M)) if "Problems" in text else 0
                 if "The open player reported" in text:
                     marks["player_issues"] += text.split("The open player reported")[1].count("\n- ")
-                if name == "add_slides" and "playable_at" not in marks and re.search(r"playable", text, re.I):
+                if name in ("start_walkthrough", "add_slides") and "playable_at" not in marks and re.search(r"playable", text, re.I):
                     m = URL_RE.search(text)
                     if m:
                         marks["playable_at"] = now
@@ -83,6 +85,8 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
                             player_task = asyncio.create_task(play_live(url))
                 if name == "finish_walkthrough":
                     marks["finished_at"] = now
+                if name == "start_walkthrough":
+                    marks["opening_in_start"] = "opening" in str(tool_inputs.get(block.get("tool_use_id"), {}))
         elif ev.get("type") == "result":
             marks["cost"] = ev.get("total_cost_usd")
             marks["turns"] = ev.get("num_turns")
