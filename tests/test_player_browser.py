@@ -103,6 +103,27 @@ A slide with only words on it.
 KINDS = ["title", "code", "diff", "diagram", "list", "list", "table", "math", "text"]
 
 
+BASELINES = Path(__file__).parent / "baselines" / "linux"
+MAX_CHANGED = 0.005  # fraction of pixels allowed to differ noticeably from the baseline
+
+
+def compare_baseline(shot: Path) -> None:
+    """Compare a screenshot with its Linux baseline. Fonts and Chromium builds differ between
+    systems, so baselines exist only for Linux CI; elsewhere, and before baselines are added
+    (scripts/update_baselines.sh), this does nothing."""
+    base = BASELINES / shot.name
+    if sys.platform != "linux" or not base.is_file():
+        return
+    import numpy as np
+    from PIL import Image
+
+    a = np.asarray(Image.open(shot).convert("RGB"), dtype=np.int16)
+    b = np.asarray(Image.open(base).convert("RGB"), dtype=np.int16)
+    assert a.shape == b.shape, f"{shot.name}: size {a.shape} differs from the baseline {b.shape}"
+    changed = float((np.abs(a - b).max(axis=2) > 24).mean())
+    assert changed <= MAX_CHANGED, f"{shot.name}: {changed:.2%} of pixels differ from tests/baselines/linux"
+
+
 def _free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -202,7 +223,9 @@ def test_every_kind_renders(daemon, browser, frame):
                       stage: stage.toJSON(), pointer: p && p.toJSON(), visual: vis && vis.toJSON()};
             }"""
         )
-        page.screenshot(path=str(ART / f"{frame}-{i:02d}-{slide['kind']}.png"))
+        shot = ART / f"{frame}-{i:02d}-{slide['kind']}.png"
+        page.screenshot(path=str(shot))
+        compare_baseline(shot)
         assert f"k-{slide['kind']}" in state["cls"]
         assert not state["errors"], state["errors"]
         st = state["stage"]
