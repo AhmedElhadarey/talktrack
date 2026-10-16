@@ -67,7 +67,7 @@
  {
   "id": "setup",
   "kind": "howto",
-  "prompt": "Use showntell to show a new contributor how to set up this repo and run its tests: the commands, what their output looks like, and where the tests live."
+  "prompt": "Use showntell to show a new contributor how to set up this repo and run its tests: the commands from the README and CONTRIBUTING, real output from `uv run pytest --collect-only -q` and `uv run showntell --help` (you may run those two), and where the tests live."
  },
  {
   "id": "mcp",

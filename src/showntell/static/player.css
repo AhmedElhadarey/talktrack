@@ -176,6 +176,7 @@ body.portrait .diff { grid-template-columns: 1fr; }
 .chat .msg.active .bubble { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
 .chat .msg.entry.active { border: 0; box-shadow: none; transform: none; }
 .chat .bubble code.inline { font-size: 0.88em; }
+.chat .bubble.wire { font-family: var(--mono); font-size: 18px; line-height: 1.5; word-break: break-word; }
 
 /* framed screenshots */
 .device { display: flex; flex-direction: column; max-width: 100%; max-height: 100%; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); box-shadow: 0 18px 50px var(--shadow); }

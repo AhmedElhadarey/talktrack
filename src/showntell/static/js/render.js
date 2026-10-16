@@ -309,8 +309,11 @@ export function renderSlide(slide, ctx) {
     case "chat": {
       const c = el("div", "chat");
       v.items.forEach((it, i) => {
+        // Wire messages (JSON, HTTP lines) read better in the code font, kept as written.
+        const wire = /^\s*([[{]|(GET|POST|PUT|PATCH|DELETE|HEAD|HTTP\/\d)\b)/.test(it.text);
+        const textHtml = wire ? esc(it.text).replace(/\n/g, "<br>") : it.text.split("\n").map((l) => inline(l)).join("<br>");
         const m = el("div", `entry msg ${it.side}`,
-          `<div class="who">${esc(it.role)}</div><div class="bubble">${it.text.split("\n").map((l) => inline(l)).join("<br>")}</div>`);
+          `<div class="who">${esc(it.role)}</div><div class="bubble${wire ? " wire" : ""}">${textHtml}</div>`);
         m.dataset.id = it.id;
         m.dataset.idx = i;
         parts.items.set(it.id, m);

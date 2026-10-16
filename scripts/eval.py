@@ -29,7 +29,8 @@ sys.path.insert(0, str(ROOT / "src"))
 from showntell.model import Walkthrough  # noqa: E402
 
 URL_RE = re.compile(r"http://(?:localhost|127\.0\.0\.1):\d+/w/[A-Za-z0-9_-]+/?")
-ALLOWED = ["mcp__showntell", "Read", "Grep", "Glob", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git show:*)", "Bash(ls:*)"]
+ALLOWED = ["mcp__showntell", "Read", "Grep", "Glob", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git show:*)", "Bash(ls:*)",
+           "Bash(uv run pytest --collect-only:*)", "Bash(uv run showntell --help:*)"]
 
 
 async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: bool) -> dict:
@@ -73,11 +74,24 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
                 name = tool_names.get(block.get("tool_use_id"), "")
                 text = block["content"] if isinstance(block["content"], str) else " ".join(
                     c.get("text", "") for c in block["content"] if isinstance(c, dict))
-                marks["issues"] += len(re.findall(r"^- ", text.split("The open player reported")[0], re.M)) if "Problems" in text else 0
-                for code in re.findall(r"^- .*\((\w+)\)$", text, re.M):
-                    marks["issue_codes"][code] = marks["issue_codes"].get(code, 0) + 1
-                if "The open player reported" in text:
-                    marks["player_issues"] += text.split("The open player reported")[1].count("\n- ")
+                # Claude Code passes the structured content (JSON) when a tool returns some.
+                try:
+                    data = json.loads(text)
+                except ValueError:
+                    data = None
+                if isinstance(data, dict):
+                    text = data.get("message", text)
+                    for d in data.get("issues", []) + data.get("player_issues", []):
+                        if isinstance(d, dict):
+                            marks["issue_codes"][d.get("code", "other")] = marks["issue_codes"].get(d.get("code", "other"), 0) + 1
+                    marks["issues"] += len(data.get("issues", []))
+                    marks["player_issues"] += len(data.get("player_issues", []))
+                else:
+                    marks["issues"] += len(re.findall(r"^- ", text.split("The open player reported")[0], re.M)) if "Problems" in text else 0
+                    for code in re.findall(r"^- .*\((\w+)\)$", text, re.M):
+                        marks["issue_codes"][code] = marks["issue_codes"].get(code, 0) + 1
+                    if "The open player reported" in text:
+                        marks["player_issues"] += text.split("The open player reported")[1].count("\n- ")
                 if name in ("start_walkthrough", "add_slides") and "playable_at" not in marks and re.search(r"playable", text, re.I):
                     m = URL_RE.search(text)
                     if m:
