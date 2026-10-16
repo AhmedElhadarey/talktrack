@@ -7,6 +7,9 @@
     out/static/         player code and the bundled libraries
     out/captions.vtt    captions on the walkthrough's single timeline
     out/source.md       the Markdown the walkthrough was written in
+    out/poster.png      the title slide, for link previews (only when Playwright is installed)
+
+An output path ending in `.mp4` renders a video instead (video.py).
 """
 
 from __future__ import annotations
@@ -24,8 +27,16 @@ GAP, SLIDE_GAP, EMPTY = 0.3, 0.6, 2.5  # keep in step with static/js/timeline.js
 STATIC = Path(__file__).parent / "static"
 
 
-def timeline(w: Walkthrough) -> list[tuple[float, object, object]]:
-    """(start, slide, say) for every paragraph, on the same clock as the player."""
+def _estimate(x) -> float:
+    """A paragraph's length on the timeline, as `estimate` in timeline.js computes it."""
+    if x.pause:
+        return x.pause
+    if x.status == "ready" and x.duration:
+        return x.duration
+    return max(1.0, len(x.text.split()) / 2.7)
+
+
+def _walk(w: Walkthrough) -> tuple[list[tuple[float, object, object]], float]:
     out, t = [], 0.0
     for slide in w.slides:
         says = [x for x in slide.says if x.pause or x.text]
@@ -33,10 +44,19 @@ def timeline(w: Walkthrough) -> list[tuple[float, object, object]]:
             t += EMPTY + SLIDE_GAP
             continue
         for k, x in enumerate(says):
-            dur = x.pause or x.duration or len(x.text.split()) / 2.7
             out.append((t, slide, x))
-            t += dur + (0 if x.pause else SLIDE_GAP if k == len(says) - 1 else GAP)
-    return out
+            t += _estimate(x) + (0 if x.pause else SLIDE_GAP if k == len(says) - 1 else GAP)
+    return out, t
+
+
+def timeline(w: Walkthrough) -> list[tuple[float, object, object]]:
+    """(start, slide, say) for every paragraph, on the same clock as the player."""
+    return _walk(w)[0]
+
+
+def timeline_total(w: Walkthrough) -> float:
+    """The walkthrough's length in seconds on the player's clock, trailing gap included."""
+    return _walk(w)[1]
 
 
 def _ts(t: float) -> str:
@@ -95,9 +115,10 @@ def phrases(say) -> list[list[dict]]:
 
 
 def export(data_dir: Path, wid: str, out: Path, mp3: bool = False, static_href: str = "static",
-           copy_static: bool = True) -> Path:
+           copy_static: bool = True, poster: bool = False) -> Path:
     """Write the walkthrough to `out`. A gallery of several exports can share one copy of the
-    player: pass `static_href="../static"` and `copy_static=False`, and copy `STATIC` once."""
+    player: pass `static_href="../static"` and `copy_static=False`, and copy `STATIC` once.
+    `poster` also writes poster.png when Playwright is installed (needs `copy_static`)."""
     state = data_dir / "walkthroughs" / wid / "state.json"
     if not state.is_file():
         raise SystemExit(f"no walkthrough {wid} in {data_dir}")
@@ -143,7 +164,29 @@ def export(data_dir: Path, wid: str, out: Path, mp3: bool = False, static_href: 
     src_md = data_dir / "walkthroughs" / wid / "source.md"
     if src_md.is_file():
         (out / "source.md").write_text(src_md.read_text())
+    if poster and copy_static and write_poster(out):
+        page = (out / "index.html").read_text()
+        meta = ('<meta property="og:image" content="poster.png">\n'
+                '<meta name="twitter:card" content="summary_large_image">\n'
+                '<meta name="twitter:image" content="poster.png">\n')
+        (out / "index.html").write_text(page.replace("</head>", meta + "</head>", 1))
     return out
+
+
+def write_poster(folder: Path) -> bool:
+    """poster.png: the title slide's settled frame. False, silently, without Playwright or its
+    browser; a warning for any other failure."""
+    from .capture import CaptureUnavailable, capture_frames
+
+    try:
+        png = capture_frames(folder, [0.0])[0]
+    except CaptureUnavailable:
+        return False
+    except Exception as e:  # a poster is a nicety; never fail the export over it
+        print(f"warning: no poster.png: {e}", file=sys.stderr)
+        return False
+    (folder / "poster.png").write_bytes(png)
+    return True
 
 
 def copy_player(dest: Path) -> None:
@@ -166,10 +209,25 @@ def export_cli(cfg: Config, args) -> None:
         if not path.is_file():
             raise SystemExit(f"{args.source} is neither a walkthrough id, a link nor a Markdown file")
         wid = _play_and_wait(cfg, path)
-    out = export(cfg.data_dir, wid, Path(args.out).expanduser(), mp3=args.mp3)
+    dest = Path(args.out).expanduser()
+    if dest.suffix.lower() == ".mp4":
+        return _export_mp4(cfg, wid, dest, args)
+    out = export(cfg.data_dir, wid, dest, mp3=args.mp3, poster=True)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"Exported to {out} ({size / 1e6:.1f} MB). Serve the folder with any web server, for example:")
     print(f"  python3 -m http.server --directory {out} 8000")
+
+
+def _export_mp4(cfg: Config, wid: str, dest: Path, args) -> None:
+    from .video import render_mp4
+
+    if args.mp3:
+        raise SystemExit("--mp3 applies to folder exports; an MP4 always carries AAC audio")
+    r = render_mp4(cfg.data_dir, wid, dest, fps=args.fps, workers=args.workers, captions=args.burn_captions)
+    for e in r["errors"]:
+        print(f"- player: {e}", file=sys.stderr)
+    print(f"Exported to {dest} ({dest.stat().st_size / 1e6:.1f} MB, {r['duration']:.1f} s, {r['frames']} frames at "
+          f"{r['fps']} fps) in {r['seconds']:.1f} s: {r['speed']:.1f} s of video per second")
 
 
 def _play_and_wait(cfg: Config, path: Path) -> str:

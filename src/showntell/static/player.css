@@ -301,3 +301,16 @@ body.capture-ready #controls, body.embed-minimal #controls { display: none; }
   #pointer, .entry, .ln, #caption .w, .diagram g.node, .diagram path { transition: none !important; }
   #overlay.loading #big-play, .spinner { animation: none; }
 }
+
+/* ---------- capture mode (?capture=1): frames for video export and posters ---------- */
+/* Only the stage shows, at scale 1. The capture window is the frame's own size, and the viewport
+   overhangs it by the 16px margin layoutStage() in main.js keeps around the stage. */
+body.capture #viewport { position: fixed; inset: -16px; }
+body.capture #controls, body.capture #transcript, body.capture #overlay, body.capture #end,
+body.capture #waiting, body.capture #caption { display: none !important; }
+body.capture #stage { border-radius: 0; box-shadow: none; }
+body.capture *, body.capture *::before, body.capture *::after { animation: none !important; transition: none !important; }
+body.capture.burn-captions #caption {
+  display: flex !important; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  min-height: 0; padding: 10px 40px 14px; font-size: 24px; background: rgba(7, 9, 12, 0.82);
+}

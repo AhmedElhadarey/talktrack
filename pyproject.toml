@@ -40,6 +40,8 @@ dependencies = [
 [project.optional-dependencies]
 # Pronounces words missing from misaki's dictionary with espeak-ng. espeak-ng is GPL-3.0.
 espeak = ["phonemizer-fork>=3.3", "espeakng-loader>=0.2.4"]
+# MP4 export and poster images: frames captured from the player in headless Chromium.
+video = ["playwright>=1.50"]
 
 [project.urls]
 Homepage = "https://github.com/rahimnathwani/showntell"
