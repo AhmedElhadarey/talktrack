@@ -150,19 +150,38 @@ def spoken_words(display: str, code: list) -> list[str]:
 SYMBOL_WORDS = {"dot", "slash", "dash", "underscore", "equals", "colon", "point", "hash", "plus", "minus", "times"}
 
 
+def _distance(a: str, b: str) -> int:
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
 def heard_as(word: str, token: str) -> bool:
-    """A transcript token matches a spoken word, allowing plurals and hyphen splits."""
+    """A transcript token matches a spoken word, allowing plurals, hyphen splits, numbers
+    written as digits, and small spelling differences (normalises / normalizes)."""
     if word == token:
         return True
+    if token.isdigit():
+        from num2words import num2words
+
+        token = re.sub(r"[^a-z]", "", num2words(int(token)).split()[0].split("-")[0])
+        if word == token or word.startswith(token):
+            return True
     short, long_ = sorted((word, token), key=len)
-    return len(short) >= 3 and long_.startswith(short)
+    if len(short) >= 3 and long_.startswith(short):
+        return True
+    return len(word) >= 5 and len(token) >= 4 and _distance(word, token) <= 2
 
 
 def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
     """Cue timing against whisper word times, and words missing from the transcript."""
     import mlx_whisper
 
-    cue_total = cue_ok = 0
+    cue_total = cue_ok = unlocated = 0
     deltas: list[float] = []
     missing_terms: list[str] = []
     audio_s = 0.0
@@ -202,6 +221,7 @@ def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
                 # candidate whisper times for the label's first spoken word, nearest the expected time
                 cands = [s for t, s in flat if heard_as(label[0], t)]
                 if not cands:
+                    unlocated += 1  # the transcript spells it differently: timing cannot be checked
                     continue
                 best = min(cands, key=lambda s: abs(s - c["t"]))
                 d = abs(best - c["t"])
@@ -209,7 +229,9 @@ def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
                 if d <= 0.3:
                     cue_ok += 1
     minutes = max(audio_s / 60, 1e-6)
-    return {"cues": cue_total, "cues_ok": cue_ok, "cue_accuracy": round(cue_ok / cue_total, 3) if cue_total else None,
+    located = cue_total - unlocated
+    return {"cues": cue_total, "cues_ok": cue_ok, "cues_located": located,
+            "cue_accuracy": round(cue_ok / located, 3) if located else None,
             "cue_mean_delta": round(sum(deltas) / len(deltas), 3) if deltas else None,
             "missing_terms": missing_terms[:20], "missing_per_min": round(len(missing_terms) / minutes, 2),
             "audio_min": round(minutes, 2)}
@@ -236,7 +258,18 @@ async def main() -> None:
     ap.add_argument("--no-play", action="store_true")
     ap.add_argument("--no-asr", action="store_true")
     ap.add_argument("--keep", action="store_true", help="keep the data folder")
+    ap.add_argument("--rescore", help="recompute speech checks for this results file (needs --data)")
+    ap.add_argument("--data", help="data folder of the run being rescored")
     args = ap.parse_args()
+    if args.rescore:
+        results = json.loads(Path(args.rescore).read_text())
+        for r in results:
+            w = walkthrough_for(Path(args.data), r.get("url"))
+            if w:
+                r["asr"] = asr_checks(w, Path(args.data) / "audio")
+        Path(args.rescore).write_text(json.dumps(results, indent=1, default=str))
+        print_table(results)
+        return
     all_prompts = json.loads(Path(args.prompts).read_text())
     prompts = all_prompts if args.runs == "all" else [p for p in all_prompts if p["id"] in args.runs.split(",")]
     data_dir = Path(tempfile.mkdtemp(prefix="showntell-eval-"))
