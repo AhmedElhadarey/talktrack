@@ -11,6 +11,7 @@ import webbrowser
 from pathlib import Path
 
 from .config import Config
+from .issues import line_text
 
 
 def _common(p: argparse.ArgumentParser) -> None:
@@ -174,12 +175,12 @@ def play(cfg: Config, args) -> None:
         svc = RemoteService(f"http://127.0.0.1:{lock['port']}", lock["token"])
         r = await svc.start(meta["title"], meta["frame"], meta["voice"], meta["speed"], str(project))
         a = await svc.add(r["handle"], text)
-        for issue in a["issues"]:
-            print(f"- {issue}", file=sys.stderr)
         await svc.playable(r["handle"], 60)
         f = await svc.finish(r["handle"], None)
-        for issue in f["issues"]:
-            print(f"- {issue}", file=sys.stderr)
+        # `play` opens the player itself, so notes about checks that have not run yet do not apply.
+        for issue in a["issues"] + f["issues"]:
+            if issue.get("code") != "not_checked":
+                print(line_text(issue), file=sys.stderr)
         print(f["url"])
         if not args.no_open:
             webbrowser.open(f["url"])
