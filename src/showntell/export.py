@@ -48,31 +48,29 @@ def _ts(t: float) -> str:
 def vtt(w: Walkthrough, max_words: int = 12) -> str:
     """Captions grouped into short phrases, breaking at sentence ends."""
     lines = ["WEBVTT", ""]
-    n = 0
     for start, _, say in timeline(w):
         if say.pause or not say.text or not say.words:
             continue
-        group: list[dict] = []
-
-        def flush() -> None:
-            nonlocal n, group
-            if not group:
-                return
+        for group in _phrases(say, max_words):
             a, b = group[0]["c0"], group[-1]["c1"]
-            # extend to trailing punctuation
-            while b < len(say.text) and say.text[b] in ".,;:!?)\"'":
+            while b < len(say.text) and say.text[b] in ".,;:!?)\"'":  # keep trailing punctuation
                 b += 1
-            n += 1
-            lines.extend([str(n), f"{_ts(start + group[0]["s"])} --> {_ts(start + group[-1]["e"] + 0.15)}", say.text[a:b].strip(), ""])
-            group = []
-
-        for w_ in say.words:
-            group.append(w_)
-            tail = say.text[w_["c1"] : w_["c1"] + 1]
-            if len(group) >= max_words or tail in (".", "?", "!"):
-                flush()
-        flush()
+            n = (len(lines) - 2) // 4 + 1
+            lines += [str(n), f"{_ts(start + group[0]['s'])} --> {_ts(start + group[-1]['e'] + 0.15)}", say.text[a:b].strip(), ""]
     return "\n".join(lines)
+
+
+def _phrases(say, max_words: int) -> list[list[dict]]:
+    out: list[list[dict]] = []
+    group: list[dict] = []
+    for w_ in say.words:
+        group.append(w_)
+        if len(group) >= max_words or say.text[w_["c1"] : w_["c1"] + 1] in (".", "?", "!"):
+            out.append(group)
+            group = []
+    if group:
+        out.append(group)
+    return out
 
 
 def export(data_dir: Path, wid: str, out: Path, mp3: bool = False) -> Path:

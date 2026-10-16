@@ -686,7 +686,7 @@ def infer_cues(s: Slide, say: Say) -> list[dict]:
             if i is not None:
                 add(i, i + len(title), kind="item", id=it["id"])
     elif s.kind == "table":
-        for rid, row in zip(s.visual.get("ids", []), s.visual.get("rows", [])):
+        for rid, row in zip(s.visual.get("ids", []), s.visual.get("rows", []), strict=False):
             cell = inline_plain(row[0]) if row else ""
             i = _find_word(low, cell.lower()) if len(cell) >= 3 else None
             if i is not None:

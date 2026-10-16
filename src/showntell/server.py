@@ -98,7 +98,6 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
     """MCP server with showntell's tools, prompts and resources, backed by `service`."""
     mcp = MCPServer("showntell", instructions=texts()["instructions"], version=__version__,
                     website_url="https://github.com/rahimnathwani/showntell")
-    voices = ", ".join(VOICES)
 
     async def _root(ctx: Context | None, given: str) -> str | None:
         if given:

@@ -9,8 +9,8 @@ import sys
 import threading
 import urllib.request
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 log = logging.getLogger("showntell.assets")
 
