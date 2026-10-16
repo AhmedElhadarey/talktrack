@@ -309,6 +309,12 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
     async def walkthroughs_resource() -> str:
         return json.dumps(await service.list(), indent=1)
 
+    @mcp.resource("showntell://slide-kinds", name="slide-kinds", title="Slide kinds",
+                  description="Every kind of visual a slide can show: how to write it, what cues point at, how it reveals, with an example",
+                  mime_type="application/json")
+    async def kinds_resource() -> str:
+        return (TEXT / "kinds.json").read_text()
+
     @mcp.resource("showntell://walkthroughs/{wid}", name="walkthrough", title="Walkthrough source",
                   description="The Markdown a walkthrough was written in, to read or revise", mime_type="text/markdown")
     async def walkthrough_resource(wid: str) -> str:

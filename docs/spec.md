@@ -34,17 +34,18 @@ graph TB
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| **start_walkthrough** | `title`, `frame` (landscape, square, portrait), `voice`, `speed`, `project_dir`, `opening` | `handle`, `url`; with `opening`, the playable link and the guide |
+| **start_walkthrough** | `title`, `frame` (landscape, square, portrait), `theme` (dark, light, paper, contrast), `voice`, `speed`, `project_dir`, `opening` | `handle`, `url`; with `opening`, the playable link and the guide |
 | **add_slides** | `handle`, `markdown` | `status`, `url` once playable, `issues`, progress, the guide on the first playable reply |
 | **revise_slide** | `handle`, `slide` (id), `markdown` (one slide) | `issues`; only changed narration is voiced again |
 | **finish_walkthrough** | `handle`, `questions` (optional list) | summary, `issues` |
 | **list_walkthroughs** | none | recent walkthroughs with handles, titles and links |
+| **preview_slides** | `handle`, `slides` (optional ids) | a 640×360 picture of each slide fully revealed (up to twelve), plus layout findings from drawing them. Needs Playwright where showntell runs. |
 
 All tools return structured content and a readable text version. Tools carry titles and annotations: `list_walkthroughs` is read-only, none destroy data, all work in a closed world.
 
 **Prompts:** `diff`, `file` and `topic` return a ready-made request for a walkthrough of a change, a file or a concept. Claude Code shows them as slash commands.
 
-**Resources:** `showntell://walkthroughs` lists recent walkthroughs, and `showntell://walkthroughs/{id}` holds one walkthrough's Markdown source, so a later session can read and revise it.
+**Resources:** `showntell://walkthroughs` lists recent walkthroughs, `showntell://walkthroughs/{id}` holds one walkthrough's Markdown source, so a later session can read and revise it, and `showntell://slide-kinds` describes every kind of visual with an example.
 
 ## Project root
 
@@ -121,6 +122,9 @@ Findings from the server, found while parsing, building and voicing:
 | `diff_hunks` | warning | a pasted diff has several hunks |
 | `diagram_too_big` | warning | a diagram has more nodes than the frame shows comfortably |
 | `generated_file` | info | a diff shows a lockfile or generated file |
+| `chart_error` | error | a chart block could not be read as written |
+| `chart_too_big` | warning | a chart has more bars or series than the frame shows comfortably |
+| `tree_error` | warning | a file tree's nesting is inconsistent |
 | `cue_off_code` | error | a cue points at lines the slide does not show |
 | `cue_no_target` | error | a cue names an item, row or node that does not exist |
 | `cue_moved` | info | a cue's quoted text was found on another line and the cue moved there |

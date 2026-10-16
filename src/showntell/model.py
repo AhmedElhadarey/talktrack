@@ -30,7 +30,7 @@ class Say:
 class Slide:
     id: str
     title: str = ""
-    kind: str = "text"  # title, code, diff, diagram, math, table, list, image, text
+    kind: str = "text"  # title, code, diff, diagram, math, table, list, image, chart, terminal, tree, text
     classes: list = field(default_factory=list)
     shown: str = ""  # on-screen text from > quotes
     visual: dict = field(default_factory=dict)

@@ -10,7 +10,7 @@ import re
 import shutil
 from pathlib import Path
 
-from . import sources
+from . import kinds, sources
 from .format import Block, Cue, Parser, inline_plain, parse_item, parse_narration, parse_table
 from .issues import Issue
 from .model import Say, Slide, Walkthrough
@@ -22,6 +22,7 @@ LIMITS = {
     "portrait": {"lines": 34, "width": 48, "diff_lines": 18, "diff_width": 52, "nodes": 8},
 }
 WORDS_PER_SECOND = 2.7
+CHART_MAX = 12
 SPEED_RANGE = (0.8, 1.3)
 IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"}
 STOPWORDS = set(
@@ -175,6 +176,27 @@ class Builder:
         return s
 
     def _add_visual(self, b: Block) -> None:
+        if b.kind == "code" and b.lang == "chart":
+            vis, problems = kinds.parse_chart(b.text, b.attrs)
+            for p in problems:
+                self._issue("chart_error", f"Line {b.line}: {p}.", "See the chart format in the resource showntell://slide-kinds.", line=b.line)
+            n = len(vis["ids"])
+            if n > CHART_MAX:
+                self._issue("chart_too_big", f"The chart on line {b.line} has {n} {'series' if vis['type'] == 'line' else 'bars'}; "
+                            f"charts read well up to {CHART_MAX}.", "Group the small ones, or split the chart.", line=b.line)
+            return self._set(self._slide_for_visual("chart"), "chart", vis)
+        if b.kind == "code" and b.lang in kinds.TERMINAL_LANGS:
+            vis = kinds.parse_terminal(b.text, b.attrs)
+            self._check_code(vis)
+            return self._set(self._slide_for_visual("terminal"), "terminal", vis)
+        if b.kind == "code" and b.lang == "tree":
+            vis, problems = kinds.parse_tree(b.text, b.attrs)
+            for p in problems:
+                self._issue("tree_error", f"Line {b.line}: {p}.", "Indent each level by the same amount.", line=b.line)
+            if len(vis["items"]) > self.limits["lines"]:
+                self._issue("code_too_tall", f"The file tree on line {b.line} has {len(vis['items'])} entries; this frame reads well up to {self.limits['lines']}.",
+                            "Show only the folders that matter, with `...` for the rest.", line=b.line)
+            return self._set(self._slide_for_visual("tree"), "tree", vis)
         if b.kind == "code":
             flags = b.attrs.get("flags", [])
             if b.lang == "mermaid":
@@ -424,13 +446,13 @@ class Builder:
                 return {**base, "kind": "text"}
             return {**base, "kind": "visual"}
         m = re.fullmatch(r"([+-])?L(\d+)(?:-L?(\d+))?", t, re.I)
-        if m and s.kind in ("code", "diff"):
+        if m and s.kind in ("code", "diff", "terminal"):
             side = "old" if m.group(1) == "-" else "new"
             a = int(m.group(2))
             b = int(m.group(3)) if m.group(3) else a
             if b < a:
                 a, b = b, a
-            vis = s.visual if s.kind == "code" else s.visual[side]
+            vis = s.visual[side] if s.kind == "diff" else s.visual
             lines = vis["code"].split("\n")
             first, last = vis["start"], vis["start"] + len(lines) - 1
             where = f"slide `{s.id}`" + (f" ({side} side)" if s.kind == "diff" else "")
@@ -470,6 +492,14 @@ class Builder:
                 return {**base, "kind": "item", "id": hit}
             self._issue("cue_no_target", f"[{c.label}](#{t}): no item `{t}` on slide `{s.id}`. Items: {', '.join(sorted(ids))}.", slide=s.id)
             return None
+        if s.kind in ("chart", "tree"):
+            pid = kinds.find_part(s.visual, t)
+            if pid:
+                return {**base, "kind": "item", "id": pid}
+            what = "entry" if s.kind == "tree" else "series" if s.visual.get("type") == "line" else "bar"
+            self._issue("cue_no_target", f"[{c.label}](#{t}): no {what} `{t}` on slide `{s.id}`. "
+                        f"Ids: {', '.join(s.visual.get('ids', [])[:12])}.", slide=s.id)
+            return None
         if s.kind == "table":
             if t in s.visual.get("ids", []):
                 return {**base, "kind": "row", "id": t}
@@ -499,14 +529,14 @@ class Builder:
             self._issue("no_narration", f"Slide `{s.id}` has no narration.", "Every slide needs at least one spoken paragraph.",
                         slide=s.id, line=s.line)
             return
-        if s.kind in ("code", "diff", "diagram", "list", "table") and not any(
+        if s.kind in ("code", "diff", "diagram", "list", "table", "chart", "tree", "terminal") and not any(
             not c.get("inferred") for x in s.says for c in x.cues
         ):
             self._issue("no_cues", f"Slide `{s.id}` has no cues, so the pointer only follows names showntell can match.",
                         "Link the words that name each part, as in [the loader](#L18) or [the cache](#cache).", slide=s.id, line=s.line)
         words = sum(len(x.text.split()) for x in s.says)
         secs = words / WORDS_PER_SECOND
-        if s.kind in ("code", "diff"):
+        if s.kind in ("code", "diff", "terminal"):
             n = len(s.visual.get("code", s.visual.get("new", {}).get("code", "")).split("\n"))
             need = 1.5 + 0.35 * n
             if secs < need * 0.6:
@@ -612,6 +642,9 @@ def _source_rank(s: Slide):
     if s.kind == "table":
         ids = v.get("ids", [])
         return lambda c: ids.index(c["id"]) if c.get("kind") == "row" and c.get("id") in ids else None
+    if s.kind in ("chart", "tree"):
+        ids = v.get("ids", [])
+        return lambda c: ids.index(c["id"]) if c.get("kind") == "item" and c.get("id") in ids else None
     if s.kind == "diagram":
         order = v.get("order", [])
         return lambda c: order.index(c["id"]) if c.get("kind") == "node" and c.get("id") in order else None
@@ -748,8 +781,8 @@ def infer_cues(s: Slide, say: Say) -> list[dict]:
         seen.add(key)
         out.append({"at": at, "end": end, "label": text[at:end], "target": "", "inferred": True, **kw})
 
-    if s.kind in ("code", "diff"):
-        sides = [("new", s.visual)] if s.kind == "code" else [("new", s.visual["new"]), ("old", s.visual["old"])]
+    if s.kind in ("code", "diff", "terminal"):
+        sides = [("new", s.visual["new"]), ("old", s.visual["old"])] if s.kind == "diff" else [("new", s.visual)]
         for a, b in say.code:
             needle = text[a:b]
             for side, vis in sides:
@@ -778,6 +811,11 @@ def infer_cues(s: Slide, say: Say) -> list[dict]:
             i = _find_word(low, title.lower())
             if i is not None:
                 add(i, i + len(title), kind="item", id=it["id"])
+    elif s.kind in ("chart", "tree"):
+        for pid, name in kinds.labels(s.visual):
+            i = _find_word(low, name.lower()) if len(name) >= 3 else None
+            if i is not None:
+                add(i, i + len(name), kind="item", id=pid)
     elif s.kind == "table":
         for rid, row in zip(s.visual.get("ids", []), s.visual.get("rows", []), strict=False):
             cell = inline_plain(row[0]) if row else ""

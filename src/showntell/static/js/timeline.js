@@ -112,7 +112,14 @@ export function revealLevel(slide, cues, all) {
     for (const c of cues) if (c.kind === "row") n = Math.max(n, (v.ids || []).indexOf(c.id) + 1);
     return { rows: n };
   }
-  if (slide.kind === "code") {
+  if (slide.kind === "chart" || slide.kind === "tree") {
+    if (!every.some((c) => c.kind === "item")) return null;
+    const ids = v.ids || [];
+    let n = 0;
+    for (const c of cues) if (c.kind === "item") n = Math.max(n, ids.indexOf(c.id) + 1);
+    return { items: n };
+  }
+  if (slide.kind === "code" || slide.kind === "terminal") {
     const lineCues = every.filter((c) => c.kind === "lines");
     if (!lineCues.length) return null;
     // Show the lines leading up to the first one the narration points at.

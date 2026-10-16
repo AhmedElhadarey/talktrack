@@ -1,0 +1,87 @@
+{
+  "kinds": [
+    {
+      "kind": "code",
+      "fence": "```lang file=path lines=10-24",
+      "use": "specific code, read from the project",
+      "point": "#L12, #L12-18, [label](#L12 \"exact text\")",
+      "reveal": "lines up to the last range pointed at",
+      "example": "```python file=src/cache.py lines=10-24\n```"
+    },
+    {
+      "kind": "diff",
+      "fence": "```lang old / ```lang new, ```diff, or ```diff file=path rev=A",
+      "use": "a change",
+      "point": "#-L5 old side, #+L7 or #L7 new side",
+      "reveal": "none",
+      "example": "```diff file=src/stats.py rev=HEAD~1\n```"
+    },
+    {
+      "kind": "diagram",
+      "fence": "```mermaid",
+      "use": "flow, structure, states, sequences",
+      "point": "#node-id, or [label](# \"node label\")",
+      "reveal": "flowchart nodes in source order, edges once both ends show",
+      "example": "```mermaid\nflowchart LR\n  req[Request] --> cache{Cached?}\n  cache -->|no| db[Database]\n```"
+    },
+    {
+      "kind": "math",
+      "fence": "```math or $$ … $$",
+      "use": "a formula",
+      "point": "#, or [label](# \"text in the formula\")",
+      "reveal": "none",
+      "example": "```math\n\\mathrm{softmax}(z)_i = \\frac{e^{z_i}}{\\sum_j e^{z_j}}\n```"
+    },
+    {
+      "kind": "table",
+      "fence": "pipe table",
+      "use": "comparison across attributes",
+      "point": "#row-2, or {#id} at the end of a row's last cell",
+      "reveal": "rows up to the last one pointed at",
+      "example": "| Store | Speed |\n|---|---|\n| Memory | fast {#mem} |\n| Disk | slow {#disk} |"
+    },
+    {
+      "kind": "list",
+      "fence": "- items, 1. items; .cards or .steps on the heading",
+      "use": "parallel parts, options, a procedure",
+      "point": "#id from {#id}, or the bold title lowercased with hyphens",
+      "reveal": "items up to the last one pointed at",
+      "example": "- **Memory**: fast, gone on restart {#memory}\n- **Disk**: survives restarts {#disk}"
+    },
+    {
+      "kind": "image",
+      "fence": "![alt](path)",
+      "use": "a screenshot or plot from the project",
+      "point": "#",
+      "reveal": "none",
+      "example": "![Request timeline in the network panel](docs/timeline.png)"
+    },
+    {
+      "kind": "chart",
+      "fence": "```chart bar|hbar|line [title=\"…\"] [unit=\"ms\"] [x=\"…\"] [y=\"…\"]",
+      "use": "numbers: before and after, shares, a trend",
+      "point": "bar and hbar: #label (the bar's label, lowercased with hyphens); line: #series",
+      "reveal": "bars or series in source order",
+      "format": "bar: one `label: value` line per bar; for grouped bars, a `series: a, b` line first, then `label: 1, 2`. hbar: like bar, one series, for long labels. line: an `x: …` line first, then one `series: v1, v2, …` line per series, with as many values as x values. At most 12 bars or series.",
+      "example": "```chart bar title=\"p95 latency\" unit=\"ms\"\nseries: before, after\nread: 420, 180\nwrite: 610, 390\n```"
+    },
+    {
+      "kind": "terminal",
+      "fence": "```terminal (or ```console)",
+      "use": "commands and their output",
+      "point": "#L3: lines count from 1, output lines included",
+      "reveal": "lines up to the last range pointed at",
+      "format": "Lines starting with a prompt ($, % or >) are commands; the rest is output. Paste real output, trimmed.",
+      "example": "```terminal\n$ uv run pytest -q\n720 passed in 51.2s\n```"
+    },
+    {
+      "kind": "tree",
+      "fence": "```tree",
+      "use": "where files live in a project",
+      "point": "#path/to/file, or a file or folder name that is unique in the tree",
+      "reveal": "entries in source order",
+      "format": "One entry per line, nested by indentation or pasted from `tree`. A trailing / marks a folder; `# note` after an entry shows a short note. Show only what matters.",
+      "example": "```tree\nsrc/\n  app.py   # entry point\n  cache/\n    lru.py\ntests/\n```"
+    }
+  ]
+}

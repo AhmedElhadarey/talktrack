@@ -543,7 +543,7 @@ function cueTarget(cue, slide) {
     if (!e) return null;
     e.classList.add("active");
     e.parentElement.classList.add("has-active");
-    if (cue.kind === "item") return { rects: [] }; // the card's own highlight is the pointer
+    if (cue.kind === "item") return { rects: e instanceof SVGElement ? [e.getBoundingClientRect()] : [] }; // a card's own highlight is the pointer
     return { rects: [e.getBoundingClientRect()] };
   }
   if (cue.kind === "node") {

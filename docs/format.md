@@ -21,10 +21,10 @@ On a miss it [calls the loader](#L18) and stores the result.
 
 | Part | Rule |
 |---|---|
-| **Front matter** | optional, only at the very start, between `---` lines. Keys: `title`, `frame`, `voice`, `speed`. Tools pass these as arguments instead. |
+| **Front matter** | optional, only at the very start, between `---` lines. Keys: `title`, `frame`, `theme`, `voice`, `speed`. Tools pass these as arguments instead. |
 | **Slide** | every heading (`#`, `##` or `###`) starts a slide. The level does not matter. |
 | **Title slide** | the first slide renders as a title slide when it has no visual. A `>` quote under it is the subtitle. |
-| **Visual** | at most one per slide: a code block, a diff, a diagram, a formula, a table, a list or an image |
+| **Visual** | at most one per slide: a code block, a diff, a diagram, a formula, a table, a list, an image, a chart, a terminal session or a file tree |
 | **Shown text** | `>` quote lines are shown on the slide, never spoken |
 | **Narration** | every other paragraph is spoken. Each paragraph is voiced separately, with a short pause after it. |
 | **Questions** | a slide whose heading has the `.questions` class is not shown; its list items become the questions offered at the end. Questions passed to `finish_walkthrough` replace them. |
@@ -140,6 +140,49 @@ Bullets give a bulleted list and `1.` items give numbered steps; add `.cards` to
 
 A path is read from the project folder and copied into the walkthrough. An `https://` URL is shown as is.
 
+### Chart
+
+````markdown
+```chart bar title="p95 latency" unit="ms"
+series: before, after
+read: 420, 180
+write: 610, 390
+```
+````
+
+| Type | Body | Cue targets |
+|---|---|---|
+| **`bar`** | one `label: value` line per bar; for grouped bars a `series: a, b` line first, then `label: 1, 2` | `#label`: the bar's label, lowercased with hyphens |
+| **`hbar`** | as `bar`, one series, drawn horizontally for long labels | `#label` |
+| **`line`** | an `x: …` line first, then one `name: v1, v2, …` line per series with as many values as x values | `#name`: the series |
+
+Options: `title=`, `unit=` (shown after values), `x=` and `y=` (axis labels). Values may carry a unit suffix such as `ms` or `%`. At most 12 bars or series read well. The player draws the chart in the theme's colours.
+
+### Terminal session
+
+````markdown
+```terminal
+$ uv run pytest -q
+720 passed in 51.2s
+```
+````
+
+Lines starting with a prompt (`$`, `%` or `>`) are commands; the rest is output. `console` and `shell-session` work as names too. Cues point at lines with `#L3`, counting from 1 with output lines included; `start=` changes the first number. Size limits are those of code.
+
+### File tree
+
+````markdown
+```tree
+src/
+  app.py   # entry point
+  cache/
+    lru.py
+tests/
+```
+````
+
+One entry per line, nested by indentation (any consistent step) or pasted from the `tree` command. A trailing `/`, or deeper lines below, mark a folder; `# note` after an entry shows a short note. Cues point at an entry by its path (`#src/cache/lru.py`) or by a file or folder name that is unique in the tree (`#lru.py`).
+
 ## Narration
 
 Narration is plain prose written to be heard. Markdown inside it is used like this:
@@ -163,7 +206,7 @@ A cue is a Markdown link inside narration. The label is spoken normally. The poi
 | **`#L12-18`** | lines 12 to 18 |
 | **`#-L5`** | line 5 of the old side of a diff |
 | **`#+L7`**, **`#L7`** | line 7 of the new side of a diff |
-| **`#id`** | a list item, card, diagram node or table row with that id |
+| **`#id`** | a list item, card, diagram node, table row, chart bar or series, or file-tree entry with that id |
 | **`#`** | the slide's whole visual |
 
 A title in quotes narrows the target to that exact text: `[the guard](#L12 "if key in self._data")` highlights only that text on line 12. With `#` alone, the quoted text is searched for anywhere in the visual: `[the decision](# "In cache?")` points at the diagram node with that label.
@@ -181,6 +224,8 @@ With `.build` on the heading, the slide starts mostly empty and fills in as the 
 | **List, cards, table** | items or rows appear up to the latest one pointed at by id |
 | **Code** | lines appear up to the end of the latest line range pointed at |
 | **Flowchart** | nodes appear in source order up to the latest node pointed at; an edge appears once both its ends are visible |
+| **Chart, file tree** | bars, series or entries appear in source order up to the latest one pointed at |
+| **Terminal** | lines appear up to the end of the latest line range pointed at, as for code |
 
 Everything is visible once the slide's narration ends.
 
@@ -194,6 +239,23 @@ Everything is visible once the slide's narration ends.
 
 These are the sizes that still render at a comfortable reading size, measured with `scripts/measure_limits.py`. Larger code still renders, but smaller. Diffs show the two sides next to each other in landscape and square, and stacked in portrait.
 
+## Themes
+
+| Theme | Look |
+|---|---|
+| **`dark`** | the default |
+| **`light`** | white slides |
+| **`paper`** | warm off-white slides |
+| **`contrast`** | black slides, white text, yellow pointer |
+
+The walkthrough's theme comes from `start_walkthrough`'s `theme`, else front matter `theme:`, else the project's `showntell.theme.json`, else `dark`. Viewers can switch with `?theme=` or the player menu. A project file can also replace single colours:
+
+```json
+{ "theme": "light", "tokens": { "accent": "#0969da", "node-line": "#8250df" } }
+```
+
+Token names are those defined in `static/themes.css`. Values must be colours (`#rrggbb`, `rgb()`, `rgba()`); anything else is reported and ignored. Every built-in theme meets WCAG contrast for its text.
+
 ## Reserved for later versions
 
-Pronunciation of other languages, citations, per-slide voice and speed, camera moves (a `{.zoom}` class after a cue link), charts, terminal sessions, file trees, quizzes and scene animations. Parsers must ignore attributes and classes they do not know.
+Pronunciation of other languages, citations, per-slide voice and speed, camera moves (a `{.zoom}` class after a cue link), quizzes and scene animations. Parsers must ignore attributes and classes they do not know.

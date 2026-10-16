@@ -262,6 +262,40 @@ export function renderSlide(slide, ctx) {
       }).catch((e) => ctx.report(`Formula on slide ${slide.id}: ${e.message || e}`, "render_error", slide.id));
       break;
     }
+    case "chart": {
+      const c = el("div", "chart");
+      c.setAttribute("role", "img");
+      c.setAttribute("aria-label", chartLabel(v));
+      c.innerHTML = drawChart(v);
+      c.querySelectorAll("g.entry").forEach((g) => parts.items.set(g.dataset.id, g));
+      parts.visual = c;
+      parts.svg = null;
+      body.append(c);
+      break;
+    }
+    case "terminal": {
+      const { box, lines } = terminalBox(v);
+      parts.lines.new = lines;
+      parts.visual = box;
+      body.append(box);
+      break;
+    }
+    case "tree": {
+      const t = el("div", "tree");
+      if (v.title) t.append(el("div", "tree-title", esc(v.title)));
+      v.items.forEach((it, i) => {
+        const row = el("div", `entry${it.folder ? " folder" : ""}`,
+          `<span class="icon" aria-hidden="true">${it.folder ? FOLDER : FILE}</span><span class="name">${esc(it.name)}</span>${it.note ? `<span class="note">${inline(it.note)}</span>` : ""}`);
+        row.style.paddingLeft = `${14 + it.depth * 30}px`;
+        row.dataset.id = it.id;
+        row.dataset.idx = i;
+        parts.items.set(it.id, row);
+        t.append(row);
+      });
+      parts.visual = t;
+      body.append(t);
+      break;
+    }
     case "image": {
       const wrap = el("div", "image");
       const img = el("img");
@@ -280,6 +314,133 @@ export function renderSlide(slide, ctx) {
     }
   }
   return { root, ready, parts };
+}
+
+// ---------------------------------------------------------------- terminal sessions
+
+function terminalBox(v) {
+  const box = el("figure", "codebox terminal");
+  box.dataset.side = "new";
+  box.append(el("figcaption", "file", `<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="name">${esc(v.title || "Terminal")}</span>`));
+  const body = el("div", "code hljs");
+  const lines = new Map();
+  const start = v.start || 1;
+  v.lines.forEach((ln, i) => {
+    const n = start + i;
+    const text = ln.cmd ? highlight(ln.text, "bash") : esc(ln.text);
+    const row = el("div", `ln${ln.cmd ? " cmd" : " out"}`,
+      `<span class="no" aria-hidden="true">${n}</span><span class="tx">${ln.cmd ? `<span class="prompt">${esc(ln.prompt)} </span>` : ""}${text || " "}</span>`);
+    row.dataset.n = n;
+    body.append(row);
+    lines.set(n, row);
+  });
+  box.append(body);
+  return { box, lines };
+}
+
+// ---------------------------------------------------------------- charts
+
+const FOLDER = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.2l2 2h8.8A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" fill="currentColor"/></svg>';
+const FILE = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M6 3h8l5 5v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm7 1.5V9h4.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+const PALETTE = ["var(--accent)", "var(--node-line)", "var(--add-fg)", "var(--hl-title)", "var(--hl-built-in)", "var(--del-fg)"];
+
+function chartLabel(v) {
+  const head = v.title ? `${v.title}. ` : "";
+  if (v.type === "line") return `${head}Line chart of ${v.series.map((s) => s.name).join(", ")} over ${v.x.join(", ")}.`;
+  return `${head}Bar chart: ${v.categories.map((c) => `${c.label} ${c.values.join(" and ")}${v.unit ? ` ${v.unit}` : ""}`).join("; ")}.`;
+}
+
+// A round axis maximum and step: 1, 2 or 5 times a power of ten.
+function niceScale(max, ticks = 5) {
+  if (!(max > 0)) return { top: 1, step: 0.2 };
+  const raw = max / ticks;
+  const p = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw);
+  return { top: Math.ceil(max / step - 1e-9) * step, step };
+}
+
+function fmt(n, unit) {
+  const abs = Math.abs(n);
+  const s = abs >= 1e6 ? `${+(n / 1e6).toFixed(1)}M` : abs >= 1e4 ? `${+(n / 1e3).toFixed(1)}k` : `${+n.toFixed(abs < 10 ? 2 : abs < 100 ? 1 : 0)}`;
+  return unit ? `${s} ${unit}` : s;
+}
+
+function drawChart(v) {
+  const W = 1100, H = 600;
+  const t = (x, y, text, cls, anchor = "middle") => `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${esc(text)}</text>`;
+  const all = v.type === "line" ? v.series.flatMap((s) => s.values) : v.categories.flatMap((c) => c.values);
+  const lo = Math.min(0, ...all);
+  const { top, step } = niceScale(Math.max(...all, 0) - lo);
+  const head = v.title ? t(W / 2, 34, v.title, "ctitle") : "";
+  const m = { l: 96, r: 40, t: v.title ? 70 : 30, b: 86 };
+  if (v.type === "hbar") return drawHbar(v, W, H, m, top, step, head, t);
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const y = (val) => m.t + ih - ((val - lo) / top) * ih;
+  let grid = "";
+  for (let k = 0; k <= top / step + 1e-9; k++) {
+    const val = lo + k * step;
+    grid += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(val)}" y2="${y(val)}" class="grid"/>` + t(m.l - 12, y(val) + 7, fmt(val, ""), "tick", "end");
+  }
+  const axes = (v.ylabel ? `<text class="alabel" text-anchor="middle" transform="translate(24 ${m.t + ih / 2}) rotate(-90)">${esc(v.ylabel + (v.unit ? ` (${v.unit})` : ""))}</text>` : "")
+    + (v.xlabel ? t(m.l + iw / 2, H - 14, v.xlabel, "alabel") : "");
+  let marks = "";
+  if (v.type === "line") {
+    const n = v.x.length;
+    const x = (i) => m.l + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
+    v.x.forEach((xv, i) => { marks += t(x(i), m.t + ih + 34, xv, "tick"); });
+    v.series.forEach((s, si) => {
+      const col = PALETTE[si % PALETTE.length];
+      const pts = s.values.map((val, i) => `${x(i)},${y(val)}`).join(" ");
+      const last = s.values.length - 1;
+      marks += `<g class="entry series" data-id="${esc(s.id)}" data-idx="${si}" style="--c:${col}">`
+        + `<polyline points="${pts}" class="line"/>`
+        + s.values.map((val, i) => `<circle cx="${x(i)}" cy="${y(val)}" r="7" class="dot"><title>${esc(`${s.name}: ${fmt(val, v.unit)}`)}</title></circle>`).join("")
+        + (last >= 0 ? t(Math.min(W - m.r, x(last)) - 8, y(s.values[last]) - 16, s.name, "slabel", "end") : "")
+        + "</g>";
+    });
+  } else {
+    const n = v.categories.length, k = Math.max(1, ...v.categories.map((c) => c.values.length));
+    const band = iw / Math.max(1, n), gap = band * 0.24, bw = (band - gap) / k;
+    v.categories.forEach((c, ci) => {
+      let g = `<g class="entry bar" data-id="${esc(c.id)}" data-idx="${ci}">`;
+      c.values.forEach((val, si) => {
+        const x0 = m.l + ci * band + gap / 2 + si * bw;
+        const y0 = y(Math.max(0, val)), h = Math.abs(y(val) - y(0));
+        g += `<rect x="${x0}" y="${y0}" width="${Math.max(2, bw - 6)}" height="${Math.max(1, h)}" rx="6" style="fill:${PALETTE[(k > 1 ? si : 0) % PALETTE.length]}"/>`
+          + t(x0 + (bw - 6) / 2, y0 - 12, fmt(val, v.unit), "vlabel");
+      });
+      g += t(m.l + ci * band + band / 2, m.t + ih + 36, c.label, "tick") + "</g>";
+      marks += g;
+    });
+    if (k > 1) marks += legend(v.series, m.l, H - 22);
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${head}${grid}${axes}<line x1="${m.l}" x2="${W - m.r}" y1="${y(Math.max(lo, 0))}" y2="${y(Math.max(lo, 0))}" class="axis"/>${marks}</svg>`;
+}
+
+function drawHbar(v, W, H, m, top, step, head, t) {
+  const labelW = Math.min(360, 24 + 13 * Math.max(...v.categories.map((c) => c.label.length)));
+  m.l = labelW;
+  const iw = W - m.l - m.r - 90, ih = H - m.t - 40;
+  const n = v.categories.length, band = ih / Math.max(1, n), bh = band * 0.66;
+  const x = (val) => m.l + (val / top) * iw;
+  let marks = "";
+  v.categories.forEach((c, ci) => {
+    const val = c.values[0] ?? 0, y0 = m.t + ci * band + (band - bh) / 2;
+    marks += `<g class="entry bar" data-id="${esc(c.id)}" data-idx="${ci}">`
+      + t(m.l - 14, y0 + bh / 2 + 8, c.label, "tick", "end")
+      + `<rect x="${m.l}" y="${y0}" width="${Math.max(2, x(val) - m.l)}" height="${bh}" rx="6" style="fill:${PALETTE[0]}"/>`
+      + t(x(val) + 12, y0 + bh / 2 + 8, fmt(val, v.unit), "vlabel", "start") + "</g>";
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${head}<line x1="${m.l}" x2="${m.l}" y1="${m.t}" y2="${m.t + ih}" class="axis"/>${marks}</svg>`;
+}
+
+function legend(series, x, y) {
+  let out = "", cx = x;
+  series.forEach((s, i) => {
+    out += `<rect x="${cx}" y="${y - 16}" width="18" height="18" rx="4" style="fill:${PALETTE[i % PALETTE.length]}"/><text x="${cx + 26}" y="${y}" class="legend">${esc(s.name)}</text>`;
+    cx += 60 + s.name.length * 12;
+  });
+  return out;
 }
 
 let seq = 0;
@@ -323,12 +484,12 @@ export function sizeDiagram(svg, body) {
 // which keeps the pointer on the words it points at.
 export function fit(body) {
   const content = body.firstElementChild;
-  if (!content || content.matches(".diagram, .image")) return;
+  if (!content || content.matches(".diagram, .image, .chart")) return;
   content.style.transform = "";
   const bw = body.clientWidth, bh = body.clientHeight;
   const cw = Math.max(content.offsetWidth, content.scrollWidth), ch = Math.max(content.offsetHeight, content.scrollHeight);
   if (!cw || !ch) return;
-  const grow = content.matches(".codebox, .diff, .math, table.data") ? 1.3 : 1;
+  const grow = content.matches(".codebox, .diff, .math, table.data, .tree") ? 1.3 : 1;
   let k = Math.min(grow, bw / cw, bh / ch) * 0.98;
   if (Math.abs(k - 1) <= 0.02) k = 1;
   k = Math.max(0.3, k);
