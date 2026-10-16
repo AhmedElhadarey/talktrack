@@ -38,7 +38,7 @@ def text(result) -> str:
 async def test_tools_are_listed_with_titles(mcp):
     async with mcp as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        assert set(tools) == {"start_walkthrough", "add_slides", "revise_slide", "finish_walkthrough", "list_walkthroughs"}
+        assert set(tools) == {"start_walkthrough", "add_slides", "revise_slide", "finish_walkthrough", "list_walkthroughs", "preview_slides"}
         assert all(t.title and t.description for t in tools.values())
 
 

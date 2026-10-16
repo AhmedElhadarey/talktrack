@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import Context, MCPServer
-from mcp_types import CallToolResult, TextContent, ToolAnnotations
+from mcp_types import CallToolResult, ImageContent, TextContent, ToolAnnotations
 from pydantic import Field
 from starlette.requests import Request
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
@@ -277,6 +277,29 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
         lines = [f"- {r['title']} — {r['slides']} slides, {mmss(r['duration'])}, {r['status']}. "
                  f"handle: {r['handle']} link: {r['url']}" for r in rows]
         return _result("\n".join(lines), {"walkthroughs": rows})
+
+    @mcp.tool(title=tool_text("preview_slides", "title", "Preview slides"), description=tool_text("preview_slides"),
+              annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
+    async def preview_slides(
+        handle: Annotated[str, Field(description=arg_text("preview_slides", "handle"))],
+        slides: Annotated[list[str] | None, Field(description=arg_text("preview_slides", "slides"))] = None,
+    ) -> CallToolResult:
+        try:
+            r = await service.preview(handle, slides)
+        except ValueError as e:
+            return _error(str(e))
+        content: list = [TextContent(type="text", text=(
+            f"{len(r['slides'])} slide(s), each as it looks once fully revealed."
+            + (f" Unknown slide ids: {', '.join(r['unknown'])}." if r["unknown"] else "")))]
+        for sl in r["slides"]:
+            content.append(TextContent(type="text", text=f"Slide `{sl['id']}` ({sl['title']}), at {mmss(sl['at_s'])}:"))
+            content.append(ImageContent(type="image", data=sl["png"], mime_type="image/png"))
+        issues = _issues_text([], r["player_issues"])
+        if issues:
+            content.append(TextContent(type="text", text=issues))
+        return CallToolResult(content=content, structured_content={
+            "slides": [{k: v for k, v in sl.items() if k != "png"} for sl in r["slides"]],
+            "player_issues": r["player_issues"]})
 
     for name, p in texts()["prompts"].items():
         _register_prompt(mcp, name, p)

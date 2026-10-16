@@ -306,3 +306,17 @@ def test_the_player_reports_text_shrunk_too_far(daemon, browser):
     f = call("finish", handle=r["handle"], questions=None)
     assert any(i["code"] == "text_too_small" and i["slide"] == "wall" and i["source"] == "player" for i in f["player_issues"])
     page.close()
+
+
+def test_preview_returns_pictures_of_slides(daemon, browser):
+    import base64
+
+    call = _rpc(daemon)
+    r = call("start", title="Preview", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    call("add", handle=r["handle"], markdown=DOC)
+    call("playable", handle=r["handle"], timeout=10)
+    p = call("preview", handle=r["handle"], slides=["flow", "math", "nope"], short=360)
+    assert [s["id"] for s in p["slides"]] == ["flow", "math"] and p["unknown"] == ["nope"]
+    png = base64.b64decode(p["slides"][0]["png"])
+    assert png[:8] == b"\x89PNG\r\n\x1a\n" and len(png) > 5000
+    assert p["slides"][0]["png"] != p["slides"][1]["png"]

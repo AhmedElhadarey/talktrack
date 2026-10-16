@@ -41,5 +41,13 @@
     "title": "List walkthroughs",
     "description": "List recent walkthroughs with their handles, titles and links. Use it to find the handle of a walkthrough to revise later, including one from an earlier session. Its Markdown source is the resource showntell://walkthroughs/{id}, where id is the part of the handle before the dot.",
     "args": {}
+  },
+  "preview_slides": {
+    "title": "Preview slides",
+    "description": "Look at slides as the viewer sees them: returns a small picture of each, fully revealed, plus any layout problems the player found while drawing them. Use it after finishing, or after revising a slide, to check that code is readable, diagrams fit and nothing overlaps. Needs Playwright on the machine running showntell; the reply says how to install it if missing.",
+    "args": {
+      "handle": "Handle from start_walkthrough or list_walkthroughs.",
+      "slides": "Slide ids to show. Omit for all slides, up to twelve; with more, the last twelve."
+    }
   }
 }

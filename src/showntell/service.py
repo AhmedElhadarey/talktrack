@@ -109,6 +109,40 @@ class LocalService:
     async def list(self) -> list[dict]:
         return self.store.list(20)
 
+    async def preview(self, handle: str, slides: list[str] | None = None, short: int = 360) -> dict:
+        """Pictures of slides as the viewer sees them once fully revealed, for the agent to check."""
+        import base64
+
+        from .capture import CaptureUnavailable, capture_frames_async
+        from .export import timeline, timeline_total
+
+        s = self.store.by_handle(handle)
+        starts: dict[str, float] = {}
+        for t, slide, _ in timeline(s.w):
+            starts.setdefault(slide.id, t)
+        order = [sl.id for sl in s.w.slides if sl.id in starts]
+        want = [x for x in (slides or order) if x in starts]
+        unknown = [x for x in (slides or []) if x not in starts]
+        if len(want) > PREVIEW_MAX:
+            want = want[-PREVIEW_MAX:] if not slides else want[:PREVIEW_MAX]
+        total = timeline_total(s.w)
+        times = []
+        for sid in want:
+            i = order.index(sid)
+            end = starts[order[i + 1]] if i + 1 < len(order) else total
+            times.append(max(starts[sid], end - 0.35))
+        try:
+            pngs = await capture_frames_async(s.url, times, short=short) if times else []
+        except CaptureUnavailable as e:
+            raise ValueError(str(e)) from e
+        return {
+            "url": s.url,
+            "slides": [{"id": sid, "title": next(x.title for x in s.w.slides if x.id == sid), "at_s": round(t, 1),
+                        "png": base64.b64encode(png).decode()} for sid, t, png in zip(want, times, pngs, strict=True)],
+            "unknown": unknown,
+            "player_issues": _dicts(s.take_player_issues()),
+        }
+
     async def source(self, wid: str) -> str:
         s = self.store.get(wid)
         if s is None:
@@ -154,8 +188,12 @@ class RemoteService:
     async def source(self, wid):
         return await self._call("source", wid=wid)
 
+    async def preview(self, handle, slides=None, short=360):
+        return await self._call("preview", handle=handle, slides=slides, short=short)
 
-RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list", "source"}
+
+RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list", "source", "preview"}
+PREVIEW_MAX = 12
 
 
 def mmss(seconds: float | None) -> str:
