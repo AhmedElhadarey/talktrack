@@ -73,7 +73,10 @@ def _phrases(say, max_words: int) -> list[list[dict]]:
     return out
 
 
-def export(data_dir: Path, wid: str, out: Path, mp3: bool = False) -> Path:
+def export(data_dir: Path, wid: str, out: Path, mp3: bool = False, static_href: str = "static",
+           copy_static: bool = True) -> Path:
+    """Write the walkthrough to `out`. A gallery of several exports can share one copy of the
+    player: pass `static_href="../static"` and `copy_static=False`, and copy `STATIC` once."""
     state = data_dir / "walkthroughs" / wid / "state.json"
     if not state.is_file():
         raise SystemExit(f"no walkthrough {wid} in {data_dir}")
@@ -88,7 +91,8 @@ def export(data_dir: Path, wid: str, out: Path, mp3: bool = False) -> Path:
     (out / "audio").mkdir(parents=True)
     from .server import render_player
 
-    shutil.copytree(STATIC, out / "static", ignore=shutil.ignore_patterns("index.html", "player.html", "*.map"))
+    if copy_static:
+        copy_player(out / "static")
     assets = data_dir / "walkthroughs" / wid / "assets"
     if assets.is_dir():
         shutil.copytree(assets, out / "assets")
@@ -113,12 +117,16 @@ def export(data_dir: Path, wid: str, out: Path, mp3: bool = False) -> Path:
                 shutil.copyfile(src, out / "audio" / f"{key}.wav")
     data["status"] = "finished"
     (out / "data.json").write_text(json.dumps(data))
-    (out / "index.html").write_text(render_player(w.title, w.frame, "", "static", live=False))
+    (out / "index.html").write_text(render_player(w.title, w.frame, "", static_href, live=False))
     (out / "captions.vtt").write_text(vtt(w))
     src_md = data_dir / "walkthroughs" / wid / "source.md"
     if src_md.is_file():
         (out / "source.md").write_text(src_md.read_text())
     return out
+
+
+def copy_player(dest: Path) -> None:
+    shutil.copytree(STATIC, dest, ignore=shutil.ignore_patterns("index.html", "player.html", "*.map"), dirs_exist_ok=True)
 
 
 def _resolve_id(source: str) -> str | None:
