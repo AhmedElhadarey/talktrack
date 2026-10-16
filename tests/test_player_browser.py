@@ -224,7 +224,7 @@ def test_every_kind_renders(daemon, browser, frame):
             }"""
         )
         shot = ART / f"{frame}-{i:02d}-{slide['kind']}.png"
-        page.screenshot(path=str(shot))
+        page.screenshot(path=str(shot), animations="disabled")  # transitions finished, so frames repeat exactly
         compare_baseline(shot)
         assert f"k-{slide['kind']}" in state["cls"]
         assert not state["errors"], state["errors"]
