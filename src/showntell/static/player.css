@@ -275,7 +275,7 @@ body.portrait .diff { grid-template-columns: 1fr; }
 body.presenter #caption { display: none; }
 body.audience #controls, body.audience #caption, body.audience #overlay, body.audience #waiting, body.audience #transcript, body.audience #notes { display: none !important; }
 body.audience #app { grid-template-rows: minmax(0, 1fr); }
-body.capture-ready #controls, body.embed-minimal #controls { display: none; }
+
 #range-note { position: absolute; z-index: 9; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 12px; align-items: center;
   padding: 8px 10px 8px 16px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); font-size: 15px; }
 #range-note button { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 999px; padding: 6px 12px; font-weight: 600; }
@@ -307,10 +307,10 @@ body.capture-ready #controls, body.embed-minimal #controls { display: none; }
    overhangs it by the 16px margin layoutStage() in main.js keeps around the stage. */
 body.capture #viewport { position: fixed; inset: -16px; }
 body.capture #controls, body.capture #transcript, body.capture #overlay, body.capture #end,
-body.capture #waiting, body.capture #caption { display: none !important; }
+body.capture #waiting, body.capture #caption, body.capture #notes, body.capture #range-note { display: none !important; }
 body.capture #stage { border-radius: 0; box-shadow: none; }
 body.capture *, body.capture *::before, body.capture *::after { animation: none !important; transition: none !important; }
 body.capture.burn-captions #caption {
   display: flex !important; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  min-height: 0; padding: 10px 40px 14px; font-size: 24px; background: rgba(7, 9, 12, 0.82);
+  min-height: 0; padding: 10px 40px 14px; font-size: 24px; background: var(--scrim);
 }
