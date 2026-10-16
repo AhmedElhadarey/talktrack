@@ -40,6 +40,8 @@ class Session:
         self.player_issues: list[str] = []
         self.reported: set[str] = set()
         self.source = ""
+        # Revised slides waiting for their audio, shown to viewers only once voiced (by slide id).
+        self.staged: dict[str, Slide] = {}
         self._playable: asyncio.Event = asyncio.Event()
         self._save_handle: asyncio.TimerHandle | None = None
 
@@ -87,16 +89,37 @@ class Session:
             new.kind = "text"
         for i, say in enumerate(new.says):
             say.id = f"{new.id}.{i + 1}.{new.rev}"
-        self.w.slides[idx] = new
         b._check_finished_slide(new)
         issues = list(dict.fromkeys(issues + [x for x in b.issues if x not in issues]))
+        # Someone may be watching: keep showing the voiced old version until the new one has
+        # its audio, so a revision never makes the viewer wait.
+        stage = bool(self.subscribers) and all(x.status == "ready" for x in old.says if x.text)
+        if stage:
+            self.staged[new.id] = new
+        else:
+            self.staged.pop(new.id, None)
+            self.w.slides[idx] = new
+        order = sum(len(x.says) for x in self.w.slides[:idx])
         voiced = 0
-        for say in new.says:
+        for i, say in enumerate(new.says):
             if not say.pause:
-                voiced += self._voice(new, say)
+                voiced += self._voice(new, say, order=order + i)
         self.source += f"\n<!-- revised {slide_id} -->\n{text}\n"
-        self._changed({new.id})
+        if not stage:
+            self._changed({new.id})
+        self._promote(new.id)
         return {"slide": new.id, "rev": new.rev, "says": len(new.says), "revoiced": voiced, "issues": issues}
+
+    def _promote(self, slide_id: str) -> None:
+        """Swap a staged revision in once all its narration has audio (or failed)."""
+        new = self.staged.get(slide_id)
+        if new is None or any(x.text and x.status == "pending" for x in new.says):
+            return
+        del self.staged[slide_id]
+        idx = next((i for i, s in enumerate(self.w.slides) if s.id == slide_id), None)
+        if idx is not None:
+            self.w.slides[idx] = new
+            self._changed({slide_id})
 
     def finish(self, questions: list[str] | None) -> list[str]:
         b = self.builder
@@ -114,7 +137,7 @@ class Session:
 
     # -- speech -------------------------------------------------------------------------
 
-    def _voice(self, slide: Slide, say: Say) -> int:
+    def _voice(self, slide: Slide, say: Say, order: int | None = None) -> int:
         """Request audio for a narration. Returns 1 if it needs voicing, 0 if cached."""
         if say.pause or not say.text:
             return 0
@@ -122,12 +145,13 @@ class Session:
         key, spoken = narrator.prepare(say.text, say.code, say.overrides, self.w.voice, self.w.speed)
         say.key = key
         say.status = "pending"
-        order = 0
-        for s in self.w.slides:
-            if s is slide:
-                order += s.says.index(say) if say in s.says else len(s.says)
-                break
-            order += len(s.says)
+        if order is None:
+            order = 0
+            for s in self.w.slides:
+                if s is slide:
+                    order += s.says.index(say) if say in s.says else len(s.says)
+                    break
+                order += len(s.says)
         sid = say.id
         loop = self.store.loop
         hit = narrator.cached(key)
@@ -142,7 +166,9 @@ class Session:
         return 0 if hit else 1
 
     def _audio(self, slide_id: str, say_id: str, result: dict) -> None:
-        slide = next((s for s in self.w.slides if s.id == slide_id), None)
+        staged = self.staged.get(slide_id)
+        slide = staged if staged and any(x.id == say_id for x in staged.says) else next(
+            (s for s in self.w.slides if s.id == slide_id), None)
         say = next((x for x in slide.says if x.id == say_id), None) if slide else None
         if say is None:
             return  # revised away meanwhile
@@ -154,6 +180,9 @@ class Session:
             say.status, say.error = "error", result.get("error", "speech failed")
         if self.first_say() is say:
             self._playable.set()
+        if slide is staged:
+            self._promote(slide_id)
+            return
         self._changed({slide_id})
 
     def first_say(self) -> Say | None:

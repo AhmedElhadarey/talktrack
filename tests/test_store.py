@@ -143,6 +143,25 @@ async def test_revise_keeps_id_bumps_rev_and_revoices_only_changes(service, stor
     assert store.narrator.stats["jobs"] == jobs + 1
 
 
+async def test_revise_while_watched_keeps_the_old_slide_until_voiced(service, store, voiced, wait_until):
+    """A viewer never waits on a revision: the voiced old version stays until the new one has audio."""
+    r = await started(service)
+    await service.add(r["handle"], OPENING + "\n" + BODY)
+    s = store.by_handle(r["handle"])
+    await voiced(s)
+    q = s.subscribe()
+    store.narrator.backend.delay = 0.3  # slow speech, so the revision is still being voiced below
+    new = BODY.replace("It never touches the database.", "It only reads from memory, never the disk.")
+    v = await service.revise(r["handle"], "lookup", new)
+    assert v["rev"] == 2 and v["revoiced"] == 1
+    assert s.w.slides[1].rev == 1 and all(x.status == "ready" for x in s.w.slides[1].says)
+    assert "lookup" in s.staged
+    await wait_until(lambda: s.w.slides[1].rev == 2)
+    store.narrator.backend.delay = 0
+    assert all(x.status == "ready" for x in s.w.slides[1].says) and not s.staged
+    s.unsubscribe(q)
+
+
 async def test_revise_without_heading_keeps_the_title(service, store):
     r = await started(service)
     await service.add(r["handle"], OPENING + "\n" + BODY)

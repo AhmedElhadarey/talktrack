@@ -69,6 +69,8 @@ Audio files are named by a hash of model, voice, speed and spoken text and kept 
 
 State is saved as JSON next to the source after each change (debounced) and reloaded on demand. Narration still waiting for audio after a restart is queued again.
 
+While a player is connected, a revised slide replaces the old one only once all its narration has audio, so a revision never makes a viewer wait.
+
 ## Speech
 
 - **Backends:** one interface, two implementations. MLX (mlx-audio) on Apple silicon, ONNX Runtime elsewhere. Both use Kokoro-82M with misaki for English phonemes and return per-token timings.
