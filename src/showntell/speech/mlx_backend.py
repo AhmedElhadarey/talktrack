@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import importlib.util
+import logging
 import sys
 import types
 from pathlib import Path
@@ -42,6 +43,7 @@ class MlxBackend:
         if self.status:
             self.status.set("loading")
         _stub_espeak_if_missing()
+        logging.getLogger().addFilter(_quiet_espeak_warning)
         from mlx_audio.tts.utils import load_model
 
         self._model = load_model(path)
@@ -94,3 +96,10 @@ def _stub_espeak_if_missing() -> None:
 
     stub.EspeakFallback = EspeakFallback
     sys.modules["misaki.espeak"] = stub
+
+
+def _quiet_espeak_warning(record: logging.LogRecord) -> bool:
+    """mlx-audio warns that unknown words will be skipped without espeak; showntell's
+    pronunciation layer gives every word a pronunciation first, so the warning misleads."""
+    msg = str(record.getMessage())
+    return not ("EspeakFallback" in msg or "espeak-ng is not installed" in msg)

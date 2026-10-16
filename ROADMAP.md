@@ -24,6 +24,27 @@ Version 1.0 ships when it meets the launch criteria below. Everything else waits
 - **Pronunciation:** at most one mispronounced technical term per minute of narration on the pronunciation test set, measured by speech-recognition round trip.
 - **Quality:** no open priority-1 bugs. All tests pass on macOS and on Linux CI with the fake narrator.
 
+## Status (16 October 2026)
+
+Phases 0 to 2 are built. What is left is measurement on a quiet machine and the owner's publishing steps.
+
+| Launch criterion | Measured | Result |
+|---|---|---|
+| **Install** | empty uv and Hugging Face caches on an Apple silicon Mac: install 11 s, first speech 52 s including the 327 MB model download | met |
+| **Speed** | link 2.2 to 4.1 s after `start_walkthrough` in five Sonnet runs; the 4.1 s run shared the machine with a second, accidental daemon (since fixed) | re-measure |
+| **Evaluation** | the 10-prompt Sonnet run was stopped by the system for low memory after 7 runs; the completed walkthroughs played with no render errors | re-run |
+| **Pointer** | 7 of 7 cues within 300 ms of whisper word times in the first run; ONNX and MLX word starts are within 75 ms of whisper | re-run at scale |
+| **Pronunciation** | 0.55 missed technical terms per minute on the 70-sentence set (af_heart); 0.98 and 1.08 for am_michael and bf_emma | met |
+| **Quality** | 568 Python tests, 3 browser tests (every slide kind in every frame) and 14 player tests pass on macOS; Linux CI is written but has not run | Linux pending |
+
+| Phase | Done | Left |
+|---|---|---|
+| **0** | clean room, spec, Markdown format, document model, code from disk, packaging, rename, licence files | |
+| **1** | security, revise, cue inference, checks, `play`, step reveals, pronunciation, MLX and ONNX backends, time-driven player, transcript, seeking, accessibility, shared daemon, `doctor`, `autostart`, plugin and skill, prompts, resources, tests | full evaluation |
+| **2** | static export with captions, docs, CI, release and gallery workflows, recorder for demo video | gallery content, README demo, publishing |
+
+**Owner steps:** create the GitHub repository and push; add a PyPI trusted publisher for `release.yml` and tag `v0.1.0`; enable GitHub Pages; confirm the trademark in USPTO TSDR; post the mlx-audio issue asking for a public word-timestamp API; announce.
+
 ## Phase 0: Foundations
 
 ### Clean room
