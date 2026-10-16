@@ -59,3 +59,15 @@ jobs:
       - name: Download the MLX voice model and the spaCy English model
         run: uv run showntell doctor --speech mlx
       - run: uv run pytest -m mlx -rs
+
+  wheel:
+    name: Built wheel, installed outside the repo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run scripts/sync_version.py --check
+      - run: uv build
+      # version, doctor and play with fake speech from a temp folder, then a clean daemon shutdown:
+      # no process left and the lockfile removed
+      - run: bash scripts/wheel_smoke.sh

@@ -38,6 +38,14 @@ Run a daemon without a voice model with `uv run showntell serve --speech fake --
 - **New slide kinds** need a parser test, a builder test, validation messages, a renderer, a screenshot test, and a section in `docs/format.md`.
 - **Dependencies:** nothing GPL in the default install. Optional extras may be.
 
+## Releasing
+
+- **One version:** `pyproject.toml` holds it. After changing it, run `uv run scripts/sync_version.py`; it stamps `src/showntell/__init__.py`, the plugin and marketplace manifests and `gemini-extension.json`, and regenerates `GEMINI.md` from the plugin skill. `tests/test_versions.py` fails while anything disagrees.
+- **Generated files:** edit `claude-plugin/skills/showntell/SKILL.md` and `claude-plugin/.mcp.json`, never `GEMINI.md` or `gemini-extension.json`, then re-run the script.
+- **Changelog:** rename `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)` with at least one entry under it.
+- **Tag:** push `vX.Y.Z`. `release.yml` stops unless the tag equals the pyproject version, the manifests agree and the changelog section is dated and non-empty; then it builds, smoke-tests the wheel with `scripts/wheel_smoke.sh` and publishes to PyPI.
+- **Check first:** `uv run scripts/sync_version.py --check --tag vX.Y.Z` runs the same gate locally.
+
 ## Reporting bugs
 
 Include `showntell doctor` output, the walkthrough's `source.md` (in the data folder under `walkthroughs/<id>/`), and what you expected.

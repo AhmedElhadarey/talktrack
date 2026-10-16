@@ -1,7 +1,10 @@
 {
   "name": "showntell",
   "owner": { "name": "Rahim Nathwani", "url": "https://github.com/rahimnathwani" },
-  "metadata": { "description": "Narrated slide walkthroughs for coding agents, voiced on your machine." },
+  "metadata": {
+    "description": "Narrated slide walkthroughs for coding agents, voiced on your machine.",
+    "version": "0.1.0"
+  },
   "plugins": [
     {
       "name": "showntell",

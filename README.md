@@ -14,6 +14,8 @@ Ask your agent to walk you through a pull request, a module or a concept. It wri
 - **Checked:** every call returns problems to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, diagrams that failed to render in the open player.
 - **Shareable:** export any walkthrough as a static folder with captions, and host it anywhere.
 
+How it compares with a screen recording, a written PR description and a rendered MP4 explainer, including where those win: [docs/comparison.md](docs/comparison.md).
+
 ## Install
 
 You need [uv](https://docs.astral.sh/uv/). It installs Python 3.12 or newer for you if needed.
@@ -38,6 +40,15 @@ The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB el
 
 2. Start a new `claude` session and run `/mcp`; `showntell` should be listed as connected.
 3. Ask for a walkthrough, or use a built-in prompt: `/mcp__showntell__diff HEAD~1..HEAD`, `/mcp__showntell__file src/app.py` or `/mcp__showntell__topic how TLS works`.
+
+**Or install the plugin** instead of step 1. It bundles the same server with a skill that tells Claude when a walkthrough fits and how to pace one:
+
+```zsh
+claude plugin marketplace add rahimnathwani/showntell
+claude plugin install showntell@showntell
+```
+
+Claude Code 2.1.275 or later does both in one step: `claude plugin install showntell --marketplace rahimnathwani/showntell`. Check it with `claude plugin list`. A new release arrives with `claude plugin marketplace update showntell` and then `claude plugin update showntell@showntell`. Use the plugin or `claude mcp add`, not both, or Claude sees two copies of the tools.
 
 ### Codex CLI
 
@@ -69,6 +80,17 @@ args = ["--from", "git+https://github.com/rahimnathwani/showntell", "showntell",
 2. Check it with `agy mcp list`.
 3. Start `agy` in your project and ask for a walkthrough. MCP tools ask for approval by default, so allow showntell's tools when prompted. In print mode there is no prompt, so the calls may be refused.
 
+### Gemini CLI
+
+1. Install the extension. It adds the server and a context file with the same guidance as the Claude Code skill:
+
+   ```zsh
+   gemini extensions install https://github.com/rahimnathwani/showntell
+   ```
+
+2. Check it with `gemini extensions list`, or run `/mcp` inside a `gemini` session.
+3. Start `gemini` in your project and ask for a walkthrough. Update later with `gemini extensions update showntell`.
+
 ### Pi
 
 Recent Pi (checked with 1.3.0) has MCP built in.
@@ -97,7 +119,14 @@ Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobail
 
 ### Other clients
 
-- **Cursor, VS Code, Claude Desktop, Gemini CLI and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell showntell mcp`. Most use the same `mcpServers` JSON as the older-Pi example.
+- **VS Code:** add the server to your user profile from a terminal, then pick `showntell` under **MCP: List Servers**:
+
+  ```zsh
+  code --add-mcp '{"name":"showntell","command":"uvx","args":["--from","git+https://github.com/rahimnathwani/showntell","showntell","mcp"]}'
+  ```
+
+- **GitHub Copilot CLI:** its plugin system reads the same marketplace file as Claude Code: `copilot plugin marketplace add rahimnathwani/showntell`, then `copilot plugin install showntell@showntell`.
+- **Cursor, Claude Desktop and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell showntell mcp`. Most use the same `mcpServers` JSON as the older-Pi example.
 - **Over HTTP:** run `uvx --from git+https://github.com/rahimnathwani/showntell showntell serve` and connect the client to `http://localhost:4747/mcp`.
 
 ### Good to know
@@ -221,6 +250,10 @@ uv run showntell serve --speech fake   # run without a voice model
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [docs/spec.md](docs/spec.md) and [docs/architecture.md](docs/architecture.md).
+
+## Who uses it
+
+Using showntell on a team or project? Add a line to [ADOPTERS.md](ADOPTERS.md).
 
 ## Licence
 

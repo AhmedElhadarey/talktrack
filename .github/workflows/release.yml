@@ -15,9 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - name: Check the tag matches the package version
-        run: |
-          version=$(uv run --no-sync python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
-          test "v$version" = "$GITHUB_REF_NAME"
+      - name: Check the tag, manifests and changelog agree on the version
+        # Fails unless the tag is v<pyproject version>, every manifest carries that version,
+        # and CHANGELOG.md has a dated, non-empty section for it.
+        run: uv run scripts/sync_version.py --check --tag "$GITHUB_REF_NAME"
       - run: uv build
+      - name: Install the wheel outside the repo and play a walkthrough with fake speech
+        run: bash scripts/wheel_smoke.sh
       - run: uv publish --trusted-publishing always
