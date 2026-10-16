@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+from pathlib import Path
 
 import pytest
 
@@ -95,7 +96,7 @@ def test_ensure_passes_the_data_folder_to_the_child(cfg, monkeypatch):
         def __init__(self, args, env=None, **kw):
             seen["args"], seen["env"] = args, env or {}
 
-    calls = iter([None, {"pid": 1, "port": cfg.port, "token": "t", "version": __version__}])
+    calls = iter([None, {"pid": 1, "port": cfg.port, "token": "t", "version": __version__, "build": daemon.build_id()}])
     monkeypatch.setattr(daemon, "running", lambda c: next(calls))
     monkeypatch.setattr(daemon.subprocess, "Popen", FakePopen)
     daemon.ensure(cfg, log=lambda m: None)
@@ -105,10 +106,43 @@ def test_ensure_passes_the_data_folder_to_the_child(cfg, monkeypatch):
 
 
 def test_ensure_reuses_a_running_daemon_of_this_version(cfg, monkeypatch):
-    lock = {"pid": os.getpid(), "port": cfg.port, "token": "t", "version": __version__, "health": {"busy": False}}
+    lock = {"pid": os.getpid(), "port": cfg.port, "token": "t", "version": __version__, "build": daemon.build_id(),
+            "health": {"busy": False}}
     monkeypatch.setattr(daemon, "running", lambda c: lock)
     monkeypatch.setattr(daemon.subprocess, "Popen", lambda *a, **k: pytest.fail("must not start another daemon"))
     assert daemon.ensure(cfg, log=lambda m: None) is lock
+
+
+@pytest.mark.parametrize("build", ["0000000000000000", None])
+def test_ensure_replaces_an_idle_daemon_of_the_same_version_but_other_code(cfg, monkeypatch, build):
+    """An update installed under the same version number (or a daemon from before build ids)."""
+    old = {"pid": 999999, "port": cfg.port, "token": "t", "version": __version__, "health": {"busy": False}}
+    if build:
+        old["build"] = build
+    new = {"pid": 1, "port": cfg.port, "token": "t2", "version": __version__, "build": daemon.build_id()}
+    calls = iter([old, new])
+    stopped, messages = [], []
+    monkeypatch.setattr(daemon, "running", lambda c: next(calls))
+    monkeypatch.setattr(daemon, "_shutdown", stopped.append)
+    monkeypatch.setattr(daemon, "_alive", lambda pid: False)
+    monkeypatch.setattr(daemon.subprocess, "Popen", lambda *a, **k: None)
+    assert daemon.ensure(cfg, log=messages.append) is new
+    assert stopped == [old] and "replacing" in messages[0]
+
+
+def test_build_id_changes_with_the_code(monkeypatch, tmp_path):
+    import shutil
+
+    pkg = tmp_path / "showntell"
+    shutil.copytree(Path(daemon.__file__).parent, pkg, ignore=shutil.ignore_patterns("vendor", "__pycache__"))
+    daemon.build_id.cache_clear()
+    monkeypatch.setattr(daemon, "__file__", str(pkg / "daemon.py"))
+    a = daemon.build_id()
+    daemon.build_id.cache_clear()
+    (pkg / "text" / "guide.md").write_text("changed")
+    b = daemon.build_id()
+    daemon.build_id.cache_clear()
+    assert a != b and len(a) == 16
 
 
 def test_ensure_keeps_a_busy_daemon_of_another_version(cfg, monkeypatch):

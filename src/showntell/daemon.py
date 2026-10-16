@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import functools
+import hashlib
 import json
 import os
 import subprocess
 import sys
 import time
 import urllib.request
+from pathlib import Path
 
 from .config import Config
 
@@ -69,7 +72,7 @@ def write_lock(cfg: Config, token: str) -> None:
     tmp = cfg.lockfile.with_suffix(".part")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:
-        json.dump({"pid": os.getpid(), "port": cfg.port, "host": cfg.host, "version": _version(), "token": token,
+        json.dump({"pid": os.getpid(), "port": cfg.port, "host": cfg.host, "version": _version(), "build": build_id(), "token": token,
                    "url": cfg.base_url, "started": time.time()}, f)
     os.replace(tmp, cfg.lockfile)
 
@@ -141,11 +144,12 @@ def ensure(cfg: Config, log=print) -> dict:
 
 def _ensure(cfg: Config, log) -> dict:
     lock = running(cfg)
-    if lock and lock.get("version") != _version():
+    if lock and not same_build(lock):
+        old = f"{lock.get('version')} ({str(lock.get('build') or 'no build id')[:8]})"
         if lock["health"].get("busy"):
-            log(f"showntell: a daemon of version {lock.get('version')} is busy; using it for now")
+            log(f"showntell: a daemon of version {old} is busy; using it for now")
             return lock
-        log(f"showntell: replacing daemon version {lock.get('version')} with {_version()}")
+        log(f"showntell: replacing daemon version {old} with {_version()} ({build_id()[:8]})")
         _shutdown(lock)
         for _ in range(50):
             if not _alive(int(lock["pid"])):
@@ -169,6 +173,26 @@ def _ensure(cfg: Config, log) -> dict:
             return lock
         time.sleep(0.15)
     raise RuntimeError(f"the showntell daemon did not start; see {cfg.data_dir / 'daemon.log'}")
+
+
+def same_build(lock: dict) -> bool:
+    """Whether a running daemon runs this exact code: same version and same build id. A daemon
+    from before build ids counts as different, so it is replaced once it is idle."""
+    return lock.get("version") == _version() and lock.get("build") == build_id()
+
+
+@functools.lru_cache(maxsize=1)
+def build_id() -> str:
+    """A hash of the package's own files (code, player, text; not vendored libraries), so an
+    update installed under the same version number still replaces an idle daemon."""
+    root = Path(__file__).parent
+    h = hashlib.sha256()
+    for p in sorted(root.rglob("*")):
+        if not p.is_file() or "__pycache__" in p.parts or "vendor" in p.parts or p.suffix in (".pyc", ".pyo"):
+            continue
+        h.update(str(p.relative_to(root)).encode())
+        h.update(p.read_bytes())
+    return h.hexdigest()[:16]
 
 
 def _version() -> str:

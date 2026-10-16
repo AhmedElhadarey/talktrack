@@ -72,9 +72,9 @@ def doctor(cfg: Config, args) -> None:
     lock = daemon.running(cfg)
     if lock:
         h = lock["health"]
-        same = lock.get("version") == __version__
+        same = daemon.same_build(lock)
         _row(OK if same else WARN, "daemon", f"running at {lock['url']} (pid {lock['pid']}, version {lock.get('version')}, "
-             f"speech {h['speech']['state']})" + ("" if same else "; it will be replaced when idle"))
+             f"speech {h['speech']['state']})" + ("" if same else "; it runs other code and will be replaced when idle"))
     else:
         with socket.socket() as s:
             free = s.connect_ex(("127.0.0.1", cfg.port)) != 0
