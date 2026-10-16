@@ -45,6 +45,8 @@ Run a daemon without a voice model with `uv run showntell serve --speech fake --
 - **Changelog:** rename `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)` with at least one entry under it.
 - **Tag:** push `vX.Y.Z`. `release.yml` stops unless the tag equals the pyproject version, the manifests agree and the changelog section is dated and non-empty; then it builds, smoke-tests the wheel with `scripts/wheel_smoke.sh` and publishes to PyPI.
 - **Check first:** `uv run scripts/sync_version.py --check --tag vX.Y.Z` runs the same gate locally.
+- **Through Claude Code:** `SHOWNTELL_TEST_CLAUDE=1 uv run pytest -m claude` checks what the model really receives from the tools (the guide, the share-the-link instruction, preview pictures). CI cannot run it; it needs a logged-in `claude` and costs a few cents.
+- **Clean room:** `uv run scripts/provenance_check.py <reference folder>` should match only HTML boilerplate.
 
 ## Reporting bugs
 

@@ -71,6 +71,7 @@ markers = [
     "onnx: needs the cached Kokoro ONNX model",
     "slow: takes more than a few seconds",
     "browser: drives headless Chromium through Playwright",
+    "claude: runs the real Claude Code CLI (opt in with SHOWNTELL_TEST_CLAUDE=1; costs a few cents)",
 ]
 
 [tool.ruff]
