@@ -97,14 +97,18 @@ WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent
 def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
     """MCP server with showntell's tools, prompts and resources, backed by `service`."""
     mcp = MCPServer("showntell", instructions=texts()["instructions"], version=__version__,
-                    website_url="https://github.com/showntell")
+                    website_url="https://github.com/rahimnathwani/showntell")
     voices = ", ".join(VOICES)
 
     async def _root(ctx: Context | None, given: str) -> str | None:
         if given:
             return given
         try:
-            roots = await ctx.session.list_roots()  # type: ignore[union-attr]
+            import warnings
+
+            with warnings.catch_warnings():  # roots are deprecated as of protocol 2026-07-28
+                warnings.simplefilter("ignore")
+                roots = await asyncio.wait_for(ctx.session.list_roots(), 2.0)  # type: ignore[union-attr]
             for r in roots.roots:
                 uri = str(r.uri)
                 if uri.startswith("file://"):
@@ -174,6 +178,7 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
                 parts.append(reply("need_opening", "Nothing to play yet: send the title slide with a spoken sentence."))
             else:
                 status = "pending"
+                await service.playable(handle, 0, give_up=True)  # later calls return at once
                 parts.append(reply("pending", "Audio is still being made; share this link anyway: {url}", url=r["url"]))
             if p.get("guide"):
                 g = guide(p.get("frame", r["frame"]))
@@ -243,6 +248,11 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
     async def walkthroughs_resource() -> str:
         return json.dumps(await service.list(), indent=1)
 
+    @mcp.resource("showntell://walkthroughs/{wid}", name="walkthrough", title="Walkthrough source",
+                  description="The Markdown a walkthrough was written in, to read or revise", mime_type="text/markdown")
+    async def walkthrough_resource(wid: str) -> str:
+        return await service.source(wid)
+
     return mcp
 
 
@@ -266,7 +276,7 @@ def _register_prompt(mcp: MCPServer, name: str, p: dict) -> None:
 # -- web ----------------------------------------------------------------------------------
 
 
-def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: float) -> None:
+def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: float, stop=None) -> None:
     store = service.store
 
     def session_or_404(request: Request):
@@ -386,7 +396,7 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
             return JSONResponse({"error": "forbidden"}, status_code=403)
         method = request.path_params["method"]
         if method == "shutdown":
-            asyncio.get_running_loop().call_later(0.2, _shutdown)
+            asyncio.get_running_loop().call_later(0.2, stop or _shutdown)
             return JSONResponse({"result": "bye"})
         if method not in RPC_METHODS:
             return JSONResponse({"error": "unknown method"}, status_code=404)

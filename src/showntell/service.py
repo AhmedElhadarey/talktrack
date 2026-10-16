@@ -50,10 +50,13 @@ class LocalService:
             "speech": self.speech_status(),
         }
 
-    async def playable(self, handle: str, timeout: float) -> dict:
-        """Wait up to `timeout` for the opening narration. Marks the link shared once it is."""
+    async def playable(self, handle: str, timeout: float, give_up: bool = False) -> dict:
+        """Wait up to `timeout` for the opening narration. Marks the link shared once it is,
+        or at once with `give_up`, so later calls stop waiting."""
         s = self.store.by_handle(handle)
-        status = await s.wait_playable(timeout)
+        status = await s.wait_playable(timeout) if timeout > 0 else (s.first_say().status if s.first_say() else "empty")
+        if give_up and status == "pending":
+            s.w.link_shared = True
         out: dict[str, Any] = {"status": status, "url": s.url, "speech": self.speech_status(), "frame": s.w.frame}
         if status == "error":
             first = s.first_say()
@@ -90,6 +93,12 @@ class LocalService:
     async def list(self) -> list[dict]:
         return self.store.list(20)
 
+    async def source(self, wid: str) -> str:
+        s = self.store.get(wid)
+        if s is None:
+            raise ValueError(f"no walkthrough {wid}")
+        return s.source
+
 
 class RemoteService:
     """Forwards calls to the daemon's `/api/rpc/{method}` route."""
@@ -114,8 +123,8 @@ class RemoteService:
     async def add(self, handle, markdown):
         return await self._call("add", handle=handle, markdown=markdown)
 
-    async def playable(self, handle, timeout):
-        return await self._call("playable", handle=handle, timeout=timeout)
+    async def playable(self, handle, timeout, give_up=False):
+        return await self._call("playable", handle=handle, timeout=timeout, give_up=give_up)
 
     async def revise(self, handle, slide, markdown):
         return await self._call("revise", handle=handle, slide=slide, markdown=markdown)
@@ -126,8 +135,11 @@ class RemoteService:
     async def list(self):
         return await self._call("list")
 
+    async def source(self, wid):
+        return await self._call("source", wid=wid)
 
-RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list"}
+
+RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list", "source"}
 
 
 def mmss(seconds: float | None) -> str:

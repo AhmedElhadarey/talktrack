@@ -107,14 +107,24 @@ def head_sha(root: Path | None) -> str | None:
         return None
 
 
-def file_at(root: Path, rev: str, path: Path) -> str:
+def verify_rev(root: Path, rev: str) -> None:
     if not REV_RE.match(rev) or rev.startswith("-"):
         raise SourceError(f"rev={rev} is not a git revision")
+    try:
+        out = _git(root, "rev-parse", "--verify", "--quiet", f"{rev}^{{commit}}").strip()
+    except SourceError:
+        out = ""
+    if not out:
+        raise SourceError(f"rev={rev} is not a commit in this repository")
+
+
+def file_at(root: Path, rev: str, path: Path) -> str:
+    verify_rev(root, rev)
     rel = os.path.relpath(path, root.resolve())
     try:
         return _git(root, "cat-file", "-p", f"{rev}:./{rel}")
     except SourceError as e:
-        if "does not exist" in str(e) or "exists on disk, but not in" in str(e) or "invalid object" in str(e):
+        if "does not exist" in str(e) or "exists on disk, but not in" in str(e):
             return ""  # file added after that revision
         raise
 
@@ -197,17 +207,26 @@ def _map_range(old: list[str], new: list[str], n0: int, n1: int) -> tuple[int, i
 
 
 def split_unified(body: str) -> tuple[Excerpt, Excerpt]:
-    """Old and new sides from a unified diff body (`-`, `+`, ` ` lines; `@@` sets numbering)."""
+    """Old and new sides from a unified diff body (`-`, `+`, ` ` lines; `@@` sets numbering).
+
+    File headers (`--- a/x`, `+++ b/x`) count only before the first hunk, so a removed SQL
+    comment (`-- note`) stays a removed line. Numbering follows the first hunk.
+    """
     old, new = [], []
     o_start = n_start = None
+    in_hunk = False
     for line in body.split("\n"):
-        if line.startswith(("--- ", "+++ ", "diff ", "index ")):
+        if not in_hunk and line.startswith(("--- ", "+++ ", "diff ", "index ", "new file", "deleted file", "similarity", "rename ")):
             continue
         m = re.match(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
         if m:
             if o_start is None:
                 o_start, n_start = int(m.group(1)), int(m.group(2))
+            in_hunk = True
             continue
+        if line.startswith("\\"):  # "\ No newline at end of file"
+            continue
+        in_hunk = in_hunk or bool(line)
         if line.startswith("-"):
             old.append(line[1:])
         elif line.startswith("+"):
@@ -225,3 +244,7 @@ def split_unified(body: str) -> tuple[Excerpt, Excerpt]:
         old.pop()
         new.pop()
     return Excerpt("\n".join(old), o_start or 1, len(old)), Excerpt("\n".join(new), n_start or 1, len(new))
+
+
+def hunk_count(body: str) -> int:
+    return len(re.findall(r"^@@ ", body, re.M))

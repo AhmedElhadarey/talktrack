@@ -28,17 +28,29 @@ class Guard:
     """Host and Origin checks on every route, JSON-only POSTs, and an access token when the
     daemon is reachable from other machines."""
 
-    def __init__(self, app, cfg: Config) -> None:
+    def __init__(self, app, cfg: Config, on_shutdown=None) -> None:
         self.app = app
+        self.on_shutdown = on_shutdown
         self.allowed = set(LOOPBACK_NAMES)
         if cfg.public_url:
             self.allowed.add((urlparse(cfg.public_url).hostname or "").lower())
         if not cfg.loopback and cfg.host not in ("0.0.0.0", "::"):
             self.allowed.add(cfg.host.lower())
         self.open_hosts = not cfg.loopback and not cfg.public_url  # bound wide without a known name
-        self.token = cfg.access_token if not cfg.loopback else ""
+        self.token = cfg.access_token if (not cfg.loopback or cfg.public_url) else ""
 
     async def __call__(self, scope, receive, send):
+        if scope["type"] == "lifespan" and self.on_shutdown:
+            async def receive_and_clean():
+                msg = await receive()
+                if msg["type"] == "lifespan.shutdown":
+                    try:
+                        self.on_shutdown()
+                    except Exception:
+                        log.exception("cleanup on shutdown failed")
+                return msg
+
+            return await self.app(scope, receive_and_clean, send)
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         headers = {k.decode().lower(): v.decode(errors="replace") for k, v in scope.get("headers", [])}
@@ -104,7 +116,7 @@ def serve(cfg: Config) -> None:
     other = daemon.running(cfg)
     if other:
         raise SystemExit(f"showntell is already running at {other['url']} (pid {other['pid']})")
-    if not cfg.loopback and not cfg.access_token:
+    if (not cfg.loopback or cfg.public_url) and not cfg.access_token:
         cfg.access_token = secrets.token_urlsafe(16)
     port = pick_port(cfg.host, cfg.port)
     if port != cfg.port:
@@ -120,27 +132,38 @@ def serve(cfg: Config) -> None:
     service = LocalService(store)
     mcp = create_mcp(service)
     rpc_token = secrets.token_urlsafe(24)
-    add_routes(mcp, service, rpc_token, started)
+    holder: dict = {}
+
+    def stop() -> None:
+        if holder.get("server"):
+            holder["server"].should_exit = True
+
+    def cleanup() -> None:
+        daemon.clear_lock(cfg)
+        for s in list(store.sessions.values()):
+            s.save_now()
+
+    add_routes(mcp, service, rpc_token, started, stop=stop)
     security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=["127.0.0.1:*", "localhost:*", "[::1]:*"],
         allowed_origins=["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
     )
-    app = Guard(mcp.streamable_http_app(streamable_http_path="/mcp", transport_security=security, host=cfg.host), cfg)
+    app = Guard(mcp.streamable_http_app(streamable_http_path="/mcp", transport_security=security, host=cfg.host), cfg,
+                on_shutdown=cleanup)
 
     async def main() -> None:
         store.loop = asyncio.get_running_loop()
         config = uvicorn.Config(app, host=cfg.host, port=cfg.port, log_level="warning", lifespan="on")
         server = uvicorn.Server(config)
+        holder["server"] = server
         daemon.write_lock(cfg, rpc_token)
         log.info("showntell %s at %s (MCP: http://localhost:%d/mcp, speech: %s)",
                  _version(), cfg.base_url + "/" + suffix, cfg.port, narrator.backend.name)
         try:
             await server.serve()
         finally:
-            daemon.clear_lock(cfg)
-            for s in store.sessions.values():
-                s.save_now()
+            cleanup()
 
     asyncio.run(main())
 

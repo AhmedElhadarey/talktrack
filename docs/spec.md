@@ -41,11 +41,11 @@ graph TB
 | **finish_walkthrough** | `handle`, `questions` (optional list) | summary, `issues` |
 | **list_walkthroughs** | none | recent walkthroughs with handles, titles and links |
 
-All tools return structured content and a readable text version. Tools carry titles and annotations: none are read-only, none destroy data, all work in a closed world.
+All tools return structured content and a readable text version. Tools carry titles and annotations: `list_walkthroughs` is read-only, none destroy data, all work in a closed world.
 
 **Prompts:** `diff`, `file` and `topic` return a ready-made request for a walkthrough of a change, a file or a concept. Claude Code shows them as slash commands.
 
-**Resources:** each walkthrough is a resource holding its Markdown source, so a later session can read and revise it.
+**Resources:** `showntell://walkthroughs` lists recent walkthroughs, and `showntell://walkthroughs/{id}` holds one walkthrough's Markdown source, so a later session can read and revise it.
 
 ## Project root
 
@@ -55,7 +55,7 @@ Code blocks with `file=` and images with a path read from the project root, whic
 2. **MCP roots:** the first root the client reports.
 3. **Shim directory:** the stdio shim's working directory. Claude Code starts stdio servers in the project folder.
 
-Paths must stay inside the root after resolving symbolic links. Git runs with `--no-ext-diff --no-textconv` and `core.fsmonitor=` emptied, so repository config cannot run commands.
+Paths must stay inside the root after resolving symbolic links. Git runs only plumbing commands (`rev-parse`, `cat-file`) with fsmonitor disabled, and diffs are computed in Python, so a repository's diff drivers, filters and hooks never run.
 
 ## Document model
 

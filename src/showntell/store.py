@@ -16,7 +16,7 @@ import time
 import webbrowser
 from pathlib import Path
 
-from .build import Builder
+from .build import SPEED_RANGE, Builder
 from .format import Parser
 from .model import FRAMES, STATE_VERSION, Say, Slide, Walkthrough, public_slide
 from .speech.base import VOICES
@@ -69,7 +69,9 @@ class Session:
         old = self.w.slides[idx]
         text = markdown.strip()
         if not re.match(r"^#{1,6}\s", text):
-            text = f"## {old.title}\n\n{text}"
+            attrs = [f"#{old.id}"] + [f".{c}" for c in old.classes]
+            attrs += [f'{k}="{v}"' for k, v in old.attrs.items() if isinstance(v, str)]
+            text = f"## {old.title} {{{' '.join(attrs)}}}\n\n{text}"
         scratch = Walkthrough(id=self.w.id, key="", report_key="", title=self.w.title, frame=self.w.frame,
                               voice=self.w.voice, speed=self.w.speed, root=self.w.root, sha=self.w.sha)
         b = Builder(scratch, self.store.walk_dir(self.w.id) / "assets")
@@ -275,7 +277,7 @@ class Store:
             title=(title or "Untitled walkthrough").strip()[:120],
             frame=frame,
             voice=voice,
-            speed=max(0.7, min(1.4, float(speed or 1.0))),
+            speed=max(SPEED_RANGE[0], min(SPEED_RANGE[1], float(speed or 1.0))),
             root=root,
             created=time.time(),
             updated=time.time(),

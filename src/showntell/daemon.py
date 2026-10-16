@@ -95,7 +95,7 @@ def ensure(cfg: Config, log=print) -> dict:
         return lock
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     logfile = open(cfg.data_dir / "daemon.log", "ab")
-    args = [sys.executable, "-m", "showntell", "serve", "--port", str(cfg.port), "--host", cfg.host]
+    args = [sys.executable, "-m", "showntell", "serve", "--port", str(cfg.port), "--host", cfg.host, "--data", str(cfg.data_dir)]
     subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=logfile, stderr=logfile, start_new_session=True,
                      env={**os.environ, "PYTHONUNBUFFERED": "1"})
     deadline = time.time() + 30

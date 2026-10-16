@@ -133,9 +133,11 @@ tbody.has-active tr:not(.active) { opacity: 0.5; }
 ::highlight(diff-add) { background-color: var(--add-strong); }
 ::highlight(diff-del) { background-color: var(--del-strong); }
 
-.diff { display: flex; gap: 18px; align-items: flex-start; justify-content: center; width: 100%; }
-body.portrait .diff { flex-direction: column; align-items: stretch; }
-.diff .codebox { flex: 1 1 0; min-width: 0; }
+/* Both panes take the width of the wider one, and the pair is as wide as its content, so
+   fit() can see real line lengths and shrink the diff instead of clipping it. */
+.diff { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; width: max-content; flex: none; }
+body.portrait .diff { grid-template-columns: 1fr; }
+.diff .codebox { min-width: 300px; max-width: none; }
 .diff .code { font-size: 19px; }
 
 /* diagrams, maths, images */

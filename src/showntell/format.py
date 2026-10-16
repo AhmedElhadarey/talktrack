@@ -15,7 +15,7 @@ HEADING_RE = re.compile(r"^ {0,3}(#{1,6})\s+(.*?)\s*$")
 ATTRS_TAIL_RE = re.compile(r"\s*\{([^{}]*)\}\s*$")
 QUOTE_RE = re.compile(r"^ {0,3}>\s?(.*)$")
 ITEM_RE = re.compile(r"^(\s*)([-*+]|\d{1,3}[.)])\s+(.*)$")
-TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$")
+TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$")
 IMAGE_RE = re.compile(r"^\s*!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)\s*(?:\{([^{}]*)\})?\s*$")
 FOOTNOTE_DEF_RE = re.compile(r"^\s*\[\^([^\]\s]+)\]:\s*(.*)$")
 PAUSE_RE = re.compile(r"^\s*\{\s*pause\s*=\s*([\d.]+)\s*s?\s*\}\s*$")
@@ -89,7 +89,7 @@ class Parser:
         self.source += chunk if chunk.endswith("\n") or not chunk else chunk + "\n"
         text = self.pending + chunk
         self.pending = ""
-        text = COMMENT_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
+        text = _strip_comments(text)
         lines = text.split("\n")
         if lines and lines[-1] == "":
             lines.pop()
@@ -264,6 +264,35 @@ class Parser:
         consumed = len(lines) if not self.pending else len(lines) - self.pending.count("\n")
         self.lines_seen = base + max(0, consumed)
         return blocks
+
+
+def _strip_comments(text: str) -> str:
+    """Remove HTML comments outside fenced blocks, keeping line numbers."""
+    out: list[str] = []
+    buf: list[str] = []
+    fence = ""
+
+    def flush() -> None:
+        if buf:
+            out.append(COMMENT_RE.sub(lambda m: "\n" * m.group(0).count("\n"), "".join(buf)))
+            buf.clear()
+
+    for line in text.splitlines(keepends=True):
+        m = FENCE_RE.match(line.rstrip("\n"))
+        if fence:
+            out.append(line)
+            st = line.strip()
+            if st and st[0] == fence[0] and set(st) == {fence[0]} and len(st) >= len(fence):
+                fence = ""
+            continue
+        if m:
+            flush()
+            fence = m.group(1)
+            out.append(line)
+            continue
+        buf.append(line)
+    flush()
+    return "".join(out)
 
 
 def _front_matter(lines: list[str]) -> dict:

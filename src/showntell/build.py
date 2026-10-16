@@ -16,11 +16,12 @@ from .model import Say, Slide, Walkthrough
 
 # Comfortable sizes, measured on the player at each frame (scripts/measure_limits.py).
 LIMITS = {
-    "landscape": {"lines": 18, "width": 80, "diff_lines": 16, "diff_width": 48, "nodes": 12},
-    "square": {"lines": 24, "width": 60, "diff_lines": 20, "diff_width": 36, "nodes": 10},
-    "portrait": {"lines": 30, "width": 40, "diff_lines": 13, "diff_width": 40, "nodes": 8},
+    "landscape": {"lines": 18, "width": 90, "diff_lines": 18, "diff_width": 46, "nodes": 12},
+    "square": {"lines": 26, "width": 68, "diff_lines": 22, "diff_width": 32, "nodes": 10},
+    "portrait": {"lines": 34, "width": 48, "diff_lines": 18, "diff_width": 52, "nodes": 8},
 }
 WORDS_PER_SECOND = 2.7
+SPEED_RANGE = (0.8, 1.3)
 IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"}
 STOPWORDS = set(
     "the a an and or but if then else for from with into onto over under this that these those it its "
@@ -96,14 +97,27 @@ class Builder:
 
     def _apply(self, b: Block) -> None:
         if b.kind == "front":
-            for k in ("title", "frame", "voice"):
-                if b.attrs.get(k):
-                    setattr(self.w, k, b.attrs[k])
-            if b.attrs.get("speed"):
+            from .model import FRAMES
+            from .speech.base import VOICES
+
+            a = b.attrs
+            if a.get("title"):
+                self.w.title = a["title"][:120]
+            if a.get("frame"):
+                if a["frame"] in FRAMES:
+                    self.w.frame = a["frame"]
+                else:
+                    self.issues.append(f"Front matter frame `{a['frame']}` is not one of {', '.join(FRAMES)}; kept {self.w.frame}.")
+            if a.get("voice"):
+                if a["voice"] in VOICES:
+                    self.w.voice = a["voice"]
+                else:
+                    self.issues.append(f"Front matter voice `{a['voice']}` is unknown; kept {self.w.voice}.")
+            if a.get("speed"):
                 try:
-                    self.w.speed = float(b.attrs["speed"])
+                    self.w.speed = max(SPEED_RANGE[0], min(SPEED_RANGE[1], float(a["speed"])))
                 except ValueError:
-                    pass
+                    self.issues.append(f"Front matter speed `{a['speed']}` is not a number; kept {self.w.speed}.")
             return
         if b.kind == "heading":
             self._flush_old()
@@ -264,6 +278,12 @@ class Builder:
             }
         else:
             old, new = sources.split_unified(b.text)
+            hunks = sources.hunk_count(b.text)
+            if hunks > 1:
+                self.issues.append(
+                    f"Line {b.line}: this diff has {hunks} hunks; line numbers follow the first one. "
+                    "Show one hunk per slide, or use file= with rev=."
+                )
             lang = b.attrs.get("lang", "")
             vis = {
                 "lang": lang,
@@ -341,6 +361,9 @@ class Builder:
                     f"The {side} side of a diff shows {len(lines)} lines; diffs read well up to {lim['diff_lines']} per side."
                 )
                 break
+        width = max((len(ln.expandtabs(4)) for side in ("old", "new") for ln in vis[side]["code"].split("\n")), default=0)
+        if width > lim["diff_width"]:
+            self.issues.append(f"A diff has lines of {width} characters; diffs read well up to {lim['diff_width']} per side.")
 
     # -- narration ----------------------------------------------------------------------
 
@@ -460,6 +483,11 @@ class Builder:
     # -- slide-level checks -------------------------------------------------------------
 
     def _check_finished_slide(self, s: Slide) -> None:
+        if not s.visual and s.kind not in ("title",):
+            for x in s.says:
+                for c in getattr(x, "_cues", None) or []:
+                    if c.target.strip() not in ("", s.id, "visual", "slide"):
+                        self.issues.append(f"Slide `{s.id}` has no visual, so the cue [{c.label}](#{c.target}) has nothing to point at.")
         if not any(x.text for x in s.says):
             self.issues.append(f"Slide `{s.id}` has no narration. Every slide needs at least one spoken paragraph.")
             return
@@ -473,9 +501,9 @@ class Builder:
                     f"Slide `{s.id}` shows {n} lines with about {secs:.0f} s of narration. Say more, or show fewer lines."
                 )
         shown = " ".join([s.shown] + [it.get("body", "") for it in s.visual.get("items", [])])
-        spoken = " ".join(x.text for x in s.says)
+        spoken = " " + " ".join(re.findall(r"[\w'-]+", " ".join(x.text for x in s.says).lower())) + " "
         for chunk in _phrases(shown, 7):
-            if chunk in _norm(spoken):
+            if f" {chunk} " in spoken:
                 self.issues.append(
                     f"Slide `{s.id}`: the narration reads the on-screen text aloud (\"{chunk[:40]}...\"). "
                     "Say what the screen does not."
@@ -532,9 +560,8 @@ def _lang_from_name(name: str) -> str:
 
 
 NODE_RE = re.compile(
-    r"(?<![\w-])([A-Za-z_][\w-]*)\s*(\(\[|\[\[|\[\(|\(\(\(|\(\(|\{\{|\[/|\[\\|\[|\(|\{|>)\s*(\"[^\"]*\"|[^\]\)\}\n]*?)\s*(\]\)|\]\]|\)\]|\)\)\)|\)\)|\}\}|/\]|\\\]|\]|\)|\})"
+    r"(?<![\w-])([A-Za-z_]\w*(?:-\w+)*)\s*(\(\[|\[\[|\[\(|\(\(\(|\(\(|\{\{|\[/|\[\\|\[|\(|\{|>)\s*(\"[^\"]*\"|[^\]\)\}\n]*?)\s*(\]\)|\]\]|\)\]|\)\)\)|\)\)|\}\}|/\]|\\\]|\]|\)|\})"
 )
-EDGE_ID_RE = re.compile(r"(?<![\w\"-])([A-Za-z_][\w]*)(?=\s*(?:-->|---|-\.->|==>|-\.-|--[^>]|<-->|--o|--x|&)|(?<=>)\s*$)")
 EDGE_LABEL_RE = re.compile(r"\|\s*\"?([^|\"]+?)\"?\s*\||--\s+([^->|][^->]*?)\s+-->")
 
 
@@ -564,7 +591,9 @@ def parse_mermaid(src: str) -> tuple[dict, list, list]:
                 nodes[nid] = label or nodes.get(nid, nid)
             stripped = NODE_RE.sub(lambda m: m.group(1), line)
             stripped = re.sub(r"\|[^|]*\|", " ", stripped)
-            for nid in re.findall(r"(?<![\w-])([A-Za-z_][\w]*)(?![\w-])", stripped):
+            # edge text written inline: a -- calls --> b, a -. maybe .-> b, a == sure ==> b
+            stripped = re.sub(r"(--|-\.|==)\s+[^-=.>][^>]*?\s+(-->|\.->|==>|---)", r" \2 ", stripped)
+            for nid in re.findall(r"(?<![\w-])([A-Za-z_]\w*(?:-\w+)*)(?![\w])", stripped):
                 if nid in ("end", "subgraph", "TD", "TB", "LR", "RL", "BT") or nid in nodes:
                     continue
                 if re.search(rf"(?<![\w-]){re.escape(nid)}\s*(-|=|&|$)", stripped) or re.search(
@@ -581,7 +610,7 @@ def parse_mermaid(src: str) -> tuple[dict, list, list]:
                     order.append(m.group(1))
                 nodes[m.group(1)] = (m.group(2) or m.group(1)).strip()
                 continue
-            m = re.match(r"([\w-]+)\s*[-=.]*[>x)]+[+-]?\s*([\w-]+)\s*:\s*(.+)$", line)
+            m = re.match(r"(\w+(?:-\w+)*)\s*(?:<<)?-{1,2}(?:>>|>|x|\))[+-]?\s*(\w+(?:-\w+)*)\s*:\s*(.+)$", line)
             if m:
                 for nid in (m.group(1), m.group(2)):
                     if nid not in nodes:

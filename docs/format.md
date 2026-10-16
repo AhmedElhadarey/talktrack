@@ -186,13 +186,13 @@ Everything is visible once the slide's narration ends.
 
 ## Frames and limits
 
-| Frame | Size | Code lines | Code width |
-|---|---|---|---|
-| **landscape** | 1280 × 720 | 18 | 80 |
-| **square** | 960 × 960 | 24 | 60 |
-| **portrait** | 720 × 1280 | 30 | 40 |
+| Frame | Size | Code lines | Code width | Diff lines per side | Diff width per side |
+|---|---|---|---|---|---|
+| **landscape** | 1280 × 720 | 18 | 90 | 18 | 46 |
+| **square** | 960 × 960 | 26 | 68 | 22 | 32 |
+| **portrait** | 720 × 1280 | 34 | 48 | 18 | 52 |
 
-Longer code still renders, but smaller. A diff shows both sides at half these widths in landscape and square, and stacks the sides in portrait.
+These are the sizes that still render at a comfortable reading size, measured with `scripts/measure_limits.py`. Larger code still renders, but smaller. Diffs show the two sides next to each other in landscape and square, and stacked in portrait.
 
 ## Reserved for later versions
 
