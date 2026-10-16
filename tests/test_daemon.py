@@ -200,3 +200,39 @@ def test_shutdown_clears_the_lockfile(cfg, fake_daemon_env):
     fake_daemon_env.append(int(lock["pid"]))
     _shut_down(cfg, lock)
     assert not cfg.lockfile.exists()
+
+
+@pytest.mark.slow
+def test_concurrent_clients_share_one_daemon(tmp_path):
+    """Several MCP clients starting at once must not each start a daemon."""
+    import concurrent.futures
+    import os
+    import socket
+    import urllib.request
+
+    from showntell import daemon
+    from showntell.config import Config
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    old = os.environ.get("SHOWNTELL_SPEECH")
+    os.environ["SHOWNTELL_SPEECH"] = "fake"
+    try:
+        def start(_):
+            cfg = Config()
+            cfg.data_dir, cfg.port = tmp_path, port
+            return daemon.ensure(cfg, log=lambda m: None)["pid"]
+
+        with concurrent.futures.ThreadPoolExecutor(4) as ex:
+            pids = set(ex.map(start, range(4)))
+        assert len(pids) == 1
+        lock = json.loads((tmp_path / "daemon.json").read_text())
+        req = urllib.request.Request(f"http://127.0.0.1:{lock['port']}/api/rpc/shutdown", data=b"{}", method="POST",
+                                     headers={"Authorization": f"Bearer {lock['token']}", "Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=3).read()
+    finally:
+        if old is None:
+            os.environ.pop("SHOWNTELL_SPEECH", None)
+        else:
+            os.environ["SHOWNTELL_SPEECH"] = old

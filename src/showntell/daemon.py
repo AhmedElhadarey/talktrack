@@ -12,6 +12,51 @@ import urllib.request
 from .config import Config
 
 
+class FileLock:
+    """An exclusive lock on a file, held until released or the process exits."""
+
+    def __init__(self, path, blocking: bool = True) -> None:
+        self.path, self.blocking, self.fh = path, blocking, None
+
+    def acquire(self) -> bool:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.fh = open(self.path, "a+")
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                self.fh.seek(0)
+                mode = msvcrt.LK_LOCK if self.blocking else msvcrt.LK_NBLCK
+                msvcrt.locking(self.fh.fileno(), mode, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(self.fh, fcntl.LOCK_EX | (0 if self.blocking else fcntl.LOCK_NB))
+            return True
+        except OSError:
+            self.fh.close()
+            self.fh = None
+            return False
+
+    def release(self) -> None:
+        if self.fh:
+            self.fh.close()  # closing drops the lock
+            self.fh = None
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.release()
+
+
+def instance_lock(cfg: Config) -> FileLock | None:
+    """Held by the running daemon for its lifetime: one daemon per data folder."""
+    lock = FileLock(cfg.data_dir / "daemon.instance.lock", blocking=False)
+    return lock if lock.acquire() else None
+
+
 def read_lock(cfg: Config) -> dict | None:
     try:
         return json.loads(cfg.lockfile.read_text())
@@ -87,7 +132,14 @@ def _shutdown(lock: dict) -> None:
 
 
 def ensure(cfg: Config, log=print) -> dict:
-    """Return the lock of a running daemon of this version, starting or replacing one if needed."""
+    """Return the lock of a running daemon of this version, starting or replacing one if needed.
+    Several clients starting at once agree on one daemon: the check and the start happen under
+    a file lock."""
+    with FileLock(cfg.data_dir / "daemon.start.lock"):
+        return _ensure(cfg, log)
+
+
+def _ensure(cfg: Config, log) -> dict:
     lock = running(cfg)
     if lock and lock.get("version") != _version():
         if lock["health"].get("busy"):
@@ -110,7 +162,7 @@ def ensure(cfg: Config, log=print) -> dict:
         detach = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
     subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=logfile, stderr=logfile,
                      env={**os.environ, "PYTHONUNBUFFERED": "1"}, **detach)
-    deadline = time.time() + 30
+    deadline = time.time() + 60
     while time.time() < deadline:
         lock = running(cfg)
         if lock:

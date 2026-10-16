@@ -113,9 +113,11 @@ def pick_port(host: str, preferred: int, tries: int = 20) -> int:
 def serve(cfg: Config) -> None:
     started = time.time()
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
-    other = daemon.running(cfg)
-    if other:
-        raise SystemExit(f"showntell is already running at {other['url']} (pid {other['pid']})")
+    held = daemon.instance_lock(cfg)
+    if held is None:
+        other = daemon.running(cfg)
+        where = f" at {other['url']} (pid {other['pid']})" if other else ""
+        raise SystemExit(f"showntell is already running for {cfg.data_dir}{where}")
     if (not cfg.loopback or cfg.public_url) and not cfg.access_token:
         cfg.access_token = secrets.token_urlsafe(16)
     port = pick_port(cfg.host, cfg.port)
