@@ -1,0 +1,769 @@
+{
+ "format": 1,
+ "id": "new-kinds",
+ "title": "new-kinds",
+ "frame": "landscape",
+ "theme": "dark",
+ "tokens": {},
+ "status": "finished",
+ "questions": [],
+ "notes": {},
+ "slides": [
+  {
+   "id": "new-kinds",
+   "rev": 1,
+   "kind": "title",
+   "title": "New kinds",
+   "classes": [],
+   "shown": "",
+   "visual": {},
+   "says": [
+    {
+     "id": "new-kinds.1.1",
+     "status": "ready",
+     "text": "Three new visuals.",
+     "cues": [],
+     "notes": [],
+     "code": [],
+     "audio": "audio/aad37f8eaf16b52b0f988a98.wav",
+     "duration": 0.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 5
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 6,
+       "c1": 9
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 10,
+       "c1": 18
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lat",
+   "rev": 1,
+   "kind": "chart",
+   "title": "Latency",
+   "classes": [
+    "build"
+   ],
+   "shown": "",
+   "visual": {
+    "type": "bar",
+    "title": "p95 latency",
+    "unit": "ms",
+    "xlabel": "",
+    "ylabel": "",
+    "categories": [
+     {
+      "id": "read",
+      "label": "read",
+      "values": [
+       420.0,
+       180.0
+      ]
+     },
+     {
+      "id": "write",
+      "label": "write",
+      "values": [
+       610.0,
+       390.0
+      ]
+     },
+     {
+      "id": "list",
+      "label": "list",
+      "values": [
+       220.0,
+       205.0
+      ]
+     }
+    ],
+    "series": [
+     {
+      "id": "before",
+      "name": "before"
+     },
+     {
+      "id": "after",
+      "name": "after"
+     }
+    ],
+    "ids": [
+     "read",
+     "write",
+     "list"
+    ]
+   },
+   "says": [
+    {
+     "id": "lat.1.1",
+     "status": "ready",
+     "text": "The read path gained the most; writes less; listing barely moved.",
+     "cues": [
+      {
+       "at": 4,
+       "end": 13,
+       "label": "read path",
+       "target": "read",
+       "text": "",
+       "kind": "item",
+       "id": "read",
+       "t": 0.3
+      },
+      {
+       "at": 31,
+       "end": 37,
+       "label": "writes",
+       "target": "write",
+       "text": "",
+       "kind": "item",
+       "id": "write",
+       "t": 1.55
+      },
+      {
+       "at": 44,
+       "end": 51,
+       "label": "listing",
+       "target": "list",
+       "text": "",
+       "kind": "item",
+       "id": "list",
+       "t": 2.05
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/2145f893f03ebff6499a90aa.wav",
+     "duration": 2.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 3
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 4,
+       "c1": 8
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 9,
+       "c1": 13
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 14,
+       "c1": 20
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 21,
+       "c1": 24
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 25,
+       "c1": 30
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 31,
+       "c1": 37
+      },
+      {
+       "s": 1.8,
+       "e": 2.013,
+       "c0": 38,
+       "c1": 43
+      },
+      {
+       "s": 2.05,
+       "e": 2.262,
+       "c0": 44,
+       "c1": 51
+      },
+      {
+       "s": 2.3,
+       "e": 2.512,
+       "c0": 52,
+       "c1": 58
+      },
+      {
+       "s": 2.55,
+       "e": 2.762,
+       "c0": 59,
+       "c1": 65
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "where",
+   "rev": 1,
+   "kind": "chart",
+   "title": "Where time goes",
+   "classes": [],
+   "shown": "",
+   "visual": {
+    "type": "hbar",
+    "title": "",
+    "unit": "%",
+    "xlabel": "",
+    "ylabel": "",
+    "categories": [
+     {
+      "id": "database-queries",
+      "label": "Database queries",
+      "values": [
+       46.0
+      ]
+     },
+     {
+      "id": "template-rendering",
+      "label": "Template rendering",
+      "values": [
+       22.0
+      ]
+     },
+     {
+      "id": "json-serialisation",
+      "label": "JSON serialisation",
+      "values": [
+       17.0
+      ]
+     },
+     {
+      "id": "network",
+      "label": "Network",
+      "values": [
+       15.0
+      ]
+     }
+    ],
+    "series": [],
+    "ids": [
+     "database-queries",
+     "template-rendering",
+     "json-serialisation",
+     "network"
+    ]
+   },
+   "says": [
+    {
+     "id": "where.1.1",
+     "status": "ready",
+     "text": "Database queries dominate.",
+     "cues": [
+      {
+       "at": 0,
+       "end": 16,
+       "label": "Database queries",
+       "target": "database-queries",
+       "text": "",
+       "kind": "item",
+       "id": "database-queries",
+       "t": 0.05
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/4f9b1d8fbc98619ae5ed5407.wav",
+     "duration": 0.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 8
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 9,
+       "c1": 16
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 17,
+       "c1": 26
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "scale",
+   "rev": 1,
+   "kind": "chart",
+   "title": "Scaling",
+   "classes": [],
+   "shown": "",
+   "visual": {
+    "type": "line",
+    "title": "",
+    "unit": "ms",
+    "xlabel": "requests per second",
+    "ylabel": "latency",
+    "x": [
+     "100",
+     "200",
+     "400",
+     "800",
+     "1600"
+    ],
+    "series": [
+     {
+      "id": "p50",
+      "name": "p50",
+      "values": [
+       12.0,
+       13.0,
+       15.0,
+       22.0,
+       48.0
+      ]
+     },
+     {
+      "id": "p99",
+      "name": "p99",
+      "values": [
+       40.0,
+       52.0,
+       90.0,
+       210.0,
+       640.0
+      ]
+     }
+    ],
+    "ids": [
+     "p50",
+     "p99"
+    ]
+   },
+   "says": [
+    {
+     "id": "scale.1.1",
+     "status": "ready",
+     "text": "The p99 line bends upward long before the median.",
+     "cues": [
+      {
+       "at": 4,
+       "end": 12,
+       "label": "p99 line",
+       "target": "p99",
+       "text": "",
+       "kind": "item",
+       "id": "p99",
+       "t": 0.3
+      },
+      {
+       "at": 38,
+       "end": 48,
+       "label": "the median",
+       "target": "p50",
+       "text": "",
+       "kind": "item",
+       "id": "p50",
+       "t": 1.8
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/88c8f69e72e84a10dda5b5bc.wav",
+     "duration": 2.4,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 3
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 4,
+       "c1": 7
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 8,
+       "c1": 12
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 13,
+       "c1": 18
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 19,
+       "c1": 25
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 26,
+       "c1": 30
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 31,
+       "c1": 37
+      },
+      {
+       "s": 1.8,
+       "e": 2.013,
+       "c0": 38,
+       "c1": 41
+      },
+      {
+       "s": 2.05,
+       "e": 2.262,
+       "c0": 42,
+       "c1": 49
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "term",
+   "rev": 1,
+   "kind": "terminal",
+   "title": "Running the tests",
+   "classes": [
+    "build"
+   ],
+   "shown": "",
+   "visual": {
+    "code": "$ uv run pytest -q\n........................................ [100%]\n720 passed in 51.2s\n$ uv run ruff check\nAll checks passed!",
+    "start": 1,
+    "lines": [
+     {
+      "n": 1,
+      "cmd": true,
+      "prompt": "$",
+      "text": "uv run pytest -q"
+     },
+     {
+      "n": 2,
+      "cmd": false,
+      "prompt": "",
+      "text": "........................................ [100%]"
+     },
+     {
+      "n": 3,
+      "cmd": false,
+      "prompt": "",
+      "text": "720 passed in 51.2s"
+     },
+     {
+      "n": 4,
+      "cmd": true,
+      "prompt": "$",
+      "text": "uv run ruff check"
+     },
+     {
+      "n": 5,
+      "cmd": false,
+      "prompt": "",
+      "text": "All checks passed!"
+     }
+    ],
+    "title": "Terminal"
+   },
+   "says": [
+    {
+     "id": "term.1.1",
+     "status": "ready",
+     "text": "First the tests run, then the linter.",
+     "cues": [
+      {
+       "at": 6,
+       "end": 15,
+       "label": "the tests",
+       "target": "L1",
+       "text": "",
+       "kind": "lines",
+       "side": "new",
+       "l0": 1,
+       "l1": 1,
+       "t": 0.3
+      },
+      {
+       "at": 26,
+       "end": 36,
+       "label": "the linter",
+       "target": "L4",
+       "text": "",
+       "kind": "lines",
+       "side": "new",
+       "l0": 4,
+       "l1": 4,
+       "t": 1.3
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/fee1f2fde8038163b04a9b17.wav",
+     "duration": 1.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 5
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 6,
+       "c1": 9
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 10,
+       "c1": 15
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 16,
+       "c1": 20
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 21,
+       "c1": 25
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 26,
+       "c1": 29
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 30,
+       "c1": 37
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "layout",
+   "rev": 1,
+   "kind": "tree",
+   "title": "Layout",
+   "classes": [
+    "build"
+   ],
+   "shown": "",
+   "visual": {
+    "items": [
+     {
+      "id": "src",
+      "name": "src/",
+      "depth": 0,
+      "folder": true,
+      "note": ""
+     },
+     {
+      "id": "src/showntell",
+      "name": "showntell/",
+      "depth": 1,
+      "folder": true,
+      "note": ""
+     },
+     {
+      "id": "src/showntell/build.py",
+      "name": "build.py",
+      "depth": 2,
+      "folder": false,
+      "note": "Markdown to slides"
+     },
+     {
+      "id": "src/showntell/kinds.py",
+      "name": "kinds.py",
+      "depth": 2,
+      "folder": false,
+      "note": "charts, terminals, trees"
+     },
+     {
+      "id": "src/showntell/static",
+      "name": "static/",
+      "depth": 2,
+      "folder": true,
+      "note": ""
+     },
+     {
+      "id": "src/showntell/static/js",
+      "name": "js/",
+      "depth": 3,
+      "folder": true,
+      "note": ""
+     },
+     {
+      "id": "src/showntell/static/js/render.js",
+      "name": "render.js",
+      "depth": 4,
+      "folder": false,
+      "note": ""
+     },
+     {
+      "id": "tests",
+      "name": "tests/",
+      "depth": 0,
+      "folder": true,
+      "note": ""
+     },
+     {
+      "id": "README.md",
+      "name": "README.md",
+      "depth": 0,
+      "folder": false,
+      "note": ""
+     }
+    ],
+    "ids": [
+     "src",
+     "src/showntell",
+     "src/showntell/build.py",
+     "src/showntell/kinds.py",
+     "src/showntell/static",
+     "src/showntell/static/js",
+     "src/showntell/static/js/render.js",
+     "tests",
+     "README.md"
+    ],
+    "title": ""
+   },
+   "says": [
+    {
+     "id": "layout.1.1",
+     "status": "ready",
+     "text": "The builder turns Markdown into slides, and render.js draws them.",
+     "cues": [
+      {
+       "at": 4,
+       "end": 11,
+       "label": "builder",
+       "target": "build.py",
+       "text": "",
+       "kind": "item",
+       "id": "src/showntell/build.py",
+       "t": 0.3
+      },
+      {
+       "at": 44,
+       "end": 53,
+       "label": "render.js",
+       "target": "render.js",
+       "text": "",
+       "kind": "item",
+       "id": "src/showntell/static/js/render.js",
+       "t": 1.8
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/587272e5c11482a6ab88a0ce.wav",
+     "duration": 3.15,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 3
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 4,
+       "c1": 11
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 12,
+       "c1": 17
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 18,
+       "c1": 26
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 27,
+       "c1": 31
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 32,
+       "c1": 39
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 40,
+       "c1": 43
+      },
+      {
+       "s": 1.8,
+       "e": 2.512,
+       "c0": 44,
+       "c1": 53
+      },
+      {
+       "s": 2.55,
+       "e": 2.762,
+       "c0": 54,
+       "c1": 59
+      },
+      {
+       "s": 2.8,
+       "e": 3.012,
+       "c0": 60,
+       "c1": 65
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
