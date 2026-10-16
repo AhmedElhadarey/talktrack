@@ -118,33 +118,8 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
             pass
         return project_dir_default
 
-    @mcp.tool(title=tool_text("start_walkthrough", "title", "Start walkthrough"),
-              description=tool_text("start_walkthrough"), annotations=WRITE)
-    async def start_walkthrough(
-        title: Annotated[str, Field(description=arg_text("start_walkthrough", "title"))],
-        frame: Annotated[Literal["landscape", "square", "portrait"], Field(description=arg_text("start_walkthrough", "frame"))] = "landscape",
-        voice: Annotated[str, Field(description=arg_text('start_walkthrough', 'voice') + ' ' + ', '.join(VOICES) + '.')] = "",
-        speed: Annotated[float, Field(description=arg_text("start_walkthrough", "speed"))] = 1.0,
-        project_dir: Annotated[str, Field(description=arg_text("start_walkthrough", "project_dir"))] = "",
-        ctx: Context = None,  # type: ignore[assignment]
-    ) -> CallToolResult:
-        try:
-            r = await service.start(title, frame, voice, speed, await _root(ctx, project_dir))
-        except ValueError as e:
-            return _error(str(e))
-        text = reply("started", "Handle: {handle}\nLink (not playable yet): {url}\nNext: call add_slides now with only the title slide and one or two spoken sentences.",
-                     handle=r["handle"], url=r["url"])
-        if not r["speech"]["ready"]:
-            text += "\n" + reply("loading", "The voice model is {status}; the first add_slides call may take longer.",
-                                 status=r["speech"]["describe"])
-        return _result(text, {"handle": r["handle"], "url": r["url"], "status": "started", "issues": []})
-
-    @mcp.tool(title=tool_text("add_slides", "title", "Add slides"), description=tool_text("add_slides"), annotations=WRITE)
-    async def add_slides(
-        handle: Annotated[str, Field(description=arg_text("add_slides", "handle"))],
-        markdown: Annotated[str, Field(description=arg_text("add_slides", "markdown"))],
-        ctx: Context = None,  # type: ignore[assignment]
-    ) -> CallToolResult:
+    async def _append(handle: str, markdown: str, ctx: Context | None) -> CallToolResult:
+        """Add Markdown; until the link is shared, wait for the opening audio and return the link."""
         try:
             r = await service.add(handle, markdown)
         except ValueError as e:
@@ -200,6 +175,43 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
         data = {"url": r["url"], "status": status, "issues": r["issues"], "player_issues": r["player_issues"],
                 "slides": r["total_slides"]}
         return _result("\n".join(parts), data)
+
+    @mcp.tool(title=tool_text("start_walkthrough", "title", "Start walkthrough"),
+              description=tool_text("start_walkthrough"), annotations=WRITE)
+    async def start_walkthrough(
+        title: Annotated[str, Field(description=arg_text("start_walkthrough", "title"))],
+        frame: Annotated[Literal["landscape", "square", "portrait"], Field(description=arg_text("start_walkthrough", "frame"))] = "landscape",
+        voice: Annotated[str, Field(description=arg_text('start_walkthrough', 'voice') + ' ' + ', '.join(VOICES) + '.')] = "",
+        speed: Annotated[float, Field(description=arg_text("start_walkthrough", "speed"))] = 1.0,
+        project_dir: Annotated[str, Field(description=arg_text("start_walkthrough", "project_dir"))] = "",
+        opening: Annotated[str, Field(description=arg_text("start_walkthrough", "opening"))] = "",
+        ctx: Context = None,  # type: ignore[assignment]
+    ) -> CallToolResult:
+        try:
+            r = await service.start(title, frame, voice, speed, await _root(ctx, project_dir))
+        except ValueError as e:
+            return _error(str(e))
+        head = reply("started", "Handle: {handle}\nLink (not playable yet): {url}\nNext: call add_slides now with only the title slide and one or two spoken sentences.",
+                     handle=r["handle"], url=r["url"])
+        if opening.strip():
+            # The opening came with the call: voice it now and return the link, saving a round trip.
+            res = await _append(r["handle"], opening, ctx)
+            text = f"Handle: {r['handle']}\n" + res.content[0].text
+            data = {**(res.structured_content or {}), "handle": r["handle"]}
+            return CallToolResult(content=[TextContent(type="text", text=text)], structured_content=data, is_error=res.is_error)
+        text = head
+        if not r["speech"]["ready"]:
+            text += "\n" + reply("loading", "The voice model is {status}; the first add_slides call may take longer.",
+                                 status=r["speech"]["describe"])
+        return _result(text, {"handle": r["handle"], "url": r["url"], "status": "started", "issues": []})
+
+    @mcp.tool(title=tool_text("add_slides", "title", "Add slides"), description=tool_text("add_slides"), annotations=WRITE)
+    async def add_slides(
+        handle: Annotated[str, Field(description=arg_text("add_slides", "handle"))],
+        markdown: Annotated[str, Field(description=arg_text("add_slides", "markdown"))],
+        ctx: Context = None,  # type: ignore[assignment]
+    ) -> CallToolResult:
+        return await _append(handle, markdown, ctx)
 
     @mcp.tool(title=tool_text("revise_slide", "title", "Revise slide"), description=tool_text("revise_slide"), annotations=WRITE)
     async def revise_slide(

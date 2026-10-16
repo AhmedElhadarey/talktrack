@@ -7,8 +7,7 @@ This is the reference for how showntell behaves. The slide format is in [format.
 ```mermaid
 graph TB
   subgraph agent [Coding agent]
-    S[start_walkthrough] --> O[add_slides with the title slide only]
-    O --> L[share the link]
+    S[start_walkthrough with the opening] --> L[share the link]
     L --> M[add_slides one to three slides at a time]
     M --> F[finish_walkthrough]
   end
@@ -20,14 +19,14 @@ graph TB
   subgraph player [Browser player]
     R[Renderer driven by narration time]
   end
-  O --> P
+  S --> P
   M --> P
   T --> R
   B -->|changed slides over SSE| R
 ```
 
-1. **Start:** `start_walkthrough` creates the walkthrough and returns a handle and its link. The reply is short, and the essentials of the format are already in the tool description, so the agent writes the opening at once.
-2. **Opening:** the agent sends only the title slide and one or two sentences. The call returns when that narration is voiced: about 0.3 s with the model loaded. The reply says the link is playable, tells the agent to share it now, and carries the full authoring guide.
+1. **Start with the opening:** `start_walkthrough` takes the title and, in `opening`, the title slide and one or two spoken sentences. It creates the walkthrough, voices the opening and returns when it is playable, about 0.3 s after the call arrives, with the handle, the link, an instruction to share the link now, and the full authoring guide. One model turn produces a shareable link.
+2. **Or start, then open:** without `opening`, `start_walkthrough` returns the handle at once, and the first `add_slides` call carries the opening and returns the link the same way.
 3. **Body:** the agent adds one to three slides per call. Each call returns at once with problems found in what it sent and anything the open player reported.
 4. **Finish:** `finish_walkthrough` closes it, records the end questions, and returns a summary with remaining problems.
 
@@ -35,7 +34,7 @@ graph TB
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| **start_walkthrough** | `title`, `frame` (landscape, square, portrait), `voice`, `speed`, `project_dir` | `handle`, `url`, short next step |
+| **start_walkthrough** | `title`, `frame` (landscape, square, portrait), `voice`, `speed`, `project_dir`, `opening` | `handle`, `url`; with `opening`, the playable link and the guide |
 | **add_slides** | `handle`, `markdown` | `status`, `url` once playable, `issues`, progress, the guide on the first playable reply |
 | **revise_slide** | `handle`, `slide` (id), `markdown` (one slide) | `issues`; only changed narration is voiced again |
 | **finish_walkthrough** | `handle`, `questions` (optional list) | summary, `issues` |

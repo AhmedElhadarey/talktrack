@@ -133,6 +133,24 @@ def norm_words(s: str) -> list[str]:
     return re.findall(r"[a-z0-9]+", s.lower())
 
 
+def spoken_words(display: str, code: list) -> list[str]:
+    """Words the voice says for a piece of display text: identifiers split, symbols named,
+    inline phonemes reduced to their word."""
+    from showntell.pronounce import speakable
+
+    text = speakable(display, code, [], {}).text
+    text = re.sub(r"\[([^\]]*)\]\(/[^)]*/\)", r"\1", text)
+    return norm_words(text)
+
+
+def heard_as(word: str, token: str) -> bool:
+    """A transcript token matches a spoken word, allowing plurals and hyphen splits."""
+    if word == token:
+        return True
+    short, long_ = sorted((word, token), key=len)
+    return len(short) >= 3 and long_.startswith(short)
+
+
 def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
     """Cue timing against whisper word times, and words missing from the transcript."""
     import mlx_whisper
@@ -154,21 +172,23 @@ def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
             flat = [(t, s) for ws, s in words for t in ws]
             heard = {t for t, _ in flat}
             audio_s += say.duration
-            # terms written in backticks must be audible
+            # terms written in backticks must be audible, in the form the voice says them
             for a, b in say.code:
-                for t in norm_words(say.text[a:b]):
-                    if len(t) > 2 and t not in heard:
+                for t in spoken_words(say.text[a:b], [(0, b - a)]):
+                    if len(t) > 2 and not any(heard_as(t, h) for h in heard):
                         missing_terms.append(say.text[a:b])
                         break
             for c in say.cues:
                 if c.get("inferred") or "t" not in c:
                     continue
                 cue_total += 1
-                label = norm_words(c.get("label", ""))
+                a, b = c["at"], c["end"]
+                code_in = [(max(a, x) - a, min(b, y) - a) for x, y in say.code if x < b and y > a]
+                label = spoken_words(say.text[a:b], code_in)
                 if not label:
                     continue
-                # candidate whisper times for the label's first word, nearest the expected time
-                cands = [s for t, s in flat if t == label[0]]
+                # candidate whisper times for the label's first spoken word, nearest the expected time
+                cands = [s for t, s in flat if heard_as(label[0], t)]
                 if not cands:
                     continue
                 best = min(cands, key=lambda s: abs(s - c["t"]))

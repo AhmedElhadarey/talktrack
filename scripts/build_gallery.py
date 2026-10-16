@@ -1,9 +1,12 @@
 """Build gallery/: exported walkthroughs sharing one copy of the player, plus an index page.
 
     uv run python scripts/build_gallery.py gallery.json
+    uv run python scripts/build_gallery.py --from-results eval/results/<run>.json --data <eval data folder>
 
 gallery.json lists entries: [{"slug": "...", "id": "<walkthrough id>", "blurb": "..."}], read
-from the data folder in SHOWNTELL_DATA (default ~/.local/share/showntell).
+from the data folder in SHOWNTELL_DATA (default ~/.local/share/showntell). With
+--from-results, the entries come from an eval run made with --keep, using each prompt as
+the blurb.
 """
 
 from __future__ import annotations
@@ -24,9 +27,35 @@ from showntell.model import Walkthrough  # noqa: E402
 OUT = ROOT / "gallery"
 
 
-def main() -> None:
-    entries = json.loads(Path(sys.argv[1]).read_text())
+def _entries() -> tuple[list[dict], Config]:
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("entries", nargs="?")
+    ap.add_argument("--from-results")
+    ap.add_argument("--data")
+    args = ap.parse_args()
     cfg = Config()
+    if args.data:
+        cfg.data_dir = Path(args.data)
+    if args.from_results:
+        prompts = {}
+        for f in (ROOT / "eval").glob("*.json"):
+            for p in json.loads(f.read_text()):
+                prompts[p["id"]] = p["prompt"]
+        entries = []
+        for r in json.loads(Path(args.from_results).read_text()):
+            if not r.get("url"):
+                continue
+            blurb = prompts.get(r["id"], "").removeprefix("Use showntell to ").split(". ")[0]
+            entries.append({"slug": r["id"], "id": r["url"].rstrip("/").rsplit("/", 1)[-1],
+                            "blurb": f"Asked to {blurb}." if blurb else ""})
+        return entries, cfg
+    return json.loads(Path(args.entries).read_text()), cfg
+
+
+def main() -> None:
+    entries, cfg = _entries()
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir()

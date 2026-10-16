@@ -37,8 +37,7 @@ On a Mac, `showntell autostart on` starts the daemon at login, so the first walk
 ```mermaid
 graph TB
   subgraph agent [Your coding agent]
-    S[start_walkthrough] --> O[add_slides with the title slide]
-    O --> L[shares the link with you]
+    S[start_walkthrough with the opening] --> L[shares the link with you]
     L --> M[add_slides one to three slides at a time]
     M --> F[finish_walkthrough]
   end
@@ -50,13 +49,13 @@ graph TB
   subgraph browser [Your browser]
     R[Player driven by narration time]
   end
-  O --> P
+  S --> P
   M --> P
   K --> R
   B -->|changed slides over SSE| R
 ```
 
-1. **Opening first.** The agent's first call carries only the title slide and a sentence or two. It returns as soon as that audio exists, about 0.3 s, and tells the agent to send you the link.
+1. **Opening first.** The agent's first call starts the walkthrough with only the title slide and a sentence or two. It returns as soon as that audio exists, about 0.3 s later, and tells the agent to send you the link.
 2. **Voiced in the background.** Later slides are parsed, checked and voiced while you watch. The player waits with a notice if it ever catches up with the writer.
 3. **Timed to the word.** Kokoro reports when each word is spoken. Each cue in the narration, a Markdown link like `[the retry limit](#L48)`, moves the pointer as its first word is heard.
 

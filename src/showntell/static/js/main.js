@@ -152,6 +152,8 @@ function advance(dt) {
     audio.pause();
     return stall("voicing");
   }
+  const atEnd = pos.seg === TL.segs.length - 1 && pos.local >= seg.dur + seg.gap;
+  if (atEnd && W.status !== "finished") return stall("writing"); // caught up with the writer
   unstall();
   const say = sayOf(seg);
   const hasAudio = say && say.audio && !seg.pause && !seg.error && !failedAudio.has(say.audio);

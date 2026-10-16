@@ -491,6 +491,13 @@ class Builder:
         if not any(x.text for x in s.says):
             self.issues.append(f"Slide `{s.id}` has no narration. Every slide needs at least one spoken paragraph.")
             return
+        if s.kind in ("code", "diff", "diagram", "list", "table") and not any(
+            not c.get("inferred") for x in s.says for c in x.cues
+        ):
+            self.issues.append(
+                f"Slide `{s.id}` has no cues, so the pointer only follows names showntell can match. "
+                "Link the words that name each part, as in [the loader](#L18) or [the cache](#cache)."
+            )
         words = sum(len(x.text.split()) for x in s.says)
         secs = words / WORDS_PER_SECOND
         if s.kind in ("code", "diff"):

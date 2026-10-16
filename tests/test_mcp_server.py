@@ -60,7 +60,7 @@ async def test_start_schema_offers_frames_and_voices(mcp):
     async with mcp as client:
         (t,) = [t for t in (await client.list_tools()).tools if t.name == "start_walkthrough"]
         props = t.input_schema["properties"]
-        assert set(props) == {"title", "frame", "voice", "speed", "project_dir"}
+        assert set(props) == {"title", "frame", "voice", "speed", "project_dir", "opening"}
         assert "af_heart" in props["voice"]["description"]
         assert t.input_schema["required"] == ["title"]
 
@@ -74,6 +74,17 @@ async def test_start_returns_handle_and_url(mcp):
         data = r.structured_content
         assert data["status"] == "started" and data["issues"] == []
         assert data["handle"] in text(r) and data["url"] in text(r)
+
+
+async def test_start_with_opening_returns_the_playable_link(mcp):
+    """The opening can ride along with the start call, saving a model round trip."""
+    async with mcp as client:
+        r = await client.call_tool("start_walkthrough", {"title": "Caching", "opening": OPENING})
+        data, t = r.structured_content, text(r)
+        assert data["status"] == "playable" and data["handle"] in t and data["url"] in t
+        assert "{{" not in t and len(t) > 1000  # the guide came with it
+        r2 = await client.call_tool("add_slides", {"handle": data["handle"], "markdown": "## Next\n\nMore words here.\n"})
+        assert r2.structured_content["status"] == "added"
 
 
 async def test_first_add_is_playable_with_url_and_filled_guide(mcp):

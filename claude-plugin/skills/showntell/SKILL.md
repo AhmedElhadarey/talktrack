@@ -26,12 +26,11 @@ Open the files, run `git diff` or `git log`, and pick line ranges before `start_
 
 ## Order of calls
 
-1. **start_walkthrough:** a title, and `project_dir` as the absolute repo path so `file=` resolves. `frame: portrait` for phones.
-2. **add_slides, opening:** only the title slide and one or two spoken sentences.
-3. **Share the link:** as soon as that reply says playable, send the link in a message before any other tool call. If it says audio is still being made, share it anyway.
-4. **add_slides, body:** one to three whole slides per call, never resending Markdown. Fix reported problems in later slides, or with `revise_slide`.
-5. **finish_walkthrough:** two or three specific follow-up questions the viewer might ask next.
-6. **Tell the user:** finished, with the link, in a line or two. No script recap.
+1. **start_walkthrough with the opening:** a title, `project_dir` as the absolute repo path so `file=` resolves, and `opening`: the title slide and one or two spoken sentences, nothing more. `frame: portrait` for phones. Without `opening`, the first `add_slides` call must carry it instead.
+2. **Share the link:** as soon as the reply says playable, send the link in a message before any other tool call. If it says audio is still being made, share it anyway. The same reply carries the full guide.
+3. **add_slides, body:** one to three whole slides per call, never resending Markdown. Fix reported problems in later slides, or with `revise_slide`.
+4. **finish_walkthrough:** two or three specific follow-up questions the viewer might ask next.
+5. **Tell the user:** finished, with the link, in a line or two. No script recap.
 
 ## Show real code
 

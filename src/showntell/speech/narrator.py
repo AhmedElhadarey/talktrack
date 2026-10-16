@@ -197,11 +197,18 @@ def timed_words(spoken: Spoken, tokens: list[Token]) -> list[dict]:
     return words
 
 
+LEAD_INTO_PAUSE = 0.4  # seconds a cue may move earlier, into the silence before its word
+
+
 def cue_time(char_at: int, words: list[dict], duration: float, text_len: int) -> float:
-    """Start time of the first word at or after a display offset."""
+    """When the pointer should move for a cue at a display offset: the start of the first word
+    at or after it, or, when that word follows a pause (a new sentence), as the pause begins,
+    so the viewer is looking there when the speaker starts."""
+    prev_end = 0.0
     for w in words:
         if w["c1"] > char_at:
-            return w["s"]
+            return max(prev_end, w["s"] - LEAD_INTO_PAUSE) if w["s"] - prev_end > 0.15 else w["s"]
+        prev_end = w["e"]
     if text_len:
         return duration * min(1.0, char_at / text_len)
     return 0.0
