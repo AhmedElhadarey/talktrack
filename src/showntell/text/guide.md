@@ -96,9 +96,10 @@ Bigger visuals render smaller and are harder to read. Narrow `lines=`, split a l
 
 ## Send in chunks
 
-- **Size:** one to three whole slides per `add_slides` call. Each call returns at once; voicing runs in the background.
+- **First slide alone:** right after sharing the link, send the first content slide by itself, kept short. The opening plays for only a few seconds; one short slide is voiced before the player catches up.
+- **Size:** after that, one to three whole slides per `add_slides` call. Each call returns at once; voicing runs in the background.
 - **Whole slides:** never split a slide, or its code block, across calls.
-- **No repeats:** never resend Markdown you already sent. To change a slide, use `revise_slide`.
+- **No repeats:** never resend Markdown you already sent. To change a slide, use `revise_slide`; in the first minute, keep it for real mistakes, since the viewer waits while a slide they are about to reach is voiced again.
 
 ## Read every reply
 

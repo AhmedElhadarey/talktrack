@@ -147,6 +147,9 @@ def spoken_words(display: str, code: list) -> list[str]:
     return norm_words(text)
 
 
+SYMBOL_WORDS = {"dot", "slash", "dash", "underscore", "equals", "colon", "point", "hash", "plus", "minus", "times"}
+
+
 def heard_as(word: str, token: str) -> bool:
     """A transcript token matches a spoken word, allowing plurals and hyphen splits."""
     if word == token:
@@ -176,12 +179,17 @@ def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
             flat = [(t, s) for ws, s in words for t in ws]
             heard = {t for t, _ in flat}
             audio_s += say.duration
-            # terms written in backticks must be audible, in the form the voice says them
+            # terms written in backticks must be audible. Whisper writes some spoken forms back
+            # as text ("server dot pie" as server.py, numbers as digits), so a term counts as
+            # heard when either its spoken words or its written words all come back.
+            def all_heard(words: list[str], heard: set = heard) -> bool:
+                words = [t for t in words if len(t) > 2 and t not in SYMBOL_WORDS]
+                return all(any(heard_as(t, h) for h in heard) for t in words)
+
             for a, b in say.code:
-                for t in spoken_words(say.text[a:b], [(0, b - a)]):
-                    if len(t) > 2 and not any(heard_as(t, h) for h in heard):
-                        missing_terms.append(say.text[a:b])
-                        break
+                term = say.text[a:b]
+                if not (all_heard(spoken_words(term, [(0, b - a)])) or all_heard(norm_words(term))):
+                    missing_terms.append(term)
             for c in say.cues:
                 if c.get("inferred") or "t" not in c:
                     continue
