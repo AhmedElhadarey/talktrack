@@ -56,6 +56,6 @@ jobs:
         with:
           path: ~/.cache/huggingface
           key: hf-mlx-${{ hashFiles('src/showntell/speech/mlx_backend.py') }}
-      - name: Download the MLX voice model
-        run: uv run python -c "from showntell.speech.mlx_backend import REPO, PATTERNS; from huggingface_hub import snapshot_download; snapshot_download(REPO, allow_patterns=PATTERNS)"
-      - run: uv run pytest -m mlx
+      - name: Download the MLX voice model and the spaCy English model
+        run: uv run showntell doctor --speech mlx
+      - run: uv run pytest -m mlx -rs

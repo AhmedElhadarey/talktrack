@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> None:
             return
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s",
                         datefmt="%H:%M:%S", stream=sys.stderr)
-    for noisy in ("httpx", "mcp.server.streamable_http", "mcp.server.lowlevel.server", "huggingface_hub"):
+    for noisy in ("httpx", "httpx2", "mcp.server.streamable_http", "mcp.server.lowlevel.server", "huggingface_hub"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
     cfg = _cfg(args)

@@ -59,6 +59,8 @@ def hf_snapshot(repo: str, patterns: list[str], status: Status | None, label: st
         pass
     if os.environ.get("HF_HUB_OFFLINE") == "1" or constants.HF_HUB_OFFLINE:
         raise RuntimeError(f"{repo} is not downloaded and HF_HUB_OFFLINE is set")
+    os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")  # downloads only, nothing else
+    constants.HF_HUB_DISABLE_TELEMETRY = True
     log.info("Downloading %s from Hugging Face", repo)
     tqdm_class = _progress_tqdm(status, label) if status else None
     path = snapshot_download(repo, allow_patterns=patterns, tqdm_class=tqdm_class)
