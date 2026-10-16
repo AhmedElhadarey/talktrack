@@ -1,0 +1,7 @@
+[
+  {"id": "tour", "kind": "architecture", "prompt": "Use showntell to give a newcomer a tour of this repository: what showntell does, how a walkthrough travels from the agent's Markdown to the browser, and where the speech comes from. Read the code first and show real code from disk. About three minutes."},
+  {"id": "review", "kind": "diff", "prompt": "Use showntell to review commit 8db41e4 in this repo for another developer: what problem it fixes in the player, how the fix works, and anything to watch. Show the real diff from git."},
+  {"id": "tls", "kind": "concept", "prompt": "Use showntell to explain the TLS 1.3 handshake: what each message does, why it needs only one round trip, and where the keys come from. Use a sequence diagram."},
+  {"id": "attention", "kind": "maths", "prompt": "Use showntell to explain scaled dot-product attention in transformers, including why the scores are divided by the square root of the key dimension. Use formulas and a tiny worked example."},
+  {"id": "rebase", "kind": "concept", "frame": "portrait", "prompt": "Use showntell, in the portrait frame for phones, to explain git rebase versus merge with diagrams of the commit graph. Keep it under two minutes."}
+]

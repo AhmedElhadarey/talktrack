@@ -28,7 +28,6 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from showntell.model import Walkthrough  # noqa: E402
 
-PROMPTS = json.loads((ROOT / "eval" / "prompts.json").read_text())
 URL_RE = re.compile(r"http://(?:localhost|127\.0\.0\.1):\d+/w/[A-Za-z0-9_-]+/?")
 ALLOWED = ["mcp__showntell", "Read", "Grep", "Glob", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git show:*)", "Bash(ls:*)"]
 
@@ -198,6 +197,7 @@ def summarize(w: Walkthrough | None) -> dict:
 async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", default="sonnet")
+    ap.add_argument("--prompts", default=str(ROOT / "eval" / "prompts.json"), help="prompt set (JSON list)")
     ap.add_argument("--runs", default="all", help="comma-separated prompt ids, or all")
     ap.add_argument("--parallel", type=int, default=2)
     ap.add_argument("--port", type=int, default=4811)
@@ -205,7 +205,8 @@ async def main() -> None:
     ap.add_argument("--no-asr", action="store_true")
     ap.add_argument("--keep", action="store_true", help="keep the data folder")
     args = ap.parse_args()
-    prompts = PROMPTS if args.runs == "all" else [p for p in PROMPTS if p["id"] in args.runs.split(",")]
+    all_prompts = json.loads(Path(args.prompts).read_text())
+    prompts = all_prompts if args.runs == "all" else [p for p in all_prompts if p["id"] in args.runs.split(",")]
     data_dir = Path(tempfile.mkdtemp(prefix="showntell-eval-"))
     jobs = [(p, m) for m in args.models.split(",") for p in prompts]
     sem = asyncio.Semaphore(args.parallel)
