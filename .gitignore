@@ -24,3 +24,4 @@ node_modules/
 .DS_Store
 eval/results/
 tests/artifacts/
+.claude/worktrees/

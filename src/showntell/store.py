@@ -18,6 +18,7 @@ from pathlib import Path
 
 from .build import SPEED_RANGE, Builder
 from .format import Parser
+from .issues import Issue, player_issue
 from .model import FRAMES, STATE_VERSION, Say, Slide, Walkthrough, public_slide
 from .speech.base import VOICES
 from .speech.narrator import Narrator, cue_time
@@ -26,6 +27,8 @@ log = logging.getLogger("showntell.store")
 
 MAX_SOURCE_BYTES = 1_000_000
 MAX_SLIDES = 80
+PARAGRAPH_GAP = 0.3  # matches the player's timeline
+STILL_S = 20.0  # longest stretch of narration with nothing changing on screen
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
 
 
@@ -37,8 +40,11 @@ class Session:
         self.w = w
         self.builder = Builder(w, store.walk_dir(w.id) / "assets")
         self.subscribers: set[asyncio.Queue] = set()
-        self.player_issues: list[str] = []
+        self.player_issues: list[Issue] = []
         self.reported: set[str] = set()
+        # Findings that need audio (timing), reported on the next call after the audio arrives.
+        self.late_issues: list[Issue] = []
+        self.viewed = False  # a player has connected at least once
         self.source = ""
         # Revised slides waiting for their audio, shown to viewers only once voiced (by slide id).
         self.staged: dict[str, Slide] = {}
@@ -58,7 +64,8 @@ class Session:
         b.issues, b.new_says, b.changed = [], [], set()
         b.add(markdown)
         if len(self.w.slides) > MAX_SLIDES:
-            b.issues.append(f"This walkthrough has {len(self.w.slides)} slides; keep it under {MAX_SLIDES}.")
+            b._issue("too_many_slides", f"This walkthrough has {len(self.w.slides)} slides; keep it under {MAX_SLIDES}.",
+                     "Split it into a series.")
         for slide, say in b.new_says:
             self._voice(slide, say)
         self._changed(b.changed)
@@ -82,7 +89,8 @@ class Session:
         if not scratch.slides:
             raise ValueError("the Markdown has no slide in it")
         if len(scratch.slides) > 1:
-            issues.append(f"revise_slide replaces one slide; kept the first of {len(scratch.slides)}.")
+            issues.append(Issue("revise_kept_first", f"revise_slide replaces one slide; kept the first of {len(scratch.slides)}.",
+                                "Send one heading per call.", slide=slide_id))
         new = scratch.slides[0]
         new.id, new.rev, new.line = old.id, old.rev + 1, old.line
         if new.kind == "title" and idx > 0:
@@ -108,7 +116,8 @@ class Session:
         if not stage:
             self._changed({new.id})
         self._promote(new.id)
-        return {"slide": new.id, "rev": new.rev, "says": len(new.says), "revoiced": voiced, "issues": issues}
+        return {"slide": new.id, "rev": new.rev, "says": len(new.says), "revoiced": voiced, "issues": issues,
+                "staged": stage and new.id in self.staged}
 
     def _promote(self, slide_id: str) -> None:
         """Swap a staged revision in once all its narration has audio (or failed)."""
@@ -126,8 +135,15 @@ class Session:
         b.issues = []
         b.check_all()
         if b.parser.pending.strip():
-            b.issues.append("A code block was never closed; it was dropped.")
+            b._issue("block_dropped", "A code block was never closed; it was dropped.", "Close it and send the slide with revise_slide.")
             b.parser.pending = ""
+        if not self.viewed:
+            b._issue("not_checked", "No player has opened this walkthrough yet, so render and layout checks have not run.",
+                     "Open the link; problems the player finds arrive with your next call to this walkthrough.", slide="")
+        waiting = sum(1 for sl in self.w.slides for x in sl.says if x.text and x.status == "pending")
+        if waiting:
+            b._issue("not_checked", f"{waiting} paragraph(s) are still being voiced, so timing checks have not run on them.",
+                     slide="")
         if questions:
             self.w.questions = [q.strip() for q in questions if q and q.strip()][:4]
         self.w.status = "finished"
@@ -180,10 +196,37 @@ class Session:
             say.status, say.error = "error", result.get("error", "speech failed")
         if self.first_say() is say:
             self._playable.set()
+        self._check_timing(slide)
         if slide is staged:
             self._promote(slide_id)
             return
         self._changed({slide_id})
+
+    def _check_timing(self, slide: Slide) -> None:
+        """Once a slide is voiced: flag long stretches where nothing on screen changes."""
+        if slide.kind in ("title", "text") or any(x.text and x.status == "pending" for x in slide.says):
+            return
+        t, marks = 0.0, [0.0]
+        for x in slide.says:
+            if x.pause:
+                t += x.pause
+                continue
+            if not x.text or x.status != "ready":
+                continue
+            marks += [t + c["t"] for c in x.cues if c.get("t") is not None]
+            t += x.duration + PARAGRAPH_GAP
+        marks = sorted(marks) + [t]
+        gap, at = max(((b - a, a) for a, b in zip(marks, marks[1:], strict=False)), default=(0.0, 0.0))
+        key = f"still:{slide.id}:{slide.rev}"
+        if gap > STILL_S and key not in self.reported:
+            self.reported.add(key)
+            self.late_issues.append(Issue(
+                "still_slide", f"Slide `{slide.id}` holds still for {gap:.0f} s (from {at:.0f} s into the slide) while the narration goes on.",
+                "Add a cue on what the narration is talking about, split the slide, or say less.", slide=slide.id, line=slide.line))
+
+    def take_late_issues(self) -> list[Issue]:
+        out, self.late_issues = self.late_issues, []
+        return out
 
     def first_say(self) -> Say | None:
         for s in self.w.slides:
@@ -210,6 +253,7 @@ class Session:
     def subscribe(self) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue()
         self.subscribers.add(q)
+        self.viewed = True
         return q
 
     def unsubscribe(self, q: asyncio.Queue) -> None:
@@ -233,13 +277,13 @@ class Session:
             "slides": [public_slide(s) for s in self.w.slides if s.id in slide_ids],
         }
 
-    def report(self, message: str) -> None:
-        message = re.sub(r"\s+", " ", message).strip()[:300]
-        if message and message not in self.reported:
-            self.reported.add(message)
-            self.player_issues.append(message)
+    def report(self, body: dict | str) -> None:
+        issue = player_issue(body if isinstance(body, dict) else {"message": body})
+        if issue is not None and issue not in self.reported:
+            self.reported.add(issue)
+            self.player_issues.append(issue)
 
-    def take_player_issues(self) -> list[str]:
+    def take_player_issues(self) -> list[Issue]:
         out, self.player_issues = self.player_issues, []
         return out
 

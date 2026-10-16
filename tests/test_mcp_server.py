@@ -121,7 +121,8 @@ async def test_later_replies_list_issues(mcp):
         r = await client.call_tool("add_slides", {"handle": h["handle"], "markdown": BODY + "\nSee [far](#L40).\n"})
         data = r.structured_content
         assert set(data) >= {"url", "status", "issues"}
-        assert data["issues"] and "points past the code" in data["issues"][0]
+        assert data["issues"] and "points past the code" in data["issues"][0]["message"]
+        assert data["issues"][0]["code"] == "cue_off_code" and data["issues"][0]["severity"] == "error"
         assert "Problems" in text(r) and "Slide ids: how-caching-works, lookup" in text(r)
 
 
@@ -131,7 +132,8 @@ async def test_player_reports_reach_the_agent_marked_untrusted(mcp, store):
         await client.call_tool("add_slides", {"handle": h["handle"], "markdown": OPENING})
         store.by_handle(h["handle"]).report("Mermaid parse error on line 3")
         r = await client.call_tool("add_slides", {"handle": h["handle"], "markdown": BODY})
-        assert r.structured_content["player_issues"] == ["Mermaid parse error on line 3"]
+        assert [d["message"] for d in r.structured_content["player_issues"]] == ["Mermaid parse error on line 3"]
+        assert r.structured_content["player_issues"][0]["source"] == "player"
         assert "untrusted" in text(r)
 
 

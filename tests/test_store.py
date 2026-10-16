@@ -120,7 +120,7 @@ async def test_add_reports_progress_and_issues(service, store, voiced):
     await service.add(r["handle"], OPENING)
     a = await service.add(r["handle"], BODY + "\nAlso [nowhere](#L99).\n")
     assert a["slides"] == 1 and a["total_slides"] == 2 and a["slide_ids"] == ["how-caching-works", "lookup"]
-    assert any("points past the code" in i for i in a["issues"])
+    assert any("points past the code" in i["message"] for i in a["issues"])
     assert a["narration_s"] > 0 and a["total_says"] == 4
 
 
@@ -189,7 +189,7 @@ async def test_revise_with_two_slides_keeps_the_first(service, store):
     r = await started(service)
     await service.add(r["handle"], OPENING + "\n" + BODY)
     v = await service.revise(r["handle"], "lookup", "## A\n\nOne.\n\n## B\n\nTwo.\n")
-    assert any("kept the first of 2" in i for i in v["issues"])
+    assert any("kept the first of 2" in i["message"] for i in v["issues"])
     assert [s.id for s in store.by_handle(r["handle"]).w.slides] == ["how-caching-works", "lookup"]
 
 
@@ -220,14 +220,14 @@ async def test_finish_reports_last_slide_problems(service):
     r = await started(service)
     await service.add(r["handle"], OPENING + "\n## Silent {#silent}\n\n```python\nx = 1\n```\n")
     f = await service.finish(r["handle"], None)
-    assert any("`silent`" in i and "no narration" in i for i in f["issues"])
+    assert any("`silent`" in i["message"] and "no narration" in i["message"] for i in f["issues"])
 
 
 async def test_finish_reports_and_drops_an_unclosed_fence(service, store):
     r = await started(service)
     await service.add(r["handle"], OPENING + "\n## C\n\n```python\nx = 1\n")
     f = await service.finish(r["handle"], None)
-    assert any("never closed" in i for i in f["issues"])
+    assert any("never closed" in i["message"] for i in f["issues"])
     assert store.by_handle(r["handle"]).builder.parser.pending == ""
 
 

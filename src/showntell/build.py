@@ -12,6 +12,7 @@ from pathlib import Path
 
 from . import sources
 from .format import Block, Cue, Parser, inline_plain, parse_item, parse_narration, parse_table
+from .issues import Issue
 from .model import Say, Slide, Walkthrough
 
 # Comfortable sizes, measured on the player at each frame (scripts/measure_limits.py).
@@ -44,7 +45,7 @@ class Builder:
         self.parser = Parser()
         self.questions_mode = False
         self.pending_old: tuple[Block, sources.Excerpt] | None = None
-        self.issues: list[str] = []
+        self.issues: list[Issue] = []
         self.new_says: list[tuple[Slide, Say]] = []
         self.changed: set[str] = set()
 
@@ -56,6 +57,11 @@ class Builder:
     def limits(self) -> dict:
         return LIMITS.get(self.w.frame, LIMITS["landscape"])
 
+    def _issue(self, code: str, message: str, fix: str = "", *, slide: str | None = None, line: int | None = None) -> None:
+        if slide is None and self.w.slides:
+            slide = self.w.slides[-1].id
+        self.issues.append(Issue(code, message, fix, slide=slide, line=line or None))
+
     # -- appending ----------------------------------------------------------------------
 
     def add(self, markdown: str) -> None:
@@ -63,10 +69,8 @@ class Builder:
             self._apply(block)
         if self.parser.pending.strip():
             first = self.parser.pending.strip().split("\n", 1)[0][:40]
-            self.issues.append(
-                f"`{first}` is still open at the end of this call; it will be completed by your next "
-                "add_slides call. Close every code block within one call."
-            )
+            self._issue("block_open", f"`{first}` is still open at the end of this call; your next add_slides call completes it.",
+                        "Close every code block within one call.")
 
     def _current(self) -> Slide:
         if not self.w.slides:
@@ -107,17 +111,17 @@ class Builder:
                 if a["frame"] in FRAMES:
                     self.w.frame = a["frame"]
                 else:
-                    self.issues.append(f"Front matter frame `{a['frame']}` is not one of {', '.join(FRAMES)}; kept {self.w.frame}.")
+                    self._issue("front_matter", f"Front matter frame `{a['frame']}` is not one of {', '.join(FRAMES)}; kept {self.w.frame}.", line=b.line)
             if a.get("voice"):
                 if a["voice"] in VOICES:
                     self.w.voice = a["voice"]
                 else:
-                    self.issues.append(f"Front matter voice `{a['voice']}` is unknown; kept {self.w.voice}.")
+                    self._issue("front_matter", f"Front matter voice `{a['voice']}` is unknown; kept {self.w.voice}.", line=b.line)
             if a.get("speed"):
                 try:
                     self.w.speed = max(SPEED_RANGE[0], min(SPEED_RANGE[1], float(a["speed"])))
                 except ValueError:
-                    self.issues.append(f"Front matter speed `{a['speed']}` is not a number; kept {self.w.speed}.")
+                    self._issue("front_matter", f"Front matter speed `{a['speed']}` is not a number; kept {self.w.speed}.", line=b.line)
             return
         if b.kind == "heading":
             self._flush_old()
@@ -158,10 +162,8 @@ class Builder:
     def _slide_for_visual(self, kind: str) -> Slide:
         s = self._current()
         if s.visual and not (kind == "list" and s.kind == "list"):
-            self.issues.append(
-                f"Slide `{s.id}` already shows a {s.kind}; the next visual got its own slide. "
-                "Give each visual its own heading."
-            )
+            self._issue("extra_visual", f"Slide `{s.id}` already shows a {s.kind}; the next visual got its own slide.",
+                        "Give each visual its own heading.", slide=s.id)
             s = self._new_slide(Block("heading", 0, s.title, attrs={"classes": list(s.classes)}))
         return s
 
@@ -246,12 +248,13 @@ class Builder:
             try:
                 ex, _ = sources.read_excerpt(self.root, b.attrs["file"], b.attrs.get("lines"))
                 if b.text.strip():
-                    self.issues.append(f"Code block for {b.attrs['file']} had a body; showed the file instead. Leave the body empty with file=.")
+                    self._issue("code_body_ignored", f"Code block for {b.attrs['file']} had a body; showed the file instead.",
+                                "Leave the body empty with file=.", line=b.line)
                 if not self.w.sha:
                     self.w.sha = sources.head_sha(self.root)
                 return ex
             except sources.SourceError as e:
-                self.issues.append(f"Line {b.line}: {e}")
+                self._issue("source_error", f"Line {b.line}: {e}", line=b.line)
                 return sources.Excerpt(f"# {e}", 1, 1)
         start = 1
         if b.attrs.get("start", "").isdigit():
@@ -266,8 +269,11 @@ class Builder:
                 if not self.w.sha:
                     self.w.sha = sources.head_sha(self.root)
             except sources.SourceError as e:
-                self.issues.append(f"Line {b.line}: {e}")
+                self._issue("source_error", f"Line {b.line}: {e}", line=b.line)
                 return
+            if _generated(b.attrs["file"]):
+                self._issue("generated_file", f"Line {b.line}: {b.attrs['file']} is a lockfile or generated file.",
+                            "Skip it unless it is the point of the change.", line=b.line)
             lang = b.attrs.get("lang") or _lang_from_name(b.attrs["file"])
             vis = {
                 "lang": lang,
@@ -280,10 +286,8 @@ class Builder:
             old, new = sources.split_unified(b.text)
             hunks = sources.hunk_count(b.text)
             if hunks > 1:
-                self.issues.append(
-                    f"Line {b.line}: this diff has {hunks} hunks; line numbers follow the first one. "
-                    "Show one hunk per slide, or use file= with rev=."
-                )
+                self._issue("diff_hunks", f"Line {b.line}: this diff has {hunks} hunks; line numbers follow the first one.",
+                            "Show one hunk per slide, or use file= with rev=.", line=b.line)
             lang = b.attrs.get("lang", "")
             vis = {
                 "lang": lang,
@@ -297,7 +301,8 @@ class Builder:
         if self.pending_old:
             ob, ex = self.pending_old
             self.pending_old = None
-            self.issues.append(f"Line {ob.line}: an `old` code block had no `new` block after it; showed it as plain code.")
+            self._issue("old_without_new", f"Line {ob.line}: an `old` code block had no `new` block after it; showed it as plain code.",
+                        line=ob.line)
             vis = {"lang": ob.lang, "code": ex.code, "start": ex.start, "title": ob.attrs.get("title") or self._name(ob)}
             self._set(self._slide_for_visual("code"), "code", vis)
 
@@ -311,11 +316,8 @@ class Builder:
         if alt:
             vis["alt"] = alt
         if len(nodes) > self.limits["nodes"]:
-            self.issues.append(
-                f"The diagram on line {b.line} has {len(nodes)} nodes; this frame reads well up to {self.limits['nodes']}. Split it."
-            )
-        if kind in ("graph",) or kind == "flowchart":
-            pass
+            self._issue("diagram_too_big", f"The diagram on line {b.line} has {len(nodes)} nodes; this frame reads well up to {self.limits['nodes']}.",
+                        "Split it across slides.", line=b.line)
         return vis
 
     def _image(self, b: Block) -> None:
@@ -326,16 +328,16 @@ class Builder:
         try:
             path = sources.resolve(self.root, src)
         except sources.SourceError as e:
-            self.issues.append(f"Line {b.line}: image {e}")
+            self._issue("image_error", f"Line {b.line}: image {e}", line=b.line)
             return
         if path.suffix.lower() not in IMAGE_TYPES:
-            self.issues.append(f"Line {b.line}: {path.name} is not an image type the player shows")
+            self._issue("image_error", f"Line {b.line}: {path.name} is not an image type the player shows.", line=b.line)
             return
         self.assets_dir.mkdir(parents=True, exist_ok=True)
         name = f"{len(list(self.assets_dir.iterdir())) + 1}-{re.sub(r'[^\w.-]', '_', path.name)}"
         shutil.copyfile(path, self.assets_dir / name)
         if not alt:
-            self.issues.append(f"Image {path.name} has no alt text; add a short description in the brackets.")
+            self._issue("image_no_alt", f"Image {path.name} has no alt text.", "Add a short description in the brackets.", line=b.line)
         self._set(s, "image", {"src": f"assets/{name}", "alt": alt})
 
     # -- checks on visuals --------------------------------------------------------------
@@ -346,24 +348,24 @@ class Builder:
         width = max((len(ln.expandtabs(4)) for ln in lines), default=0)
         where = vis.get("title") or "a code block"
         if len(lines) > lim["lines"]:
-            self.issues.append(
-                f"{where} shows {len(lines)} lines; this frame reads well up to {lim['lines']}. Show a narrower range."
-            )
+            self._issue("code_too_tall", f"{where} shows {len(lines)} lines; this frame reads well up to {lim['lines']}.",
+                        "Show a narrower range.")
         if width > lim["width"]:
-            self.issues.append(f"{where} has lines of {width} characters; this frame reads well up to {lim['width']}.")
+            self._issue("code_too_wide", f"{where} has lines of {width} characters; this frame reads well up to {lim['width']}.",
+                        "Show a narrower excerpt or wrap long lines.")
 
     def _check_diff(self, vis: dict) -> None:
         lim = self.limits
         for side in ("old", "new"):
             lines = vis[side]["code"].split("\n")
             if len(lines) > lim["diff_lines"]:
-                self.issues.append(
-                    f"The {side} side of a diff shows {len(lines)} lines; diffs read well up to {lim['diff_lines']} per side."
-                )
+                self._issue("diff_too_tall", f"The {side} side of a diff shows {len(lines)} lines; diffs read well up to {lim['diff_lines']} per side.",
+                            "Show one hunk, or narrow it with lines=.")
                 break
         width = max((len(ln.expandtabs(4)) for side in ("old", "new") for ln in vis[side]["code"].split("\n")), default=0)
         if width > lim["diff_width"]:
-            self.issues.append(f"A diff has lines of {width} characters; diffs read well up to {lim['diff_width']} per side.")
+            self._issue("diff_too_wide", f"A diff has lines of {width} characters; diffs read well up to {lim['diff_width']} per side.",
+                        "Use the portrait frame for wide diffs, or show the new code alone.")
 
     # -- narration ----------------------------------------------------------------------
 
@@ -408,7 +410,7 @@ class Builder:
             if t in ("", s.id, "visual"):
                 return {**base, "kind": "visual"}
             if not quiet:
-                self.issues.append(f"Slide `{s.id}` has no visual for the cue [{c.label}](#{t}).")
+                self._issue("cue_no_visual", f"Slide `{s.id}` has no visual for the cue [{c.label}](#{t}).", slide=s.id)
             return {**base, "kind": "visual"}
         if t in ("", s.id, "visual", "slide"):
             if c.text:
@@ -429,12 +431,11 @@ class Builder:
                 if c.text:
                     hit = _find_line(lines, c.text, first, a)
                     if hit:
-                        self.issues.append(
-                            f"[{c.label}](#{t}): line {a} is outside lines {first}-{last} on {where}; "
-                            f"pointed at line {hit}, where the quoted text is."
-                        )
+                        self._issue("cue_moved", f"[{c.label}](#{t}): line {a} is outside lines {first}-{last} on {where}; "
+                                    f"pointed at line {hit}, where the quoted text is.", slide=s.id)
                         return {**base, "kind": "lines", "side": side, "l0": hit, "l1": hit}
-                self.issues.append(f"[{c.label}](#{t}) points past the code on {where}, which shows lines {first}-{last}.")
+                self._issue("cue_off_code", f"[{c.label}](#{t}) points past the code on {where}, which shows lines {first}-{last}.",
+                            "Use the gutter numbers.", slide=s.id)
                 return None
             a, b = max(a, first), min(b, last)
             if c.text:
@@ -442,19 +443,16 @@ class Builder:
                 if _norm(c.text) not in _norm(span):
                     hit = _find_line(lines, c.text, first, a)
                     if hit:
-                        self.issues.append(
-                            f"[{c.label}](#{t}): the quoted text is not on line {a}; pointed at line {hit}, where it is. "
-                            "Count lines with the gutter numbers."
-                        )
+                        self._issue("cue_moved", f"[{c.label}](#{t}): the quoted text is not on line {a}; pointed at line {hit}, where it is.",
+                                    "Count lines with the gutter numbers.", slide=s.id)
                         a = b = hit
                     else:
-                        self.issues.append(
-                            f"[{c.label}](#{t}): \"{c.text}\" does not occur in the code on {where}; pointed at the whole line."
-                        )
+                        self._issue("cue_text_missing", f"[{c.label}](#{t}): \"{c.text}\" does not occur in the code on {where}; pointed at the whole line.",
+                                    "Quote the code exactly, spaces included.", slide=s.id)
                         return {**base, "kind": "lines", "side": side, "l0": a, "l1": b, "text": ""}
             return {**base, "kind": "lines", "side": side, "l0": a, "l1": b}
         if m:
-            self.issues.append(f"[{c.label}](#{t}) points at lines, but slide `{s.id}` shows a {s.kind}, not code.")
+            self._issue("cue_wrong_kind", f"[{c.label}](#{t}) points at lines, but slide `{s.id}` shows a {s.kind}, not code.", slide=s.id)
             return {**base, "kind": "visual"}
         if s.kind == "list":
             ids = {it["id"] for it in s.visual["items"]}
@@ -463,21 +461,22 @@ class Builder:
             hit = _match_title(t, s.visual["items"])
             if hit:
                 return {**base, "kind": "item", "id": hit}
-            self.issues.append(f"[{c.label}](#{t}): no item `{t}` on slide `{s.id}`. Items: {', '.join(sorted(ids))}.")
+            self._issue("cue_no_target", f"[{c.label}](#{t}): no item `{t}` on slide `{s.id}`. Items: {', '.join(sorted(ids))}.", slide=s.id)
             return None
         if s.kind == "table":
             if t in s.visual.get("ids", []):
                 return {**base, "kind": "row", "id": t}
-            self.issues.append(f"[{c.label}](#{t}): no row `{t}` on slide `{s.id}`.")
+            self._issue("cue_no_target", f"[{c.label}](#{t}): no row `{t}` on slide `{s.id}`.", slide=s.id)
             return None
         if s.kind == "diagram":
             nodes = s.visual.get("nodes", {})
             if t in nodes:
                 return {**base, "kind": "node", "id": t, "text": c.text or nodes[t]}
             if nodes and s.visual.get("type") in ("flowchart", "graph"):
-                self.issues.append(f"[{c.label}](#{t}): no node `{t}` in the diagram on slide `{s.id}`. Nodes: {', '.join(list(nodes)[:12])}.")
+                self._issue("cue_no_target", f"[{c.label}](#{t}): no node `{t}` in the diagram on slide `{s.id}`. Nodes: {', '.join(list(nodes)[:12])}.",
+                            slide=s.id)
             return {**base, "kind": "node", "id": t, "text": c.text}
-        self.issues.append(f"[{c.label}](#{t}): slide `{s.id}` shows a {s.kind}; point at it with `#`.")
+        self._issue("cue_wrong_kind", f"[{c.label}](#{t}): slide `{s.id}` shows a {s.kind}.", "Point at it with `#`.", slide=s.id)
         return {**base, "kind": "visual"}
 
     # -- slide-level checks -------------------------------------------------------------
@@ -487,39 +486,87 @@ class Builder:
             for x in s.says:
                 for c in getattr(x, "_cues", None) or []:
                     if c.target.strip() not in ("", s.id, "visual", "slide"):
-                        self.issues.append(f"Slide `{s.id}` has no visual, so the cue [{c.label}](#{c.target}) has nothing to point at.")
+                        self._issue("cue_no_visual", f"Slide `{s.id}` has no visual, so the cue [{c.label}](#{c.target}) has nothing to point at.",
+                                    slide=s.id, line=s.line)
         if not any(x.text for x in s.says):
-            self.issues.append(f"Slide `{s.id}` has no narration. Every slide needs at least one spoken paragraph.")
+            self._issue("no_narration", f"Slide `{s.id}` has no narration.", "Every slide needs at least one spoken paragraph.",
+                        slide=s.id, line=s.line)
             return
         if s.kind in ("code", "diff", "diagram", "list", "table") and not any(
             not c.get("inferred") for x in s.says for c in x.cues
         ):
-            self.issues.append(
-                f"Slide `{s.id}` has no cues, so the pointer only follows names showntell can match. "
-                "Link the words that name each part, as in [the loader](#L18) or [the cache](#cache)."
-            )
+            self._issue("no_cues", f"Slide `{s.id}` has no cues, so the pointer only follows names showntell can match.",
+                        "Link the words that name each part, as in [the loader](#L18) or [the cache](#cache).", slide=s.id, line=s.line)
         words = sum(len(x.text.split()) for x in s.says)
         secs = words / WORDS_PER_SECOND
         if s.kind in ("code", "diff"):
             n = len(s.visual.get("code", s.visual.get("new", {}).get("code", "")).split("\n"))
             need = 1.5 + 0.35 * n
             if secs < need * 0.6:
-                self.issues.append(
-                    f"Slide `{s.id}` shows {n} lines with about {secs:.0f} s of narration. Say more, or show fewer lines."
-                )
+                self._issue("thin_narration", f"Slide `{s.id}` shows {n} lines with about {secs:.0f} s of narration.",
+                            "Say more, or show fewer lines.", slide=s.id, line=s.line)
+        self._check_spoken(s)
+        self._check_build_order(s)
         shown = " ".join([s.shown] + [it.get("body", "") for it in s.visual.get("items", [])])
         spoken = " " + " ".join(re.findall(r"[\w'-]+", " ".join(x.text for x in s.says).lower())) + " "
         for chunk in _phrases(shown, 7):
             if f" {chunk} " in spoken:
-                self.issues.append(
-                    f"Slide `{s.id}`: the narration reads the on-screen text aloud (\"{chunk[:40]}...\"). "
-                    "Say what the screen does not."
-                )
+                self._issue("reads_screen", f"Slide `{s.id}`: the narration reads the on-screen text aloud (\"{chunk[:40]}...\").",
+                            "Say what the screen does not.", slide=s.id, line=s.line)
                 break
+
+    def _check_spoken(self, s: Slide) -> None:
+        for x in s.says:
+            text = x.text
+            for a, b in x.code:  # backticked code is spoken as code on purpose
+                text = text[:a] + " " * (b - a) + text[b:]
+            m = SPOKEN_RE.search(text)
+            if m:
+                what = "a URL" if m.group("url") else "a handle" if m.group("handle") else "a commit hash"
+                self._issue("spoken_handle", f"Slide `{s.id}`: the narration reads {what} aloud (\"{m.group(0)[:40]}\").",
+                            "Say the person's name or what the link is, and show the raw text on screen if it matters.",
+                            slide=s.id, line=s.line)
+                return
+
+    def _check_build_order(self, s: Slide) -> None:
+        if "build" not in s.classes or not s.visual:
+            return
+        paras = [[c for c in x.cues if not c.get("inferred")] for x in s.says if x.text]
+        cues = [c for p in paras for c in p]
+        if len(paras) >= 2 and len(cues) >= 3 and all(not p for p in paras[1:]):
+            self._issue("build_cues_bunched", f"Slide `{s.id}` reveals in steps, but every cue is in its first paragraph, "
+                        "so the parts appear at once while the rest of the narration has nothing to show.",
+                        "Spread the cues so each part appears as the narration reaches it.", slide=s.id, line=s.line)
+            return
+        rank = _source_rank(s)
+        seq = [rank(c) for c in cues]
+        seq = [r for r in seq if r is not None]
+        if any(b < a for a, b in zip(seq, seq[1:], strict=False)):
+            self._issue("build_cue_order", f"Slide `{s.id}` reveals in steps, but its cues jump back and forth, "
+                        "so later parts appear together with earlier ones.",
+                        "Write the visual in the order you talk about it, and cue it in that order.", slide=s.id, line=s.line)
 
     def check_all(self) -> None:
         if self.w.slides:
             self._check_finished_slide(self.w.slides[-1])
+        run: list[str] = []
+        for s in self.w.slides + [None]:
+            if s is not None and s.kind in ("code", "diff"):
+                run.append(s.id)
+                continue
+            if len(run) >= 4:
+                self._issue("code_run", f"{len(run)} code slides in a row ({', '.join(run[:5])}) with nothing showing what "
+                            "the code does when it runs.", "Add a diagram of the flow or the states it moves through between them.",
+                            slide=run[-1])
+            run = []
+        if self.w.slides:
+            first = self.w.slides[0]
+            names = [x.text[a:b] for x in first.says for a, b in x.code]
+            if names:
+                self._issue("opening_code_names", f"The opening names code ({', '.join(f'`{n}`' for n in names[:3])}) "
+                            "before the viewer knows what it is for.",
+                            "Open with what the change or system does for the viewer; bring the names in on later slides.",
+                            slide=first.id, line=first.line)
         openings: dict[str, list[str]] = {}
         for s in self.w.slides:
             first = next((x.text for x in s.says if x.text), "")
@@ -528,10 +575,42 @@ class Builder:
                 openings.setdefault(" ".join(words), []).append(s.id)
         for phrase, ids in openings.items():
             if len(ids) >= 3:
-                self.issues.append(f"{len(ids)} slides open with \"{phrase}\" ({', '.join(ids[:4])}). Vary the openings.")
+                self._issue("same_openings", f"{len(ids)} slides open with \"{phrase}\" ({', '.join(ids[:4])}).", "Vary the openings.",
+                            slide=ids[-1])
 
 
 # -- helpers ------------------------------------------------------------------------------
+
+
+SPOKEN_RE = re.compile(
+    r"(?P<url>https?://\S+|www\.\S+)|(?P<handle>(?<![\w.])@[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\b(?![.@]\w))"
+    r"|(?P<sha>(?<![\w-])(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}(?![\w-]))"
+)
+GENERATED = re.compile(
+    r"(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|uv\.lock|poetry\.lock|Cargo\.lock|Gemfile\.lock|go\.sum"
+    r"|composer\.lock|Pipfile\.lock|bun\.lockb?)$|\.min\.(js|css)$|(^|/)(dist|build|vendor|node_modules)/|_pb2\.py$|\.generated\."
+)
+
+
+def _generated(name: str) -> bool:
+    return bool(GENERATED.search(name))
+
+
+def _source_rank(s: Slide):
+    """Position in the visual of what a cue points at, for checking step-reveal order."""
+    v = s.visual
+    if s.kind == "list":
+        ids = [it["id"] for it in v.get("items", [])]
+        return lambda c: ids.index(c["id"]) if c.get("kind") == "item" and c.get("id") in ids else None
+    if s.kind == "table":
+        ids = v.get("ids", [])
+        return lambda c: ids.index(c["id"]) if c.get("kind") == "row" and c.get("id") in ids else None
+    if s.kind == "diagram":
+        order = v.get("order", [])
+        return lambda c: order.index(c["id"]) if c.get("kind") == "node" and c.get("id") in order else None
+    if s.kind in ("code", "terminal"):
+        return lambda c: c.get("l0") if c.get("kind") == "lines" else None
+    return lambda c: None
 
 
 def _norm(s: str) -> str:

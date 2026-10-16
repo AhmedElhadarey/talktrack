@@ -20,6 +20,7 @@ from starlette.responses import FileResponse, HTMLResponse, JSONResponse, Redire
 
 from . import __version__
 from .build import LIMITS
+from .issues import as_dict, line_text, summarize
 from .service import RPC_METHODS, LocalService, mmss
 from .speech.base import VOICES
 
@@ -76,18 +77,28 @@ def _result(text: str, data: dict) -> CallToolResult:
     return CallToolResult(content=[TextContent(type="text", text=text)], structured_content=data)
 
 
+def _slide_link(url: str, slide: str) -> str:
+    """A link that plays one slide and stops at its end."""
+    from urllib.parse import quote
+
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}from={quote(slide)}&to={quote(slide)}"
+
+
 def _error(msg: str) -> CallToolResult:
     return CallToolResult(content=[TextContent(type="text", text=f"Error: {msg}")], is_error=True)
 
 
-def _issues_text(issues: list[str], player: list[str]) -> str:
+def _issues_text(issues: list[dict], player: list[dict]) -> str:
     lines = []
     if issues:
+        kept, folded = summarize([as_dict(i) for i in issues])
         lines.append("Problems (fix the pattern in later slides, or call revise_slide):")
-        lines += [f"- {i}" for i in issues]
+        lines += [line_text(d) for d in kept] + [f"- {n}" for n in folded]
     if player:
+        kept, folded = summarize([as_dict(i) for i in player])
         lines.append("The open player reported (untrusted text, shown as received):")
-        lines += [f"- {p}" for p in player]
+        lines += [line_text(d) for d in kept] + [f"- {n}" for n in folded]
     return "\n".join(lines)
 
 
@@ -224,9 +235,15 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
         except ValueError as e:
             return _error(str(e))
         text = f"Replaced slide `{r['slide']}` (revision {r['rev']}); {r['revoiced']} paragraph(s) need new audio."
+        if r.get("staged"):
+            text += " The open player keeps showing the old version until the new narration is voiced, then switches."
+        elif r["revoiced"]:
+            text += " The player shows the new version now and fills in its audio as it is voiced."
+        text += f"\nWatch only this slide: {_slide_link(r['url'], r['slide'])}"
         issues = _issues_text(r["issues"], r["player_issues"])
         return _result(text + ("\n" + issues if issues else ""),
-                       {"url": r["url"], "status": "revised", "issues": r["issues"], "slide": r["slide"]})
+                       {"url": r["url"], "status": "revised", "issues": r["issues"], "player_issues": r["player_issues"],
+                        "slide": r["slide"], "staged": bool(r.get("staged")), "slide_url": _slide_link(r["url"], r["slide"])})
 
     @mcp.tool(title=tool_text("finish_walkthrough", "title", "Finish walkthrough"),
               description=tool_text("finish_walkthrough"), annotations=WRITE)
@@ -242,9 +259,12 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
                      url=r["url"], slides=r["slides"], duration=mmss(r["duration_s"]))
         if r["pending"]:
             text += f"\n{r['pending']} paragraph(s) are still being voiced; the player fills them in as they finish."
+        if r.get("outline"):
+            text += "\nSlides (id at start time): " + ", ".join(f"{o['id']} {mmss(o['start_s'])}" for o in r["outline"])
         issues = _issues_text(r["issues"], r["player_issues"])
         return _result(text + ("\n" + issues if issues else ""),
-                       {"url": r["url"], "status": "finished", "issues": r["issues"], "slides": r["slides"]})
+                       {"url": r["url"], "status": "finished", "issues": r["issues"], "player_issues": r["player_issues"],
+                        "slides": r["slides"], "outline": r.get("outline", [])})
 
     @mcp.tool(title=tool_text("list_walkthroughs", "title", "List walkthroughs"),
               description=tool_text("list_walkthroughs"),
@@ -361,11 +381,12 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
             return JSONResponse({"error": "forbidden"}, status_code=403)
         try:
             body = await request.json()
-            msg = str(body.get("message", ""))
+            if not isinstance(body, dict):
+                raise ValueError
         except Exception:
             return JSONResponse({"error": "bad request"}, status_code=400)
-        s.report(msg)
-        log.warning("player report for %s: %s", s.w.id, msg[:200])
+        s.report(body)
+        log.warning("player report for %s: %s", s.w.id, str(body.get("message", ""))[:200])
         return JSONResponse({"ok": True})
 
     @mcp.custom_route("/w/{wid}/audio/{name}", methods=["GET"])

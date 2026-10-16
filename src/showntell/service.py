@@ -11,7 +11,12 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .issues import as_dict
 from .store import Store
+
+
+def _dicts(items) -> list[dict]:
+    return [as_dict(i) for i in items]
 
 
 class LocalService:
@@ -35,6 +40,7 @@ class LocalService:
     async def add(self, handle: str, markdown: str) -> dict:
         s = self.store.by_handle(handle)
         r = s.add(markdown)
+        r["issues"] = _dicts(r["issues"] + s.take_late_issues())
         says = [x for sl in s.w.slides for x in sl.says if x.text]
         return {
             **r,
@@ -45,7 +51,7 @@ class LocalService:
             "total_says": len(says),
             "voiced": sum(1 for x in says if x.status == "ready"),
             "narration_s": round(sum(x.duration or len(x.text.split()) / 2.7 for x in says), 1),
-            "player_issues": s.take_player_issues(),
+            "player_issues": _dicts(s.take_player_issues()),
             "slide_ids": [sl.id for sl in s.w.slides],
             "speech": self.speech_status(),
         }
@@ -75,20 +81,28 @@ class LocalService:
     async def revise(self, handle: str, slide: str, markdown: str) -> dict:
         s = self.store.by_handle(handle)
         r = s.revise(slide, markdown)
-        return {**r, "url": s.url, "player_issues": s.take_player_issues()}
+        r["issues"] = _dicts(r["issues"] + s.take_late_issues())
+        return {**r, "url": s.url, "player_issues": _dicts(s.take_player_issues())}
 
     async def finish(self, handle: str, questions: list[str] | None) -> dict:
         s = self.store.by_handle(handle)
-        issues = s.finish(questions)
+        issues = s.finish(questions) + s.take_late_issues()
         says = [x for sl in s.w.slides for x in sl.says if x.text]
+        outline, t = [], 0.0
+        for sl in s.w.slides:
+            outline.append({"id": sl.id, "title": sl.title, "start_s": round(t, 1)})
+            for x in sl.says:
+                t += x.pause or (x.duration or len(x.text.split()) / 2.7) + 0.3
+            t += 0.3
         return {
+            "outline": outline,
             "url": s.url,
             "slides": len(s.w.slides),
             "duration_s": round(sum(x.duration or len(x.text.split()) / 2.7 for x in says)
                                 + sum(x.pause for sl in s.w.slides for x in sl.says), 1),
             "pending": sum(1 for x in says if x.status == "pending"),
-            "issues": issues,
-            "player_issues": s.take_player_issues(),
+            "issues": _dicts(issues),
+            "player_issues": _dicts(s.take_player_issues()),
             "questions": s.w.questions,
         }
 

@@ -87,17 +87,73 @@ While a player is connected, a revised slide replaces the old one only once all 
 
 ## Checks returned to the agent
 
-| Check | Example message |
+Every reply lists findings in two forms. The text lists them one per line, errors first, at most twelve per reply and three per code, with the rest folded into a count. The structured content holds every finding as an object:
+
+| Field | Meaning |
 |---|---|
-| **Unknown cue target** | `#L40` is past the last line of the code on slide `lookup` |
-| **Text not found** | the quoted text is not on the target line; moved to line 14 where it occurs |
-| **No narration** | slide `storage` has nothing to say |
-| **Too big** | the code is 31 lines; this frame shows 18 comfortably |
-| **Pacing** | slide `lookup` shows 22 lines with about 4 s of narration |
-| **Reading the screen** | narration repeats the shown text word for word |
-| **Sameness** | three slides open with the same words |
-| **Render error** | reported by the player: Mermaid parse error on line 3 |
-| **File** | `src/cache.py` not found under the project root |
+| **`code`** | stable identifier from the tables below |
+| **`severity`** | `error` (content lost or misplaced), `warning` (will look or sound wrong), `info` (advice) |
+| **`message`** | what is wrong, naming the slide |
+| **`fix`** | what to do about it, when there is one thing to do |
+| **`slide`**, **`line`** | where: the slide id and the Markdown line, when known |
+| **`source`** | `player` for findings reported by the open player; absent for the server's own |
+
+Findings from the server, found while parsing, building and voicing:
+
+| Code | Severity | Catches |
+|---|---|---|
+| `source_error` | error | a file, line range or revision could not be read |
+| `image_error` | error | an image is missing or not a type the player shows |
+| `block_open` | warning | a code block is still open at the end of a call |
+| `block_dropped` | error | a code block was never closed and was dropped |
+| `front_matter` | warning | a front matter value is invalid and was ignored |
+| `extra_visual` | warning | a slide got a second visual, which moved to a new slide |
+| `old_without_new` | warning | an `old` block had no `new` block after it |
+| `code_body_ignored` | info | a `file=` block had a body, which was ignored |
+| `image_no_alt` | warning | an image has no alt text |
+| `too_many_slides` | warning | the walkthrough is over the slide limit |
+| `revise_kept_first` | warning | revise_slide got more than one slide and kept the first |
+| `code_too_tall` | warning | code has more lines than the frame shows comfortably |
+| `code_too_wide` | warning | code lines are wider than the frame shows comfortably |
+| `diff_too_tall` | warning | a diff side has more lines than the frame shows comfortably |
+| `diff_too_wide` | warning | diff lines are wider than the frame shows comfortably |
+| `diff_hunks` | warning | a pasted diff has several hunks |
+| `diagram_too_big` | warning | a diagram has more nodes than the frame shows comfortably |
+| `generated_file` | info | a diff shows a lockfile or generated file |
+| `cue_off_code` | error | a cue points at lines the slide does not show |
+| `cue_no_target` | error | a cue names an item, row or node that does not exist |
+| `cue_moved` | info | a cue's quoted text was found on another line and the cue moved there |
+| `cue_text_missing` | warning | a cue's quoted text is not in the code |
+| `cue_wrong_kind` | warning | a cue's target does not suit the slide's visual |
+| `cue_no_visual` | warning | a cue is on a slide with no visual |
+| `no_cues` | info | a slide with a visual has no cues |
+| `build_cues_bunched` | info | a step-reveal slide fires all its cues in the first paragraph |
+| `build_cue_order` | info | a step-reveal slide cues its parts out of source order |
+| `no_narration` | warning | a slide has nothing to say |
+| `thin_narration` | warning | a slide shows more than its narration gives time to read |
+| `reads_screen` | warning | narration repeats on-screen text word for word |
+| `same_openings` | info | several slides open with the same words |
+| `opening_code_names` | info | the opening names code before saying what it is for |
+| `spoken_handle` | warning | narration contains a handle, commit hash or URL the voice would read out |
+| `still_slide` | warning | the screen does not change for a long stretch of narration |
+| `code_run` | info | several code slides in a row with nothing showing behaviour |
+
+`still_slide` needs audio, so it arrives with the first call after the slide is voiced. It fires when the screen holds still (no slide change, cue or reveal) for more than 20 s of narration.
+
+Findings from the open player, measured after a slide has settled. Their messages are untrusted text and are marked so:
+
+| Code | Severity | Catches |
+|---|---|---|
+| `render_error` | error | a diagram, formula or image failed to render in the player |
+| `audio_error` | error | narration audio failed to load or be voiced |
+| `player_error` | error | the player hit a script error |
+| `text_too_small` | warning | the player shrank a visual below a comfortable reading size |
+| `overflow` | warning | a visual still overflows the slide after shrinking |
+| `pointer_offstage` | warning | a cue's target is outside the visible slide |
+| `slow_render` | info | a slide took longer to draw than the player waits |
+| `viewer_waited` | info | the viewer caught up with the writer and waited |
+
+`finish_walkthrough` adds `not_checked` findings for checks that could not run: no player has opened the walkthrough, or some narration has no audio yet.
 
 ## Install and daemon
 

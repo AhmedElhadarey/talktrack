@@ -90,7 +90,7 @@ def test_hash_with_text_searches_the_visual(cues):
 
 def test_id_cue_on_code_is_an_issue(cues):
     (c,), issues = cues(CODE, "The [thing](#memory) here.")
-    assert c["kind"] == "visual" and any("point at it with `#`" in i for i in issues)
+    assert c["kind"] == "visual" and any("Point at it with `#`" in i for i in issues)
 
 
 # -- diffs -----------------------------------------------------------------------------------
