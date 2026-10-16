@@ -52,9 +52,9 @@ def hf_snapshot(repo: str, patterns: list[str], status: Status | None, label: st
     from huggingface_hub import constants, snapshot_download
 
     try:
-        path = snapshot_download(repo, allow_patterns=patterns, local_files_only=True)
-        if any(Path(path).rglob("*.*")):
-            return Path(path)
+        path = Path(snapshot_download(repo, allow_patterns=patterns, local_files_only=True))
+        if all(any(path.glob(pat)) for pat in patterns):  # complete, not just partly cached
+            return path
     except Exception:
         pass
     if os.environ.get("HF_HUB_OFFLINE") == "1" or constants.HF_HUB_OFFLINE:

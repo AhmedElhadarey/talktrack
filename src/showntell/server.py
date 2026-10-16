@@ -183,6 +183,12 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
                 g = guide(p.get("frame", r["frame"]))
                 if g:
                     parts.append("\n" + g)
+        else:
+            p = await service.playable(handle, 0)  # the guide, if the first reply went out before the audio
+            if p.get("guide"):
+                g = guide(p.get("frame", r["frame"]))
+                if g:
+                    parts.append(g)
         parts.append(
             f"Added {r['slides']} slide(s) and {r['says']} narration paragraph(s). Totals: {r['total_slides']} slides, "
             f"{r['voiced']}/{r['total_says']} paragraphs voiced, about {mmss(r['narration_s'])} of narration. "

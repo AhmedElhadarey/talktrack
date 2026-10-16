@@ -27,7 +27,7 @@ On a miss it [calls the loader](#L18) and stores the result.
 | **Visual** | at most one per slide: a code block, a diff, a diagram, a formula, a table, a list or an image |
 | **Shown text** | `>` quote lines are shown on the slide, never spoken |
 | **Narration** | every other paragraph is spoken. Each paragraph is voiced separately, with a short pause after it. |
-| **Questions** | a slide whose heading has the `.questions` class is not shown; its list items become the questions offered at the end |
+| **Questions** | a slide whose heading has the `.questions` class is not shown; its list items become the questions offered at the end. Questions passed to `finish_walkthrough` replace them. |
 
 Text before the first heading belongs to an automatic title slide that uses the walkthrough's title.
 
@@ -94,7 +94,7 @@ total = sum(xs)
 ```
 ````
 
-With `file=` and `rev=`, the server runs git: `rev=A` compares commit `A` with the working tree, and `rev=A..B` compares two commits. It shows the changed region with a few lines of context.
+With `file=` and `rev=`, the server reads both versions from git: `rev=A` compares commit `A` with the working tree, and `rev=A..B` compares two commits. It shows the changed region with a few lines of context; `lines=` narrows the new side to that range instead. A pasted `diff` block is numbered from its first `@@` header, so send one hunk per slide.
 
 ### Diagram
 
@@ -121,7 +121,7 @@ A `$$ ... $$` block works too. The content is LaTeX rendered with KaTeX.
 
 ### Table
 
-A GitHub-style pipe table. Cells may hold inline code and emphasis.
+A GitHub-style pipe table. Cells may hold inline code and emphasis. Rows are `#row-1`, `#row-2` and so on for cues, unless the last cell of a row ends with `{#id}`.
 
 ### List
 
@@ -130,7 +130,7 @@ A GitHub-style pipe table. Cells may hold inline code and emphasis.
 - **Disk**: survives restarts {#disk}
 ```
 
-Bullets give a bulleted list and `1.` items give numbered steps; add `.cards` to the heading for cards. An item may start with a bold title, followed by `:` or a dash and a description. A trailing `{#id}` names the item for cues. Nested lists are flattened.
+Bullets give a bulleted list and `1.` items give numbered steps; add `.cards` to the heading for cards. An item may start with a bold title, followed by `:` or a dash and a description. A trailing `{#id}` names the item for cues; without one, the id is the title in lowercase with hyphens (`**Hot path**` becomes `#hot-path`). Nested lists are flattened.
 
 ### Image
 
@@ -151,7 +151,7 @@ Narration is plain prose written to be heard. Markdown inside it is used like th
 | **`[label](#target)`** | a cue: the pointer moves to the target as the label is spoken |
 | **`[text]{say="spoken"}`** | shows `text` in captions and speaks `spoken` instead |
 | **`[^1]`** | reserved: citation, listed in the transcript and never read aloud |
-| **`{pause=1.5}`** | a paragraph holding only this adds silence, in seconds |
+| **`{pause=1.5}`** | a paragraph holding only this adds silence, in seconds (at most 5) |
 
 ## Cues
 
@@ -178,7 +178,7 @@ With `.build` on the heading, the slide starts mostly empty and fills in as the 
 
 | Visual | Behaviour |
 |---|---|
-| **List, cards** | items appear up to the latest item pointed at |
+| **List, cards, table** | items or rows appear up to the latest one pointed at by id |
 | **Code** | lines appear up to the end of the latest line range pointed at |
 | **Flowchart** | nodes appear in source order up to the latest node pointed at; an edge appears once both its ends are visible |
 

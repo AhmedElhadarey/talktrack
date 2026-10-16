@@ -63,11 +63,13 @@ class LocalService:
             out["error"] = first.error if first else ""
         if status in ("ready", "error"):
             out["guide"] = not s.w.guide_sent
+            first_time = not s.w.link_shared or not s.w.guide_sent
             s.w.link_shared = True
             s.w.guide_sent = True
-            s._changed(set(), meta=True)
-            if status == "ready":
-                self.store.on_playable(s)
+            if first_time:
+                s._changed(set(), meta=True)
+                if status == "ready":
+                    self.store.on_playable(s)
         return out
 
     async def revise(self, handle: str, slide: str, markdown: str) -> dict:
