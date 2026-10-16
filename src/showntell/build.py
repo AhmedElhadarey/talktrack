@@ -172,8 +172,8 @@ class Builder:
                 lang = b.lang or ob.lang
                 vis = {
                     "lang": lang,
-                    "old": {"code": oex.code, "start": oex.start, "title": ob.attrs.get("title") or self._name(ob) or "Before"},
-                    "new": {"code": nex.code, "start": nex.start, "title": b.attrs.get("title") or self._name(b) or "After"},
+                    "old": {"code": oex.code, "start": oex.start, "title": ob.attrs.get("title") or self._name(ob)},
+                    "new": {"code": nex.code, "start": nex.start, "title": b.attrs.get("title") or self._name(b)},
                 }
                 self._check_diff(vis)
                 return self._set(self._slide_for_visual("diff"), "diff", vis)
@@ -267,8 +267,8 @@ class Builder:
             lang = b.attrs.get("lang", "")
             vis = {
                 "lang": lang,
-                "old": {"code": old.code, "start": old.start, "title": b.attrs.get("title", "Before")},
-                "new": {"code": new.code, "start": new.start, "title": "After"},
+                "old": {"code": old.code, "start": old.start, "title": b.attrs.get("title", "")},
+                "new": {"code": new.code, "start": new.start, "title": b.attrs.get("title", "")},
             }
         self._check_diff(vis)
         self._set(self._slide_for_visual("diff"), "diff", vis)

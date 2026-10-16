@@ -111,7 +111,7 @@ def public_say(x: Say) -> dict:
     if x.pause:
         out["pause"] = x.pause
         return out
-    out.update(text=x.text, cues=x.cues, notes=x.notes)
+    out.update(text=x.text, cues=x.cues, notes=x.notes, code=x.code)
     if x.status == "ready":
         out.update(audio=f"audio/{x.key}.wav", duration=x.duration, words=x.words)
     elif x.status == "error":
