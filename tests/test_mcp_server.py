@@ -160,7 +160,7 @@ async def test_finish_walkthrough(mcp):
 
 async def test_list_walkthroughs(mcp):
     async with mcp as client:
-        assert (await client.call_tool("list_walkthroughs", {})).structured_content == {"walkthroughs": []}
+        assert (await client.call_tool("list_walkthroughs", {})).structured_content["walkthroughs"] == []
         h = await start(client)
         r = await client.call_tool("list_walkthroughs", {})
         (row,) = r.structured_content["walkthroughs"]
@@ -244,3 +244,15 @@ async def test_each_walkthrough_is_a_resource_with_its_markdown(mcp):
         uri = re.sub(r"\{[^}]+\}", wid, templates[0].uri_template)
         r = await client.read_resource(uri)
         assert "Every request checks a small cache first." in r.contents[0].text
+
+
+async def test_structured_content_carries_the_whole_reply(mcp):
+    """Claude Code shows the model only the structured content when there is any, so the guide
+    and the instructions must be in it, not only in the text."""
+    async with mcp as client:
+        r = await client.call_tool("start_walkthrough", {"title": "Probe", "opening": "# Probe\n\nOne short sentence.\n"})
+        msg = r.structured_content["message"]
+        assert msg == text(r)
+        assert "Writing a showntell walkthrough" in msg and r.structured_content["url"] in msg
+        a = await client.call_tool("add_slides", {"handle": r.structured_content["handle"], "markdown": "## Next\n\nMore words.\n"})
+        assert a.structured_content["message"] == text(a)

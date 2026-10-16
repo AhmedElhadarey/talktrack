@@ -74,7 +74,9 @@ def guide(frame: str) -> str:
 
 
 def _result(text: str, data: dict) -> CallToolResult:
-    return CallToolResult(content=[TextContent(type="text", text=text)], structured_content=data)
+    # Some clients (Claude Code among them) give the model only the structured content when there is
+    # any, so it carries the full reply text too: the guide and instructions live there.
+    return CallToolResult(content=[TextContent(type="text", text=text)], structured_content={"message": text, **data})
 
 
 def _slide_link(url: str, slide: str) -> str:
@@ -209,7 +211,7 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
             # The opening came with the call: voice it now and return the link, saving a round trip.
             res = await _append(r["handle"], opening, ctx)
             text = f"Handle: {r['handle']}\n" + res.content[0].text
-            data = {**(res.structured_content or {}), "handle": r["handle"]}
+            data = {**(res.structured_content or {}), "message": text, "handle": r["handle"]}
             return CallToolResult(content=[TextContent(type="text", text=text)], structured_content=data, is_error=res.is_error)
         text = head
         if not r["speech"]["ready"]:
@@ -297,9 +299,8 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
         issues = _issues_text([], r["player_issues"])
         if issues:
             content.append(TextContent(type="text", text=issues))
-        return CallToolResult(content=content, structured_content={
-            "slides": [{k: v for k, v in sl.items() if k != "png"} for sl in r["slides"]],
-            "player_issues": r["player_issues"]})
+        # No structured content here: clients that prefer it would drop the pictures.
+        return CallToolResult(content=content)
 
     for name, p in texts()["prompts"].items():
         _register_prompt(mcp, name, p)
