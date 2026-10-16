@@ -16,25 +16,95 @@ Ask your agent to walk you through a pull request, a module or a concept. It wri
 
 ## Install
 
-You need [uv](https://docs.astral.sh/uv/) and Python 3.12 or newer, which uv installs for you.
+You need [uv](https://docs.astral.sh/uv/). It installs Python 3.12 or newer for you if needed.
+
+Every agent runs the same command, which starts showntell as a stdio MCP server:
 
 ```zsh
-claude mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
+uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
 ```
 
-Once showntell is on PyPI this becomes `uvx showntell mcp`. Then ask Claude Code: *"show me how a request gets retried in this codebase"*.
+Once showntell is on PyPI this shortens to `uvx showntell mcp`. Pick your agent below, then ask it something like *"walk me through how a request gets retried in this codebase"*. The agent replies with a link; open it and press play.
 
-The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model, from Hugging Face and GitHub. After that, everything works offline.
+The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model. The first walkthrough takes a few seconds longer while they load. After that, everything works offline.
 
-| Client | Setup |
-|---|---|
-| **Claude Code** | `claude mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp` |
-| **Cursor, VS Code, Codex CLI, Gemini CLI, Claude Desktop** | a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell showntell mcp` |
-| **Any client over HTTP** | run `showntell serve`, then connect to `http://localhost:4747/mcp` |
+### Claude Code
 
-`showntell mcp` starts a shared background daemon the first time, or reuses the running one, so the voice model stays loaded across sessions and every client uses one port. `showntell doctor` checks the setup and measures speech speed.
+1. Add the server for all your projects:
 
-On a Mac, `showntell autostart on` starts the daemon at login, so the first walkthrough of the day is as fast as the rest.
+   ```zsh
+   claude mcp add --scope user showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
+   ```
+
+2. Start a new `claude` session and run `/mcp`; `showntell` should be listed as connected.
+3. Ask for a walkthrough, or use a built-in prompt: `/mcp__showntell__diff HEAD~1..HEAD`, `/mcp__showntell__file src/app.py` or `/mcp__showntell__topic how TLS works`.
+
+### Codex CLI
+
+1. Add the server (this writes `~/.codex/config.toml`):
+
+   ```zsh
+   codex mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
+   ```
+
+2. Check it with `codex mcp list`, or run `/mcp` inside a `codex` session.
+3. Start `codex` in your project and ask for a walkthrough.
+
+If you prefer to edit the config file yourself, add:
+
+```toml
+[mcp_servers.showntell]
+command = "uvx"
+args = ["--from", "git+https://github.com/rahimnathwani/showntell", "showntell", "mcp"]
+```
+
+### Antigravity CLI (agy)
+
+1. Add the server (this writes `~/.gemini/config/mcp_config.json`, which the Antigravity IDE shares). Flags go before the name, and the `--` keeps `--from` from being read as an agy flag:
+
+   ```zsh
+   agy mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
+   ```
+
+2. Check it with `agy mcp list`.
+3. Start `agy` in your project and ask for a walkthrough. MCP tools ask for approval by default, so allow showntell's tools when prompted. In print mode there is no prompt, so the calls may be refused.
+
+### Pi
+
+Pi has no MCP support of its own before version 0.99, so it uses the [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) extension.
+
+1. Install the adapter:
+
+   ```zsh
+   pi install npm:pi-mcp-adapter
+   ```
+
+2. Add showntell to `~/.config/mcp/mcp.json` for all projects, or `.mcp.json` in one project, merging with any servers already there:
+
+   ```json
+   {
+     "mcpServers": {
+       "showntell": {
+         "command": "uvx",
+         "args": ["--from", "git+https://github.com/rahimnathwani/showntell", "showntell", "mcp"]
+       }
+     }
+   }
+   ```
+
+3. Restart `pi` and run `/mcp`; `showntell` should be listed. Ask for a walkthrough.
+
+### Other clients
+
+- **Cursor, VS Code, Claude Desktop, Gemini CLI and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell showntell mcp`. Most use the same `mcpServers` JSON as the Pi example.
+- **Over HTTP:** run `uvx --from git+https://github.com/rahimnathwani/showntell showntell serve` and connect the client to `http://localhost:4747/mcp`.
+
+### Good to know
+
+- **One shared daemon:** the first `showntell mcp` starts a background daemon, and later ones reuse it. The voice model stays loaded and every agent shares one port.
+- **Checking the setup:** `uvx --from git+https://github.com/rahimnathwani/showntell showntell doctor` checks the models, speech speed, port and daemon.
+- **Your walkthroughs:** http://localhost:4747/ lists them; the daemon log is `~/.local/share/showntell/daemon.log`.
+- **Faster mornings on a Mac:** `uvx --from git+https://github.com/rahimnathwani/showntell showntell autostart on` starts the daemon at login, so even the first walkthrough of the day comes back as fast as the rest.
 
 ## How it works
 
