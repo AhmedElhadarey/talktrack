@@ -31,9 +31,9 @@ Phases 0 to 2 are built, every launch criterion is met, and the repository is pu
 | Launch criterion | Measured | Result |
 |---|---|---|
 | **Install** | empty uv and Hugging Face caches: install 11 s, first speech 52 s including the 327 MB model download | met |
-| **Speed** | link 0.75 to 1.44 s after `start_walkthrough` in 9 Sonnet runs with the model loaded (6.0 s for the first, cold run). The opening now rides along with the start call, which saves a model turn. | met |
-| **Evaluation** | 10 prompts on Sonnet, each played at 1x from the moment the link was playable: 9 of 10 with no stalls and no render errors (one run waited 2.2 s for voicing after the agent revised an upcoming slide) | met |
-| **Pointer** | 118 of 118 cues located by speech recognition fired within 300 ms of the word; 3 more could not be located in the transcript (97.5% counting those as misses) | met |
+| **Speed** | link 0.66 to 2.07 s after `start_walkthrough` across 10 Sonnet runs, including the first. The opening rides along with the start call, which saves a model turn. | met |
+| **Evaluation** | 10 prompts on Sonnet, each played at 1x from the moment the link was playable: 10 of 10 with no stalls and no render errors | met |
+| **Pointer** | 100 of 101 cues fired within 300 ms of the word, measured against speech-recognition word times; every cue was located in the transcript (99.0%) | met |
 | **Pronunciation** | 0.55 missed technical terms per minute on the 70-sentence set; 0 per minute across the 10 evaluation walkthroughs | met |
 | **Quality** | GitHub CI is green: on Linux x86_64, 562 tests, 14 player tests, 3 browser tests, `doctor` voicing with ONNX and 7 ONNX tests; on macOS Apple silicon, 562 tests, `doctor` voicing with MLX and 4 MLX tests | met |
 
@@ -43,7 +43,7 @@ Phases 0 to 2 are built, every launch criterion is met, and the repository is pu
 | **1** | security, revise, cue inference, checks, `play`, step reveals, pronunciation, MLX and ONNX backends, time-driven player, transcript, seeking, accessibility, shared daemon with start and instance locks, `doctor`, `autostart`, plugin and skill, prompts, resources, tests, evaluation |
 | **2** | static export with captions, docs, CI, release and gallery workflows, recorder for demo video, a five-walkthrough gallery made with Opus (links 0.38 to 0.81 s, $0.22 to $0.64 each), README demo |
 
-Evaluation cost on Sonnet: $0.10 to $0.24 per walkthrough.
+Evaluation cost on Sonnet: $0.09 to $0.24 per walkthrough, $1.40 for the ten.
 
 **Owner steps left:** add a PyPI trusted publisher for `release.yml` and tag `v0.1.0` (until then the README installs from GitHub); post the mlx-audio issue asking for a public word-timestamp API; announce.
 
