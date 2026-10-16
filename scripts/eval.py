@@ -44,7 +44,7 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
     t0 = time.time()
     proc = await asyncio.create_subprocess_exec(*cmd, cwd=ROOT, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
                                                 stdin=asyncio.subprocess.DEVNULL, limit=1 << 24)
-    marks: dict = {"tool_calls": [], "issues": 0, "player_issues": 0}
+    marks: dict = {"tool_calls": [], "issues": 0, "player_issues": 0, "issue_codes": {}}
     player_task = None
     url = None
     tool_names: dict[str, str] = {}
@@ -74,6 +74,8 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
                 text = block["content"] if isinstance(block["content"], str) else " ".join(
                     c.get("text", "") for c in block["content"] if isinstance(c, dict))
                 marks["issues"] += len(re.findall(r"^- ", text.split("The open player reported")[0], re.M)) if "Problems" in text else 0
+                for code in re.findall(r"^- .*\((\w+)\)$", text, re.M):
+                    marks["issue_codes"][code] = marks["issue_codes"].get(code, 0) + 1
                 if "The open player reported" in text:
                     marks["player_issues"] += text.split("The open player reported")[1].count("\n- ")
                 if name in ("start_walkthrough", "add_slides") and "playable_at" not in marks and re.search(r"playable", text, re.I):
@@ -243,7 +245,20 @@ def summarize(w: Walkthrough | None) -> dict:
         return {}
     says = [x for s in w.slides for x in s.says if x.text]
     cues = [c for x in says for c in x.cues]
-    return {"slides": len(w.slides), "paragraphs": len(says), "duration_s": round(sum(x.duration for x in says), 1),
+    used = set()
+    for s in w.slides:
+        v = s.visual or {}
+        used |= {k for k, on in {"steps": bool(v.get("steps")), "scroll": bool(v.get("scroll")), "frame": bool(v.get("frame")),
+                                 "notes": bool(v.get("notes")), "stack": v.get("style") == "stack",
+                                 "checklist": v.get("style") == "checklist"}.items() if on}
+        if s.kind in ("stat", "chat", "chapter", "chart", "terminal", "tree"):
+            used.add(s.kind)
+    for c in cues:
+        if c.get("kind") in ("edge", "region", "step"):
+            used.add(c["kind"])
+        for style in (c.get("style") or "").split():
+            used.add(style)
+    return {"features": sorted(used),"slides": len(w.slides), "paragraphs": len(says), "duration_s": round(sum(x.duration for x in says), 1),
             "cues": len(cues), "inferred_cues": sum(1 for c in cues if c.get("inferred")),
             "kinds": sorted({s.kind for s in w.slides}), "builds": sum(1 for s in w.slides if "build" in s.classes),
             "from_disk": sum(1 for s in w.slides if s.visual.get("file")), "status": w.status}
@@ -313,14 +328,15 @@ async def main() -> None:
 
 
 def print_table(results: list[dict]) -> None:
-    head = "| run | model | link s | total s | cost | slides | min | issues | render err | stalls | cue acc | missing/min |"
+    head = "| run | model | link s | total s | cost | slides | min | issues | render err | stalls | cue acc | missing/min | preview | features |"
     print("\n" + head + "\n|" + "---|" * (head.count("|") - 1))
     for r in sorted(results, key=lambda r: (r["model"], r["id"])):
         s, pl, a = r.get("summary", {}), r.get("player", {}), r.get("asr", {})
         print(f"| {r['id']} | {r['model']} | {r.get('link_after_start', '-')} | {r.get('finished_at', 0):.0f} | "
               f"${r.get('cost') or 0:.2f} | {s.get('slides', '-')} | {s.get('duration_s', 0) / 60:.1f} | {r['issues']} | "
               f"{len(pl.get('render_errors', [])) if pl else '-'} | {pl.get('stalls', '-') if pl else '-'} | "
-              f"{a.get('cue_accuracy', '-')} | {a.get('missing_per_min', '-')} |")
+              f"{a.get('cue_accuracy', '-')} | {a.get('missing_per_min', '-')} | "
+              f"{sum(1 for _, n in r.get('tool_calls', []) if n == 'preview_slides')} | {', '.join(s.get('features', [])) or '-'} |")
 
 
 if __name__ == "__main__":

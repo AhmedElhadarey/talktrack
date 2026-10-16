@@ -1,12 +1,77 @@
 [
-  {"id": "parser", "kind": "file", "prompt": "Use showntell to make me a narrated walkthrough of src/showntell/format.py: how the incremental Markdown parser works and why chunk boundaries matter."},
-  {"id": "diff", "kind": "diff", "prompt": "Use showntell to make a narrated walkthrough of what changed between commits 8d0619a and f2a4a93 in this repo, for a reviewer."},
-  {"id": "arch", "kind": "architecture", "prompt": "Use showntell to give me an architecture overview of this project: the daemon, the MCP tools, speech, and the player. Keep it under three minutes."},
-  {"id": "timing", "kind": "code", "prompt": "Use showntell to explain how word timings from the speech model become pointer cues in this project. Look at src/showntell/speech/narrator.py and src/showntell/static/js/timeline.js."},
-  {"id": "dns", "kind": "concept", "prompt": "Use showntell to explain how DNS resolution works, from typing a URL to getting an IP address."},
-  {"id": "hashmap", "kind": "concept-code", "prompt": "Use showntell to explain how a hash map handles collisions, with a short code example."},
-  {"id": "gradient", "kind": "maths", "prompt": "Use showntell to explain gradient descent: the update rule, the learning rate, and a tiny worked example."},
-  {"id": "tcp", "kind": "concept", "prompt": "Use showntell to explain the TCP three-way handshake and why it needs three steps."},
-  {"id": "csrf", "kind": "security", "prompt": "Use showntell to explain how CSRF attacks work and how SameSite cookies prevent them."},
-  {"id": "rebase", "kind": "concept", "prompt": "Use showntell to explain git rebase versus merge, with diagrams of the commit graph."}
+ {
+  "id": "parser",
+  "kind": "file",
+  "prompt": "Use showntell to make me a narrated walkthrough of src/showntell/format.py: how the incremental Markdown parser works and why chunk boundaries matter."
+ },
+ {
+  "id": "diff",
+  "kind": "diff",
+  "prompt": "Use showntell to make a narrated walkthrough of what changed between commits 8d0619a and f2a4a93 in this repo, for a reviewer."
+ },
+ {
+  "id": "arch",
+  "kind": "architecture",
+  "prompt": "Use showntell to give me an architecture overview of this project: the daemon, the MCP tools, speech, and the player. Keep it under three minutes."
+ },
+ {
+  "id": "timing",
+  "kind": "code",
+  "prompt": "Use showntell to explain how word timings from the speech model become pointer cues in this project. Look at src/showntell/speech/narrator.py and src/showntell/static/js/timeline.js."
+ },
+ {
+  "id": "dns",
+  "kind": "concept",
+  "prompt": "Use showntell to explain how DNS resolution works, from typing a URL to getting an IP address."
+ },
+ {
+  "id": "hashmap",
+  "kind": "concept-code",
+  "prompt": "Use showntell to explain how a hash map handles collisions, with a short code example."
+ },
+ {
+  "id": "gradient",
+  "kind": "maths",
+  "prompt": "Use showntell to explain gradient descent: the update rule, the learning rate, and a tiny worked example."
+ },
+ {
+  "id": "tcp",
+  "kind": "concept",
+  "prompt": "Use showntell to explain the TCP three-way handshake and why it needs three steps."
+ },
+ {
+  "id": "csrf",
+  "kind": "security",
+  "prompt": "Use showntell to explain how CSRF attacks work and how SameSite cookies prevent them."
+ },
+ {
+  "id": "rebase",
+  "kind": "concept",
+  "prompt": "Use showntell to explain git rebase versus merge, with diagrams of the commit graph."
+ },
+ {
+  "id": "refactor",
+  "kind": "refactor",
+  "prompt": "Use showntell to show how the parse_tree function in src/showntell/kinds.py could be made simpler, walking through the code as it changes step by step."
+ },
+ {
+  "id": "request",
+  "kind": "architecture",
+  "prompt": "Use showntell to show how one add_slides call travels from the coding agent through the stdio shim, the daemon, the builder and the narrator, and into the browser player."
+ },
+ {
+  "id": "speedup",
+  "kind": "numbers",
+  "prompt": "Use showntell to explain how MP4 export got faster: the first version rendered at 3.6 times real time, skipping unchanged frames reached 8.3, a faster x264 preset 10.2, and JPEG frames 16. Show the numbers and what each change did."
+ },
+ {
+  "id": "setup",
+  "kind": "howto",
+  "prompt": "Use showntell to show a new contributor how to set up this repo and run its tests: the commands, what their output looks like, and where the tests live."
+ },
+ {
+  "id": "mcp",
+  "kind": "concept",
+  "prompt": "Use showntell to explain what an MCP client and server say to each other when a tool is called: initialize, tools/list and tools/call, with the messages they exchange."
+ }
 ]
