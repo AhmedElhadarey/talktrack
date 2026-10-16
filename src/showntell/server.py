@@ -361,8 +361,15 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
         s = session_or_404(request)
         name = request.path_params["name"]
         key = name.removesuffix(".wav")
-        if not s or not any(x.key == key for sl in s.w.slides for x in sl.says):
+        hit = next(((sl, x) for sl in s.w.slides for x in sl.says if x.key == key), None) if s else None
+        if not hit:
             return Response("Not found", status_code=404)
+        if not store.narrator.audio_path(key).is_file():
+            # The audio cache was cleared: voice it again; the player gets an update when it is back.
+            hit[1].status = "pending"
+            s._voice(*hit)
+            s._changed({hit[0].id})
+            return Response("Being voiced again", status_code=404)
         return _file(store.narrator.cache_dir, f"{key}.wav", immutable=True)
 
     @mcp.custom_route("/w/{wid}/assets/{name}", methods=["GET"])

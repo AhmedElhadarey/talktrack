@@ -4,8 +4,8 @@
 # ///
 """Record a walkthrough as an MP4 with its narration, and optionally a short GIF.
 
-Plays the walkthrough at 1x in headless Chromium while recording the page, rebuilds the
-narration track from data.json on the same timeline as the player, and muxes both with ffmpeg.
+Plays the walkthrough at 1x in headless Chromium while recording the page, places each
+paragraph's audio at the moment the player started it, and muxes both with ffmpeg.
 
     uv run scripts/record_video.py http://localhost:4747/w/<id>/ demo.mp4 --gif demo.gif --gif-seconds 20
 """
@@ -26,40 +26,40 @@ import numpy as np
 import soundfile as sf
 from playwright.async_api import async_playwright
 
-GAP, SLIDE_GAP, EMPTY, SR = 0.3, 0.6, 2.5, 24000  # same as static/js/timeline.js
+SR = 24000
 
 
-def narration_track(url: str) -> np.ndarray:
+def narration_track(url: str, starts: list[dict], t_page: float) -> np.ndarray:
+    """Each paragraph's audio placed where the player actually started it, in seconds from
+    the moment the page (and so the video) began."""
     data = httpx.get(url + "data.json", timeout=30).json()
-    clips, t = [], 0.0
-    for slide in data["slides"]:
-        says = [x for x in slide["says"] if x.get("pause") or x.get("text")]
-        if not says:
-            t += EMPTY + SLIDE_GAP
+    audio_for = {x["id"]: x["audio"] for s in data["slides"] for x in s["says"] if x.get("audio")}
+    first: dict[str, dict] = {}
+    for st in starts:
+        first.setdefault(st["key"], st)
+    clips = []
+    for key, st in first.items():
+        if key not in audio_for:
             continue
-        for k, x in enumerate(says):
-            if x.get("pause"):
-                t += x["pause"]
-                continue
-            dur = x.get("duration") or len(x.get("text", "").split()) / 2.7
-            if x.get("audio"):
-                audio, sr = sf.read(io.BytesIO(httpx.get(url + x["audio"], timeout=30).content), dtype="float32")
-                assert sr == SR
-                clips.append((t, audio))
-            t += dur + (SLIDE_GAP if k == len(says) - 1 else GAP)
-    track = np.zeros(int((t + 1) * SR), dtype=np.float32)
+        audio, sr = sf.read(io.BytesIO(httpx.get(url + audio_for[key], timeout=30).content), dtype="float32")
+        assert sr == SR
+        at = st["at"] / 1000 - t_page - st["local"]
+        clips.append((max(0.0, at), audio))
+    end = max((a + len(c) / SR for a, c in clips), default=0)
+    track = np.zeros(int((end + 1) * SR), dtype=np.float32)
     for start, audio in clips:
         i = int(start * SR)
         track[i : i + len(audio)] += audio[: len(track) - i]
     return track
 
 
-async def record(url: str, size: tuple[int, int], workdir: Path) -> tuple[Path, float]:
+async def record(url: str, size: tuple[int, int], workdir: Path) -> tuple[Path, float, list[dict], float]:
     async with async_playwright() as p:
         b = await p.chromium.launch(args=["--autoplay-policy=no-user-gesture-required", "--mute-audio"])
         ctx = await b.new_context(viewport={"width": size[0], "height": size[1]}, record_video_dir=str(workdir),
                                   record_video_size={"width": size[0], "height": size[1]})
         t_start = time.monotonic()
+        t_page = time.time()
         page = await ctx.new_page()
         await page.goto(url)
         await page.wait_for_function("window.__showntell !== undefined && !document.querySelector('#big-play').disabled")
@@ -71,10 +71,11 @@ async def record(url: str, size: tuple[int, int], workdir: Path) -> tuple[Path, 
             if await page.evaluate("window.__showntell.ended"):
                 break
         await page.wait_for_timeout(2500)  # hold the end card
+        starts = await page.evaluate("window.__showntell.starts")
         video = await page.video.path()
         await ctx.close()
         await b.close()
-        return Path(video), offset
+        return Path(video), offset, starts, t_page
 
 
 def main() -> None:
@@ -93,12 +94,11 @@ def main() -> None:
     size = tuple(int(x) for x in args.size.split("x"))
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
-        video, offset = asyncio.run(record(url, size, work))
+        video, offset, starts, t_page = asyncio.run(record(url, size, work))
         wav = work / "narration.wav"
-        sf.write(wav, narration_track(url), SR)
-        delay = int(offset * 1000) + 120  # the click lands a frame or so after the measurement
+        sf.write(wav, narration_track(url, starts, t_page), SR)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(video), "-i", str(wav),
-                        "-filter_complex", f"[1:a]adelay={delay}|{delay}[a]", "-map", "0:v", "-map", "[a]",
+                        "-map", "0:v", "-map", "1:a",
                         "-c:v", "libx264", "-preset", "slow", "-crf", "22", "-pix_fmt", "yuv420p",
                         "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", args.out], check=True)
         print(f"video: {args.out}")

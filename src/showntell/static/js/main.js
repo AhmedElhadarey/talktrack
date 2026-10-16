@@ -19,7 +19,8 @@ audio.preload = "auto";
 const prefetch = new Audio();
 prefetch.preload = "auto";
 
-const metrics = { stalls: 0, stallSeconds: 0, renderErrors: [], ended: false, played: 0 };
+// Read by the evaluation harness and the video recorder.
+const metrics = { stalls: 0, stallSeconds: 0, renderErrors: [], ended: false, starts: [] };
 window.__showntell = metrics;
 
 let W = null; // walkthrough data
@@ -31,6 +32,7 @@ let view = null; // {parts, ready, root, body}
 let lastCueKey = "", lastReveal = "", lastSay = "", lastWord = -2;
 let rate = 1, captionsOn = true, pauseAfterSlide = false;
 let seekingAudio = false;
+const failedAudio = new Set(); // audio URLs that failed to load; played silently instead
 
 const store = {
   get(k, d) { try { const v = localStorage.getItem(`showntell.${k}`); return v === null ? d : JSON.parse(v); } catch { return d; } },
@@ -74,6 +76,7 @@ new ResizeObserver(() => { layoutStage(); render(true); }).observe($("#viewport"
 // ------------------------------------------------------------------- data
 
 function setData(w) {
+  failedAudio.clear();
   const keepKey = TL.segs[pos.seg]?.key;
   const keepSlideId = W && TL.segs[pos.seg] ? W.slides[TL.segs[pos.seg].slide]?.id : null;
   const first = !W;
@@ -151,7 +154,7 @@ function advance(dt) {
   }
   unstall();
   const say = sayOf(seg);
-  const hasAudio = say && say.audio && !seg.pause && !seg.error;
+  const hasAudio = say && say.audio && !seg.pause && !seg.error && !failedAudio.has(say.audio);
   if (hasAudio && pos.local < seg.dur) {
     const url = say.audio;
     if (!audio.src.endsWith(url)) {
@@ -713,8 +716,21 @@ document.addEventListener("keydown", (e) => {
   else if (k === "Escape") { $("#menu").hidden = true; }
 });
 
-audio.addEventListener("ended", () => { /* the clock moves on during the gap */ });
-audio.addEventListener("error", () => { if (audio.src) report(`Audio failed to load: ${audio.src.split("/").pop()}`); });
+audio.addEventListener("playing", () => {
+  // Wall-clock start of each paragraph's audio, so recordings can line sound up with pictures.
+  const seg = currentSeg();
+  if (seg) metrics.starts.push({ key: seg.key, at: performance.timeOrigin + performance.now(), local: audio.currentTime });
+});
+audio.addEventListener("error", () => {
+  // A missing or broken file: carry on silently with captions rather than stopping.
+  if (!audio.src) return;
+  const name = audio.src.split("/").pop();
+  const say = sayOf(currentSeg());
+  if (say?.audio) failedAudio.add(say.audio);
+  seekingAudio = false;
+  audio.removeAttribute("src");
+  report(`Audio failed to load: ${name}`);
+});
 
 load().catch((e) => {
   $("#overlay-meta").textContent = "This walkthrough could not be loaded.";
