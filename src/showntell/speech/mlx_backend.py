@@ -7,6 +7,7 @@ tests/test_mlx_adapter.py fails loudly when an mlx-audio release breaks it.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import sys
 import types
@@ -49,7 +50,8 @@ class MlxBackend:
     def _pipeline(self, voice: str):
         lang = voice[0] if voice[:1] in ("a", "b") else "a"
         if lang not in self._pipelines:
-            self._pipelines[lang] = self._model._get_pipeline(lang)  # private: see module docstring
+            with contextlib.redirect_stdout(sys.stderr):  # mlx-audio prints progress to stdout
+                self._pipelines[lang] = self._model._get_pipeline(lang)  # private: see module docstring
         return self._pipelines[lang]
 
     def synth(self, text: str, voice: str, speed: float) -> tuple[np.ndarray, list[Token]]:

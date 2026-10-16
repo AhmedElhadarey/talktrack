@@ -62,6 +62,9 @@ def main(argv: list[str] | None = None) -> None:
     d = sub.add_parser("doctor", help="check models, speech speed, port and daemon")
     _common(d)
     d.add_argument("--speech", choices=["auto", "mlx", "onnx", "fake"])
+    au = sub.add_parser("autostart", help="macOS: start the daemon at login and keep it running")
+    _common(au)
+    au.add_argument("action", choices=["on", "off", "status"])
     sub.add_parser("version", help="print the version")
 
     args = p.parse_args(argv)
@@ -96,6 +99,8 @@ def main(argv: list[str] | None = None) -> None:
         from .doctor import doctor
 
         doctor(cfg, args)
+    elif args.cmd == "autostart":
+        autostart(cfg, args.action)
     elif args.cmd == "version":
         from . import __version__
 
@@ -128,35 +133,43 @@ def _project_for(file: Path) -> Path:
     return file.parent
 
 
+def file_meta(file: Path, text: str) -> dict:
+    """Title, frame, voice and speed for a Markdown walkthrough file: front matter first,
+    then the first heading, then the file name."""
+    from .format import Parser
+
+    meta = {"title": "", "frame": "landscape", "voice": "", "speed": 1.0}
+    for b in Parser().feed(text):
+        if b.kind == "front":
+            meta["title"] = b.attrs.get("title", "")
+            meta["frame"] = b.attrs.get("frame", "landscape")
+            meta["voice"] = b.attrs.get("voice", "")
+            try:
+                meta["speed"] = float(b.attrs.get("speed", 1.0))
+            except ValueError:
+                pass
+        elif b.kind == "heading":
+            meta["title"] = meta["title"] or b.text
+            break
+    meta["title"] = meta["title"] or file.stem.replace("-", " ").replace("_", " ").title()
+    return meta
+
+
 def play(cfg: Config, args) -> None:
     from . import daemon
-    from .format import Parser
     from .service import RemoteService
 
     file = Path(args.file).expanduser().resolve()
     if not file.is_file():
         raise SystemExit(f"{file} not found")
     text = file.read_text()
-    title, frame, voice, speed = file.stem.replace("-", " ").replace("_", " ").title(), "landscape", "", 1.0
-    for b in Parser().feed(text):
-        if b.kind == "front":
-            title = b.attrs.get("title", title)
-            frame = b.attrs.get("frame", frame)
-            voice = b.attrs.get("voice", voice)
-            try:
-                speed = float(b.attrs.get("speed", speed))
-            except ValueError:
-                pass
-        elif b.kind == "heading":
-            if title == file.stem.replace("-", " ").replace("_", " ").title():
-                title = b.text
-            break
+    meta = file_meta(file, text)
     project = Path(args.project).resolve() if args.project else _project_for(file)
     lock = daemon.ensure(cfg, log=lambda m: print(m, file=sys.stderr))
 
     async def go() -> None:
         svc = RemoteService(f"http://127.0.0.1:{lock['port']}", lock["token"])
-        r = await svc.start(title, frame, voice, speed, str(project))
+        r = await svc.start(meta["title"], meta["frame"], meta["voice"], meta["speed"], str(project))
         a = await svc.add(r["handle"], text)
         for issue in a["issues"]:
             print(f"- {issue}", file=sys.stderr)
@@ -189,3 +202,47 @@ def list_cmd(cfg: Config) -> None:
             rows.append((data.get("updated", 0), data["id"], data.get("title", ""), len(data.get("slides", [])), dur))
     for _, wid, title, n, dur in sorted(rows, reverse=True)[:30]:
         print(f"{wid}  {mmss(dur):>5}  {n:>2} slides  {title}")
+
+
+LABEL = "dev.showntell.daemon"
+
+
+def autostart(cfg: Config, action: str) -> None:
+    """A LaunchAgent that runs `showntell serve` at login, so the voice model is always loaded."""
+    import plistlib
+    import subprocess
+
+    if sys.platform != "darwin":
+        raise SystemExit("autostart uses launchd and works on macOS only; use a systemd user unit elsewhere")
+    plist = Path.home() / "Library/LaunchAgents" / f"{LABEL}.plist"
+    domain = f"gui/{os.getuid()}"
+    if action == "status":
+        r = subprocess.run(["launchctl", "print", f"{domain}/{LABEL}"], capture_output=True, text=True)
+        state = next((ln.strip() for ln in r.stdout.splitlines() if ln.strip().startswith("state =")), "")
+        print(f"autostart is {'on' if plist.exists() else 'off'}" + (f" ({state})" if state else ""))
+        return
+    subprocess.run(["launchctl", "bootout", f"{domain}/{LABEL}"], capture_output=True)
+    if action == "off":
+        plist.unlink(missing_ok=True)
+        print("autostart is off")
+        return
+    cfg.data_dir.mkdir(parents=True, exist_ok=True)
+    log = str(cfg.data_dir / "daemon.log")
+    env = {k: v for k, v in os.environ.items() if k.startswith(("SHOWNTELL_", "HF_"))}
+    env["PATH"] = os.environ.get("PATH", "/usr/bin:/bin")
+    plist.parent.mkdir(parents=True, exist_ok=True)
+    plist.write_bytes(plistlib.dumps({
+        "Label": LABEL,
+        "ProgramArguments": [sys.executable, "-m", "showntell", "serve", "--port", str(cfg.port)],
+        "EnvironmentVariables": env,
+        "RunAtLoad": True,
+        "KeepAlive": True,
+        "StandardOutPath": log,
+        "StandardErrorPath": log,
+    }))
+    r = subprocess.run(["launchctl", "bootstrap", domain, str(plist)], capture_output=True, text=True)
+    if r.returncode != 0:
+        raise SystemExit(f"launchctl refused the agent: {r.stderr.strip()}")
+    print(f"autostart is on: the daemon starts at login. Logs: {log}")
+    if "/uv/" in sys.executable and "/tools/" not in sys.executable:
+        print("note: this runs from a uv cache folder; `uv tool install showntell` gives a path that survives cache cleaning")
