@@ -25,3 +25,4 @@ node_modules/
 eval/results/
 tests/artifacts/
 .claude/worktrees/
+eval/*.log
