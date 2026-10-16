@@ -418,7 +418,10 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
 
     @mcp.custom_route("/static/{path:path}", methods=["GET"])
     async def static(request: Request) -> Response:
-        return _file(STATIC, request.path_params["path"])
+        r = _file(STATIC, request.path_params["path"])
+        if request.path_params["path"] == "embed.js":
+            r.headers["Access-Control-Allow-Origin"] = "*"  # for pages on other sites that embed a player
+        return r
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health(request: Request) -> Response:

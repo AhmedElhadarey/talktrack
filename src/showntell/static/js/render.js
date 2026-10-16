@@ -256,10 +256,10 @@ export function renderSlide(slide, ctx) {
         try {
           katex.render(v.latex, m, { displayMode: true, throwOnError: true });
         } catch (e) {
-          ctx.report(`Formula on slide ${slide.id} failed to render: ${e.message}`);
+          ctx.report(`Formula on slide ${slide.id} failed to render: ${e.message}`, "render_error", slide.id);
           katex.render(v.latex, m, { displayMode: true, throwOnError: false });
         }
-      }).catch((e) => ctx.report(String(e.message || e)));
+      }).catch((e) => ctx.report(`Formula on slide ${slide.id}: ${e.message || e}`, "render_error", slide.id));
       break;
     }
     case "image": {
@@ -270,7 +270,7 @@ export function renderSlide(slide, ctx) {
       wrap.append(img);
       parts.visual = img;
       body.append(wrap);
-      ready = img.decode().catch(() => ctx.report(`Image on slide ${slide.id} failed to load.`));
+      ready = img.decode().catch(() => ctx.report(`Image on slide ${slide.id} failed to load.`, "render_error", slide.id));
       break;
     }
     default: {
@@ -289,6 +289,7 @@ async function renderDiagram(container, v, slide, ctx) {
     mermaid = await mermaidReady();
   } catch (e) {
     container.innerHTML = `<div class="err">Diagrams are unavailable.</div>`;
+    ctx.report(`Diagram on slide ${slide.id}: the diagram library did not load (${e.message || e}).`, "render_error", slide.id);
     return null;
   }
   try {
@@ -300,7 +301,7 @@ async function renderDiagram(container, v, slide, ctx) {
     return s;
   } catch (e) {
     container.innerHTML = `<div class="err">This diagram could not be drawn.</div>`;
-    ctx.report(`Diagram on slide ${slide.id} failed to render: ${String(e.message || e).split("\n")[0]}`);
+    ctx.report(`Diagram on slide ${slide.id} failed to render: ${String(e.message || e).split("\n")[0]}`, "render_error", slide.id);
     document.querySelectorAll('[id^="dmmd-"]').forEach((n) => n.remove());
     return null;
   }

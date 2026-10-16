@@ -45,27 +45,48 @@ def _ts(t: float) -> str:
     return f"{int(h):02d}:{int(m):02d}:{s:06.3f}"
 
 
-def vtt(w: Walkthrough, max_words: int = 12) -> str:
-    """Captions grouped into short phrases, breaking at sentence ends."""
-    lines = ["WEBVTT", ""]
+# Caption grouping: break where the voice pauses or a sentence ends, keep groups short enough
+# to read at a glance, show each a moment before its first word and let it linger briefly.
+MAX_WORDS, MAX_SECONDS = 8, 3.0
+PAUSE_BREAK, COMMA_PAUSE = 0.45, 0.2
+LEAD, LINGER, MIN_SHOW = 0.08, 0.6, 0.7
+
+
+def vtt(w: Walkthrough) -> str:
+    """WebVTT captions on the player's timeline, one short phrase per cue."""
+    cues: list[tuple[float, float, str]] = []
     for start, _, say in timeline(w):
         if say.pause or not say.text or not say.words:
             continue
-        for group in _phrases(say, max_words):
+        for group in phrases(say):
             a, b = group[0]["c0"], group[-1]["c1"]
             while b < len(say.text) and say.text[b] in ".,;:!?)\"'":  # keep trailing punctuation
                 b += 1
-            n = (len(lines) - 2) // 4 + 1
-            lines += [str(n), f"{_ts(start + group[0]['s'])} --> {_ts(start + group[-1]['e'] + 0.15)}", say.text[a:b].strip(), ""]
+            cues.append((start + group[0]["s"], start + group[-1]["e"], say.text[a:b].strip()))
+    lines = ["WEBVTT", ""]
+    for i, (s0, e0, text) in enumerate(cues):
+        nxt = cues[i + 1][0] - LEAD if i + 1 < len(cues) else e0 + LINGER
+        prev_end = cues[i - 1][1] if i else 0.0
+        a = max(prev_end, s0 - LEAD) if i else max(0.0, s0 - LEAD)
+        b = min(max(e0 + LINGER, a + MIN_SHOW), max(nxt, e0))
+        lines += [str(i + 1), f"{_ts(a)} --> {_ts(b)}", text, ""]
     return "\n".join(lines)
 
 
-def _phrases(say, max_words: int) -> list[list[dict]]:
+def phrases(say) -> list[list[dict]]:
+    """Group a paragraph's words into caption phrases using the voice's own timing."""
     out: list[list[dict]] = []
     group: list[dict] = []
-    for w_ in say.words:
+    words = say.words
+    for i, w_ in enumerate(words):
         group.append(w_)
-        if len(group) >= max_words or say.text[w_["c1"] : w_["c1"] + 1] in (".", "?", "!"):
+        after = say.text[w_["c1"]: w_["c1"] + 1]
+        nxt = words[i + 1] if i + 1 < len(words) else None
+        gap = (nxt["s"] - w_["e"]) if nxt else 0.0
+        span = w_["e"] - group[0]["s"]
+        if (nxt is None or after in (".", "?", "!") or gap >= PAUSE_BREAK
+                or (after in (",", ";", ":") and (gap >= COMMA_PAUSE or len(group) >= 4))
+                or len(group) >= MAX_WORDS or span >= MAX_SECONDS):
             out.append(group)
             group = []
     if group:

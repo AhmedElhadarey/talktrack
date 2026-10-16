@@ -1,0 +1,964 @@
+{
+ "format": 1,
+ "id": "every-kind",
+ "title": "every-kind",
+ "frame": "landscape",
+ "status": "finished",
+ "questions": [],
+ "notes": {},
+ "slides": [
+  {
+   "id": "every-slide-kind",
+   "rev": 1,
+   "kind": "title",
+   "title": "Every slide kind",
+   "classes": [],
+   "shown": "A tour of what the player draws",
+   "visual": {},
+   "says": [
+    {
+     "id": "every-slide-kind.1.1",
+     "status": "ready",
+     "text": "This opening sentence is narrated while the title shows.",
+     "cues": [],
+     "notes": [],
+     "code": [],
+     "audio": "audio/f5adf614ae5eafe5878e4aef.wav",
+     "duration": 2.4,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 4
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 5,
+       "c1": 12
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 13,
+       "c1": 21
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 22,
+       "c1": 24
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 25,
+       "c1": 33
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 34,
+       "c1": 39
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 40,
+       "c1": 43
+      },
+      {
+       "s": 1.8,
+       "e": 2.013,
+       "c0": 44,
+       "c1": 49
+      },
+      {
+       "s": 2.05,
+       "e": 2.262,
+       "c0": 50,
+       "c1": 56
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "code",
+   "rev": 1,
+   "kind": "code",
+   "title": "Code from disk",
+   "classes": [
+    "build"
+   ],
+   "shown": "",
+   "visual": {
+    "lang": "python",
+    "code": "\"\"\"Incremental, lenient parser for the showntell Markdown format (docs/format.md).\n\n`Parser.feed(chunk)` returns the blocks completed by that chunk. The end of a chunk closes\nevery open block except a fenced block, a `$$` formula or front matter, which wait for\nthe next chunk. Inline narration markup is handled by `parse_narration`.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport re\nfrom dataclasses import dataclass, field\n\nFENCE_RE = re.compile(r\"^ {0,3}(`{3,}|~{3,})\\s*(.*)$\")\nHEADING_RE = re.compile(r\"^ {0,3}(#{1,6})\\s+(.*?)\\s*$\")",
+    "start": 1,
+    "title": "format.py",
+    "file": "src/showntell/format.py"
+   },
+   "says": [
+    {
+     "id": "code.1.1",
+     "status": "ready",
+     "text": "The file opens with a docstring and then imports.",
+     "cues": [
+      {
+       "at": 20,
+       "end": 31,
+       "label": "a docstring",
+       "target": "L1",
+       "text": "",
+       "kind": "lines",
+       "side": "new",
+       "l0": 1,
+       "l1": 1,
+       "t": 1.05
+      },
+      {
+       "at": 41,
+       "end": 48,
+       "label": "imports",
+       "target": "L8",
+       "text": "import re",
+       "kind": "lines",
+       "side": "new",
+       "l0": 10,
+       "l1": 10,
+       "t": 2.05
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/e28d51ea13e7beaf99184a2a.wav",
+     "duration": 2.4,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 3
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 4,
+       "c1": 8
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 9,
+       "c1": 14
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 15,
+       "c1": 19
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 20,
+       "c1": 21
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 22,
+       "c1": 31
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 32,
+       "c1": 35
+      },
+      {
+       "s": 1.8,
+       "e": 2.013,
+       "c0": 36,
+       "c1": 40
+      },
+      {
+       "s": 2.05,
+       "e": 2.262,
+       "c0": 41,
+       "c1": 49
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "diff",
+   "rev": 1,
+   "kind": "diff",
+   "title": "A change",
+   "classes": [],
+   "shown": "",
+   "visual": {
+    "lang": "python",
+    "old": {
+     "code": "total = 0\nfor x in xs:\n    total += x",
+     "start": 1,
+     "title": ""
+    },
+    "new": {
+     "code": "total = sum(xs)",
+     "start": 1,
+     "title": ""
+    }
+   },
+   "says": [
+    {
+     "id": "diff.1.1",
+     "status": "ready",
+     "text": "The loop goes away and one call replaces it.",
+     "cues": [
+      {
+       "at": 9,
+       "end": 18,
+       "label": "goes away",
+       "target": "-L2",
+       "text": "",
+       "kind": "lines",
+       "side": "old",
+       "l0": 2,
+       "l1": 2,
+       "t": 0.55
+      },
+      {
+       "at": 23,
+       "end": 31,
+       "label": "one call",
+       "target": "+L1",
+       "text": "sum",
+       "kind": "lines",
+       "side": "new",
+       "l0": 1,
+       "l1": 1,
+       "t": 1.3
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/d9bde182d74874c1e9a01c63.wav",
+     "duration": 2.4,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 3
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 4,
+       "c1": 8
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 9,
+       "c1": 13
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 14,
+       "c1": 18
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 19,
+       "c1": 22
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 23,
+       "c1": 26
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 27,
+       "c1": 31
+      },
+      {
+       "s": 1.8,
+       "e": 2.013,
+       "c0": 32,
+       "c1": 40
+      },
+      {
+       "s": 2.05,
+       "e": 2.262,
+       "c0": 41,
+       "c1": 44
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flow",
+   "rev": 1,
+   "kind": "diagram",
+   "title": "Flow",
+   "classes": [
+    "build"
+   ],
+   "shown": "",
+   "visual": {
+    "source": "flowchart LR\n  a[Request] --> b{Cached?}\n  b -->|yes| c[Return]\n  b -->|no| d[Load]",
+    "type": "flowchart",
+    "nodes": {
+     "a": "Request",
+     "b": "Cached?",
+     "c": "Return",
+     "d": "Load"
+    },
+    "labels": [
+     "yes",
+     "no"
+    ],
+    "order": [
+     "a",
+     "b",
+     "c",
+     "d"
+    ]
+   },
+   "says": [
+    {
+     "id": "flow.1.1",
+     "status": "ready",
+     "text": "A request checks the cache and either returns or loads.",
+     "cues": [
+      {
+       "at": 2,
+       "end": 9,
+       "label": "request",
+       "target": "a",
+       "text": "Request",
+       "kind": "node",
+       "id": "a",
+       "t": 0.3
+      },
+      {
+       "at": 17,
+       "end": 26,
+       "label": "the cache",
+       "target": "b",
+       "text": "Cached?",
+       "kind": "node",
+       "id": "b",
+       "t": 0.8
+      },
+      {
+       "at": 38,
+       "end": 45,
+       "label": "returns",
+       "target": "c",
+       "text": "Return",
+       "kind": "node",
+       "id": "c",
+       "t": 1.8
+      },
+      {
+       "at": 49,
+       "end": 54,
+       "label": "loads",
+       "target": "d",
+       "text": "Load",
+       "kind": "node",
+       "id": "d",
+       "t": 2.3
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/f93c3cf930590aa34beb465d.wav",
+     "duration": 2.65,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 1
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 2,
+       "c1": 9
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 10,
+       "c1": 16
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 17,
+       "c1": 20
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 21,
+       "c1": 26
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 27,
+       "c1": 30
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 31,
+       "c1": 37
+      },
+      {
+       "s": 1.8,
+       "e": 2.013,
+       "c0": 38,
+       "c1": 45
+      },
+      {
+       "s": 2.05,
+       "e": 2.262,
+       "c0": 46,
+       "c1": 48
+      },
+      {
+       "s": 2.3,
+       "e": 2.512,
+       "c0": 49,
+       "c1": 55
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "steps",
+   "rev": 1,
+   "kind": "list",
+   "title": "Steps",
+   "classes": [
+    "build"
+   ],
+   "shown": "",
+   "visual": {
+    "style": "steps",
+    "items": [
+     {
+      "id": "parse",
+      "title": "Parse",
+      "body": "text to blocks"
+     },
+     {
+      "id": "build",
+      "title": "Build",
+      "body": "blocks to slides"
+     },
+     {
+      "id": "voice",
+      "title": "Voice",
+      "body": "slides to audio"
+     }
+    ]
+   },
+   "says": [
+    {
+     "id": "steps.1.1",
+     "status": "ready",
+     "text": "First we parse, then build, then voice.",
+     "cues": [
+      {
+       "at": 9,
+       "end": 14,
+       "label": "parse",
+       "target": "parse",
+       "text": "",
+       "kind": "item",
+       "id": "parse",
+       "t": 0.55
+      },
+      {
+       "at": 21,
+       "end": 26,
+       "label": "build",
+       "target": "build",
+       "text": "",
+       "kind": "item",
+       "id": "build",
+       "t": 1.05
+      },
+      {
+       "at": 33,
+       "end": 38,
+       "label": "voice",
+       "target": "voice",
+       "text": "",
+       "kind": "item",
+       "id": "voice",
+       "t": 1.55
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/90b0adb17cedfd24fb3cdcbf.wav",
+     "duration": 1.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 5
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 6,
+       "c1": 8
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 9,
+       "c1": 15
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 16,
+       "c1": 20
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 21,
+       "c1": 27
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 28,
+       "c1": 32
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 33,
+       "c1": 39
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cards",
+   "rev": 1,
+   "kind": "list",
+   "title": "Options",
+   "classes": [
+    "cards"
+   ],
+   "shown": "",
+   "visual": {
+    "style": "cards",
+    "items": [
+     {
+      "id": "mem",
+      "title": "Memory",
+      "body": "fast, lost on restart"
+     },
+     {
+      "id": "disk",
+      "title": "Disk",
+      "body": "slower, survives restarts"
+     },
+     {
+      "id": "net",
+      "title": "Network",
+      "body": "shared between machines"
+     }
+    ]
+   },
+   "says": [
+    {
+     "id": "cards.1.1",
+     "status": "ready",
+     "text": "Memory is fastest and the network is shared.",
+     "cues": [
+      {
+       "at": 0,
+       "end": 6,
+       "label": "Memory",
+       "target": "mem",
+       "text": "",
+       "kind": "item",
+       "id": "mem",
+       "t": 0.05
+      },
+      {
+       "at": 22,
+       "end": 33,
+       "label": "the network",
+       "target": "net",
+       "text": "",
+       "kind": "item",
+       "id": "net",
+       "t": 1.05
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/c38acdc1f61c5cf646db2723.wav",
+     "duration": 2.15,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 6
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 7,
+       "c1": 9
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 10,
+       "c1": 17
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 18,
+       "c1": 21
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 22,
+       "c1": 25
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 26,
+       "c1": 33
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 34,
+       "c1": 36
+      },
+      {
+       "s": 1.8,
+       "e": 2.013,
+       "c0": 37,
+       "c1": 44
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "table",
+   "rev": 1,
+   "kind": "table",
+   "title": "Checks",
+   "classes": [],
+   "shown": "",
+   "visual": {
+    "head": [
+     "Check",
+     "When"
+    ],
+    "align": [
+     "left",
+     "left"
+    ],
+    "rows": [
+     [
+      "Cue target",
+      "every call"
+     ],
+     [
+      "Pacing",
+      "slide end"
+     ]
+    ],
+    "ids": [
+     "row-1",
+     "row-2"
+    ]
+   },
+   "says": [
+    {
+     "id": "table.1.1",
+     "status": "ready",
+     "text": "Cue targets are checked on every call.",
+     "cues": [
+      {
+       "at": 0,
+       "end": 11,
+       "label": "Cue targets",
+       "target": "row-1",
+       "text": "",
+       "kind": "row",
+       "id": "row-1",
+       "t": 0.05
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/535f8f0e7540ccf852f5d06b.wav",
+     "duration": 1.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 3
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 4,
+       "c1": 11
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 12,
+       "c1": 15
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 16,
+       "c1": 23
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 24,
+       "c1": 26
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 27,
+       "c1": 32
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 33,
+       "c1": 38
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "math",
+   "rev": 1,
+   "kind": "math",
+   "title": "Softmax",
+   "classes": [],
+   "shown": "",
+   "visual": {
+    "latex": "\\mathrm{softmax}(z)_i = \\frac{e^{z_i}}{\\sum_j e^{z_j}}"
+   },
+   "says": [
+    {
+     "id": "math.1.1",
+     "status": "ready",
+     "text": "Each output is an exponential divided by the sum of all of them.",
+     "cues": [
+      {
+       "at": 15,
+       "end": 29,
+       "label": "an exponential",
+       "target": "",
+       "text": "",
+       "kind": "visual",
+       "t": 0.8
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/df67e3a5f95926d8c28cf9e5.wav",
+     "duration": 3.4,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 4
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 5,
+       "c1": 11
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 12,
+       "c1": 14
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 15,
+       "c1": 17
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 18,
+       "c1": 29
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 30,
+       "c1": 37
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 38,
+       "c1": 40
+      },
+      {
+       "s": 1.8,
+       "e": 2.013,
+       "c0": 41,
+       "c1": 44
+      },
+      {
+       "s": 2.05,
+       "e": 2.262,
+       "c0": 45,
+       "c1": 48
+      },
+      {
+       "s": 2.3,
+       "e": 2.512,
+       "c0": 49,
+       "c1": 51
+      },
+      {
+       "s": 2.55,
+       "e": 2.762,
+       "c0": 52,
+       "c1": 55
+      },
+      {
+       "s": 2.8,
+       "e": 3.012,
+       "c0": 56,
+       "c1": 58
+      },
+      {
+       "s": 3.05,
+       "e": 3.262,
+       "c0": 59,
+       "c1": 64
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "text",
+   "rev": 1,
+   "kind": "text",
+   "title": "Plain words",
+   "classes": [],
+   "shown": "Shown text, not spoken.",
+   "visual": {},
+   "says": [
+    {
+     "id": "text.1.1",
+     "status": "ready",
+     "text": "A slide with only words on it.",
+     "cues": [],
+     "notes": [],
+     "code": [],
+     "audio": "audio/dae83432ccb0d799932f038a.wav",
+     "duration": 1.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 1
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 2,
+       "c1": 7
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 8,
+       "c1": 12
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 13,
+       "c1": 17
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 18,
+       "c1": 23
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 24,
+       "c1": 26
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 27,
+       "c1": 30
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

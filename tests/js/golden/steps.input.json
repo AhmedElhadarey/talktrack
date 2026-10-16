@@ -1,0 +1,449 @@
+{
+ "format": 1,
+ "id": "steps",
+ "title": "steps",
+ "frame": "landscape",
+ "status": "finished",
+ "questions": [],
+ "notes": {},
+ "slides": [
+  {
+   "id": "steps-revealed",
+   "rev": 1,
+   "kind": "title",
+   "title": "Steps, revealed",
+   "classes": [],
+   "shown": "one paragraph per step",
+   "visual": {},
+   "says": [
+    {
+     "id": "steps-revealed.1.1",
+     "status": "ready",
+     "text": "Three stages turn text into a talk.",
+     "cues": [],
+     "notes": [],
+     "code": [],
+     "audio": "audio/8a46313c7c53cca788d51e1e.wav",
+     "duration": 1.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 5
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 6,
+       "c1": 12
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 13,
+       "c1": 17
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 18,
+       "c1": 22
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 23,
+       "c1": 27
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 28,
+       "c1": 29
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 30,
+       "c1": 35
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "pipe",
+   "rev": 1,
+   "kind": "diagram",
+   "title": "Pipeline",
+   "classes": [
+    "build"
+   ],
+   "shown": "",
+   "visual": {
+    "source": "flowchart LR\n  parse[Parse] --> build[Build] --> voice[Voice]",
+    "type": "flowchart",
+    "nodes": {
+     "parse": "Parse",
+     "build": "Build",
+     "voice": "Voice"
+    },
+    "labels": [],
+    "order": [
+     "parse",
+     "build",
+     "voice"
+    ]
+   },
+   "says": [
+    {
+     "id": "pipe.1.1",
+     "status": "ready",
+     "text": "Text is parsed first.",
+     "cues": [
+      {
+       "at": 8,
+       "end": 14,
+       "label": "parsed",
+       "target": "parse",
+       "text": "Parse",
+       "kind": "node",
+       "id": "parse",
+       "t": 0.55
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/42b48ce3f05536e0c256e15d.wav",
+     "duration": 1.15,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 4
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 5,
+       "c1": 7
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 8,
+       "c1": 14
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 15,
+       "c1": 21
+      }
+     ]
+    },
+    {
+     "id": "pipe.2.1",
+     "status": "ready",
+     "text": "Then the blocks are built into slides.",
+     "cues": [
+      {
+       "at": 20,
+       "end": 25,
+       "label": "built",
+       "target": "build",
+       "text": "Build",
+       "kind": "node",
+       "id": "build",
+       "t": 1.05
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/3913de99b74e1adcb5f1e499.wav",
+     "duration": 1.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 4
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 5,
+       "c1": 8
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 9,
+       "c1": 15
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 16,
+       "c1": 19
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 20,
+       "c1": 25
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 26,
+       "c1": 30
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 31,
+       "c1": 38
+      }
+     ]
+    },
+    {
+     "id": "pipe.3.1",
+     "status": "ready",
+     "text": "Finally each slide is voiced.",
+     "cues": [
+      {
+       "at": 22,
+       "end": 28,
+       "label": "voiced",
+       "target": "voice",
+       "text": "Voice",
+       "kind": "node",
+       "id": "voice",
+       "t": 1.05
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/2d46a5ffff33051bbd37a080.wav",
+     "duration": 1.4,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 7
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 8,
+       "c1": 12
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 13,
+       "c1": 18
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 19,
+       "c1": 21
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 22,
+       "c1": 29
+      }
+     ]
+    },
+    {
+     "id": "pipe.4.1",
+     "status": "ready",
+     "pause": 1.0
+    }
+   ]
+  },
+  {
+   "id": "code",
+   "rev": 1,
+   "kind": "code",
+   "title": "Code",
+   "classes": [
+    "build"
+   ],
+   "shown": "",
+   "visual": {
+    "lang": "python",
+    "code": "def get(self, key):\n    if key in self._data:\n        return self._data[key]\n    value = self.loader(key)\n    return value",
+    "start": 10,
+    "title": ""
+   },
+   "says": [
+    {
+     "id": "code.1.1",
+     "status": "ready",
+     "text": "The method checks the cache and returns a hit.",
+     "cues": [
+      {
+       "at": 11,
+       "end": 27,
+       "label": "checks the cache",
+       "target": "L11",
+       "text": "if key in self._data",
+       "kind": "lines",
+       "side": "new",
+       "l0": 11,
+       "l1": 11,
+       "t": 0.55
+      },
+      {
+       "at": 32,
+       "end": 45,
+       "label": "returns a hit",
+       "target": "L12",
+       "text": "",
+       "kind": "lines",
+       "side": "new",
+       "l0": 12,
+       "l1": 12,
+       "t": 1.55
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/8f5d2ac159e8414fa3fe2938.wav",
+     "duration": 2.4,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 3
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 4,
+       "c1": 10
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 11,
+       "c1": 17
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 18,
+       "c1": 21
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 22,
+       "c1": 27
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 28,
+       "c1": 31
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 32,
+       "c1": 39
+      },
+      {
+       "s": 1.8,
+       "e": 2.013,
+       "c0": 40,
+       "c1": 41
+      },
+      {
+       "s": 2.05,
+       "e": 2.262,
+       "c0": 42,
+       "c1": 46
+      }
+     ]
+    },
+    {
+     "id": "code.2.1",
+     "status": "ready",
+     "text": "On a miss it calls the loader.",
+     "cues": [
+      {
+       "at": 13,
+       "end": 29,
+       "label": "calls the loader",
+       "target": "L13",
+       "text": "",
+       "kind": "lines",
+       "side": "new",
+       "l0": 13,
+       "l1": 13,
+       "t": 1.05
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/1403057025565f747faa5c98.wav",
+     "duration": 1.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 2
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 3,
+       "c1": 4
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 5,
+       "c1": 9
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 10,
+       "c1": 12
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 13,
+       "c1": 18
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 19,
+       "c1": 22
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 23,
+       "c1": 30
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

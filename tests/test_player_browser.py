@@ -215,3 +215,94 @@ def test_every_kind_renders(daemon, browser, frame):
             assert p["left"] >= st["left"] - 20 and p["right"] <= st["right"] + 20
             assert p["top"] >= st["top"] - 20 and p["bottom"] <= st["bottom"] + 20
     page.close()
+
+
+# -- ranges, presenting, embedding, layout findings -------------------------------------------------
+
+
+def _rpc(lock: dict):
+    h = {"Authorization": f"Bearer {lock['token']}"}
+    base = f"http://127.0.0.1:{lock['port']}/api/rpc"
+
+    def call(m, **kw):
+        r = httpx.post(f"{base}/{m}", json=kw, headers=h, timeout=30)
+        r.raise_for_status()
+        return r.json()["result"]
+
+    return call
+
+
+def test_a_range_plays_its_slides_and_stops(daemon, browser):
+    url = _make(daemon, "landscape")
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    page.goto(url + "?from=flow&to=flow")
+    page.wait_for_function("window.__showntell !== undefined && !document.querySelector('#big-play').disabled")
+    page.click("#big-play")
+    page.wait_for_selector("#range-note:not([hidden])", timeout=20000)
+    shown = page.evaluate("document.querySelector('.slide').className")
+    assert "k-diagram" in shown and not page.evaluate("window.__showntell.ended")
+    page.close()
+
+
+def test_presenting_steps_by_hand_without_voice(daemon, browser):
+    url = _make(daemon, "landscape")
+    page = browser.new_page(viewport={"width": 1440, "height": 900})
+    page.goto(url + "?present=1")
+    page.wait_for_selector("#notes:not([hidden])")
+    first = page.inner_text("#notes-step")
+    for _ in range(4):
+        page.keyboard.press("Space")
+    page.wait_for_timeout(300)
+    assert page.inner_text("#notes-step") != first and "step 5 of" in page.inner_text("#notes-step")
+    assert page.evaluate("window.__showntell.starts.length") == 0  # nothing was voiced
+    page.close()
+
+
+def test_embedded_player_sends_events_and_takes_commands(daemon, browser):
+    url = _make(daemon, "landscape")
+    embed = f"http://127.0.0.1:{daemon['port']}/static/embed.js"
+    page = browser.new_page(viewport={"width": 1200, "height": 900})
+    host = f"""<!doctype html><script src="{embed}"></script>
+        <showntell-player id="p" src="{url}"></showntell-player>
+        <script>window.got = []; for (const t of ["ready", "slidechange", "durationchange"])
+          document.getElementById("p").addEventListener(t, (e) => got.push([t, e.detail]));</script>"""
+    # A page on another origin (another local port), as a docs site embedding a walkthrough.
+    import http.server
+    import threading
+
+    class Host(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(host.encode())
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), Host)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    page.goto(f"http://127.0.0.1:{srv.server_port}/")
+    page.wait_for_function("window.got.some(([t]) => t === 'ready')", timeout=15000)
+    page.evaluate("document.getElementById('p').seek(document.getElementById('p').duration - 0.5)")
+    page.wait_for_function("window.got.some(([t, d]) => t === 'slidechange' && d.id === 'text')", timeout=10000)
+    ready = page.evaluate("window.got.find(([t]) => t === 'ready')[1]")
+    assert ready["slides"] == len(KINDS) and ready["duration"] > 0
+    page.close()
+    srv.shutdown()
+
+
+def test_the_player_reports_text_shrunk_too_far(daemon, browser):
+    call = _rpc(daemon)
+    r = call("start", title="Too big", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    long = "\n".join(f"value_{i} = compute_something_long(alpha, beta, gamma, delta, epsilon_{i})" for i in range(70))
+    call("add", handle=r["handle"], markdown=f"# Too big\n\nOpening words.\n\n## Wall {{#wall}}\n\n```python\n{long}\n```\n\nA wall of code.\n")
+    call("playable", handle=r["handle"], timeout=10)
+    url = r["url"].replace("localhost", "127.0.0.1") + "/"
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    page.goto(url + "?from=wall")
+    page.wait_for_function("(window.__showntell.findings || []).some((f) => f.code === 'text_too_small')", timeout=10000)
+    page.wait_for_timeout(300)
+    f = call("finish", handle=r["handle"], questions=None)
+    assert any(i["code"] == "text_too_small" and i["slide"] == "wall" and i["source"] == "player" for i in f["player_issues"])
+    page.close()

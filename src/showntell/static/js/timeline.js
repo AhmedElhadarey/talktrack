@@ -146,6 +146,46 @@ export function slideStart(tl, slideIndex) {
   return s ? s.start : null;
 }
 
+// End time of a slide (after its last segment and gap).
+export function slideEnd(tl, slideIndex) {
+  let end = null;
+  for (const s of tl.segs) if (s.slide === slideIndex) end = s.start + s.dur + s.gap;
+  return end;
+}
+
+// Steps for presenting by hand: the start of every slide, plus, on step-reveal slides, the
+// moment each cue reveals another part, and the end where everything shows. [{t, slide, say}]
+export function steps(w, tl) {
+  const out = [];
+  const seen = new Set();
+  const add = (t, slide, say) => {
+    const key = Math.round(t * 100);
+    if (!seen.has(key)) { seen.add(key); out.push({ t, slide, say }); }
+  };
+  w.slides.forEach((slide, si) => {
+    const segs = tl.segs.filter((s) => s.slide === si);
+    if (!segs.length) return;
+    add(segs[0].start, si, segs[0].say);
+    if (!(slide.classes || []).includes("build")) return;
+    let last = JSON.stringify(revealLevel(slide, [], false));
+    for (let i = 0; i < segs.length; i++) {
+      const seg = segs[i];
+      if (seg.say < 0) continue;
+      for (const c of slide.says[seg.say].cues || []) {
+        const t = seg.start + (c.t ?? 0) + 0.06;
+        const st = stateAt(w, tl, t);
+        const level = JSON.stringify(st.reveal);
+        if (level !== last) { last = level; add(t, si, seg.say); }
+      }
+    }
+    // Everything shows once the narration ends, if that happens before the next slide.
+    const tail = segs[segs.length - 1];
+    const t = tail.start + tail.dur + 0.01;
+    if (last !== "null" && tail.gap > 0.05 && stateAt(w, tl, t).slide === si) add(t, si, tail.say);
+  });
+  return out.sort((a, b) => a.t - b.t);
+}
+
 // Per-slide [start, end] spans for the progress bar.
 export function slideSpans(tl, nSlides) {
   const spans = Array.from({ length: nSlides }, () => null);

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { build, firedCues, revealLevel, segmentAt, slideSpans, slideStart, stateAt, wordAt } from "../../src/showntell/static/js/timeline.js";
+import { build, firedCues, revealLevel, segmentAt, slideEnd, slideSpans, slideStart, stateAt, steps, wordAt } from "../../src/showntell/static/js/timeline.js";
 
 const say = (id, dur, cues = [], extra = {}) => ({ id, status: "ready", text: "one two three", duration: dur, cues, words: [], ...extra });
 const W = {
@@ -73,4 +73,22 @@ test("wordAt", () => {
   assert.equal(wordAt(s, 0), -1);
   assert.equal(wordAt(s, 0.5), 1);
   assert.equal(wordAt(s, 5), 2);
+});
+
+test("slideEnd is the end of a slide's last segment and gap", () => {
+  const tl = build(W);
+  assert.equal(slideEnd(tl, 0), 2.6);
+  assert.equal(slideEnd(tl, 1), 8.5);
+  assert.equal(slideEnd(tl, 9), null);
+});
+
+test("steps: every slide start, each reveal on a step-reveal slide, then everything", () => {
+  const tl = build(W);
+  const s = steps(W, tl);
+  assert.deepEqual(s.map((x) => x.slide), [0, 1, 1, 1, 1, 1, 2]);
+  assert.equal(s[0].t, 0);
+  assert.equal(s[1].t, 2.6); // the list slide starts with nothing revealed
+  assert.ok(Math.abs(s[2].t - (2.6 + 0.5 + 0.06)) < 1e-9); // first item
+  const levels = s.slice(1, 6).map((x) => JSON.stringify(stateAt(W, tl, x.t).reveal));
+  assert.deepEqual(levels, ['{"items":0}', '{"items":1}', '{"items":2}', '{"items":3}', "null"]);
 });
