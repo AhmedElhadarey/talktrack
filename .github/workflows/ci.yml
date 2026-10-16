@@ -37,7 +37,9 @@ jobs:
         with:
           path: ~/.cache/huggingface
           key: hf-onnx-${{ hashFiles('src/showntell/speech/onnx_backend.py') }}
-      - run: uv run pytest -m onnx
+      - name: Download the ONNX voice model
+        run: uv run python -c "from pathlib import Path; from huggingface_hub import snapshot_download; from showntell.speech.onnx_backend import REPO, OnnxBackend; snapshot_download(REPO, allow_patterns=OnnxBackend(Path('/tmp/st')).patterns)"
+      - run: uv run pytest -m onnx -rs
 
   macos:
     name: macOS Apple silicon (MLX)
