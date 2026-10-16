@@ -740,3 +740,32 @@ load().catch((e) => {
   $("#overlay-meta").textContent = "This walkthrough could not be loaded.";
   report(`Load failed: ${e.message}`);
 });
+
+// ------------------------------------------------------------------- capture mode (?capture=1)
+// Frame-by-frame capture (capture.py: MP4 export, posters, thumbnails) drives the player by
+// seeking, never by playing: no audio, no wall-clock animation (player.css turns transitions off
+// under body.capture), only the stage on screen. ?captions=1 burns the caption into the frame.
+// seek(t) resolves once the frame for t is painted, with a key that changes whenever the picture
+// can change, so the caller can reuse the previous frame while the key repeats.
+if (params.get("capture") === "1") {
+  body.classList.add("capture");
+  const burn = params.get("captions") === "1";
+  if (burn) body.classList.add("burn-captions");
+  const painted = () => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+  const stateKey = () => [shown.id, shown.rev, view?.done, lastReveal, lastCueKey, burn ? `${lastSay}:${lastWord}` : ""].join("|");
+  let paintedKey = "";
+  window.__showntell = Object.assign(window.__showntell || {}, {
+    duration: () => (W && TL.segs.length ? TL.total : 0),
+    frame: () => (W ? W.frame : ""),
+    async seek(t) {
+      seek(t);
+      // Nothing changed since the last painted frame: skip the wait (most frames of a video).
+      if (view?.done && stateKey() === paintedKey) return paintedKey;
+      // Mermaid, KaTeX, images and fonts settle in view.ready; showSlide sets view.done after them.
+      for (let i = 0; i < 600 && !view?.done; i++) await painted();
+      await document.fonts?.ready;
+      await painted();
+      return (paintedKey = stateKey());
+    },
+  });
+}

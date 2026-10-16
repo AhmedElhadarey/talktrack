@@ -38,6 +38,41 @@ graph TB
 
 `static/js/timeline.js` turns the walkthrough into segments (one per paragraph, with gaps) on a single clock and answers "what should be on screen at time *t*": slide, fired cues, step-reveal level and current word. `main.js` advances the clock from the audio element while a paragraph plays and from wall time during gaps, then applies that state to the DOM through `render.js`. Seeking, live updates and export all go through the same function.
 
+## Capture and video export
+
+`capture.py` opens the player with `?capture=1`. In that mode the player plays no audio, turns CSS animation and transitions off, shows only the stage at scale 1, and exposes `window.__showntell.duration()` and `seek(t)`. `seek` resolves once the frame for *t* is painted (slide renderers, Mermaid, KaTeX, images and fonts settled, then two animation frames) and returns a state key built from slide, revision, reveal level, cue and, with burned captions, the current word. Equal keys mean equal pictures.
+
+```mermaid
+graph TB
+  subgraph prep [Preparation]
+    EX[Static export to a temp folder] --> SV[Loopback HTTP server]
+  end
+  subgraph workers [Workers - one Chromium each]
+    W1[Frames 0 to k] --> F1[ffmpeg segment 1]
+    W2[Frames k to n] --> F2[ffmpeg segment 2]
+  end
+  subgraph mux [Mux]
+    C[Concat segments] --> M[MP4 with AAC and mov_text]
+    A[Narration clips placed with numpy] --> M
+    V[captions.vtt] --> M
+    M --> P[ffprobe duration check]
+  end
+  SV --> W1
+  SV --> W2
+  F1 --> C
+  F2 --> C
+```
+
+| Step | How |
+|---|---|
+| **Page size** | the browser window is the frame's own size (1280x720 for landscape); the device pixel ratio scales it to the output size, so text stays sharp |
+| **Frames** | each worker seeks frame *i* to *i*/fps, screenshots only when the state key changes, and pipes the image into its ffmpeg (image2pipe, x264) |
+| **Sound** | clips from the exported `audio/` folder, placed at their start on the timeline that `export.timeline` shares with `timeline.js` |
+| **Join** | segments concatenated without re-encoding; one metadata tag, the encoder, names showntell and its version |
+| **Check** | the player's and exporter's timeline lengths must agree within 0.05 s, and the file's duration the timeline's within 0.2 s |
+
+The same module writes `poster.png` for folder exports and returns PNG frames at any times for other callers (`capture_frames`).
+
 ## Data
 
 | Path in the data folder | Contents |

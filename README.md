@@ -12,7 +12,7 @@ Ask your agent to walk you through a pull request, a module or a concept. It wri
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
 - **Checked:** every call returns problems to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, diagrams that failed to render in the open player.
-- **Shareable:** export any walkthrough as a static folder with captions, and host it anywhere.
+- **Shareable:** export any walkthrough as a static folder with captions to host anywhere, or as an MP4.
 
 ## Install
 
@@ -172,10 +172,30 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **`showntell mcp`** | stdio MCP server; starts or reuses the daemon |
 | **`showntell serve`** | the daemon in the foreground: MCP over HTTP at `/mcp`, the player, and the list of walkthroughs at `/` |
 | **`showntell play FILE.md`** | voice a Markdown walkthrough and open it |
-| **`showntell export ID\|LINK\|FILE.md OUT [--mp3]`** | a static folder that plays from any web server, with WebVTT captions |
+| **`showntell export ID\|LINK\|FILE.md OUT [--mp3]`** | a static folder that plays from any web server, with WebVTT captions and a `poster.png` |
+| **`showntell export ID\|LINK\|FILE.md OUT.mp4`** | an MP4 video; `--fps`, `--workers`, `--burn-captions` |
 | **`showntell list`** | recent walkthroughs |
 | **`showntell doctor`** | check models, speech speed, port and daemon |
 | **`showntell autostart on\|off\|status`** | macOS: keep the daemon running from login |
+
+### Video export
+
+An output path ending in `.mp4` renders a video. Each frame is captured by seeking the player in headless Chromium, so rendering runs faster than real time and never drops a frame: a 4.4-minute walkthrough renders in 16 to 20 s on an M-series Mac.
+
+```zsh
+uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell' playwright install chromium   # once
+uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell' showntell export <id> talk.mp4
+```
+
+| Part | What you get |
+|---|---|
+| **Picture** | H.264, 30 fps (`--fps`), 1920x1080 for landscape, 1080x1080 square, 1080x1920 portrait; only the slide, no player controls |
+| **Sound** | AAC, built from the narration clips at their places on the timeline |
+| **Captions** | a mov_text subtitle track; `--burn-captions` also draws them into the picture |
+| **Speed** | `--workers` browsers render frame ranges in parallel (default: up to 4); unchanged frames reuse the last screenshot |
+| **Checks** | the file's duration must match the timeline within 0.2 s, or the export fails |
+
+Needs [FFmpeg](https://ffmpeg.org/) on PATH and the `video` extra (Playwright). Without Playwright, folder exports still work and skip `poster.png`.
 
 ## Settings
 
