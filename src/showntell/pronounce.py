@@ -40,9 +40,19 @@ class Spoken:
     text: str
     # (spoken_start, spoken_end, display_start, display_end), in order, covering both strings
     segs: list[tuple[int, int, int, int]] = field(default_factory=list)
+    # parallel to segs: True where the display text was copied as is. When missing, a segment
+    # whose spoken and display lengths match counts as copied.
+    copied: list[bool] = field(default_factory=list)
+
+    def is_copied(self, k: int) -> bool:
+        if k < len(self.copied):
+            return self.copied[k]
+        sa, sb, da, db = self.segs[k]
+        return sb - sa == db - da
 
     def to_display(self, a: int, b: int) -> tuple[int, int]:
-        """Display range for the spoken range [a, b)."""
+        """Display range for the spoken range [a, b). Inside copied text the map is exact; a
+        word inside a rewrite maps to everything the rewrite stands for."""
         if not self.segs:
             return a, b
         starts = [s[0] for s in self.segs]
@@ -50,14 +60,8 @@ class Spoken:
         j = max(0, bisect.bisect_right(starts, max(a, b - 1)) - 1)
         sa, sb, da, db = self.segs[i]
         ta, tb, ea, eb = self.segs[j]
-        if sb - sa == db - da:  # copied verbatim: map exactly
-            d0 = da + (a - sa)
-        else:
-            d0 = da
-        if tb - ta == eb - ea:
-            d1 = ea + (b - ta)
-        else:
-            d1 = eb
+        d0 = da + (a - sa) if self.is_copied(i) else da
+        d1 = ea + (b - ta) if self.is_copied(j) else eb
         return d0, max(d0, d1)
 
 
@@ -65,17 +69,19 @@ class _Builder:
     def __init__(self) -> None:
         self.parts: list[str] = []
         self.segs: list[tuple[int, int, int, int]] = []
+        self.copied: list[bool] = []
         self.n = 0
 
-    def add(self, spoken: str, d0: int, d1: int) -> None:
+    def add(self, spoken: str, d0: int, d1: int, copied: bool = False) -> None:
         if not spoken and d0 == d1:
             return
         self.parts.append(spoken)
         self.segs.append((self.n, self.n + len(spoken), d0, d1))
+        self.copied.append(copied)
         self.n += len(spoken)
 
     def build(self) -> Spoken:
-        return Spoken("".join(self.parts), self.segs)
+        return Spoken("".join(self.parts), self.segs, self.copied)
 
 
 # -- misaki's dictionary ----------------------------------------------------------------------
@@ -187,6 +193,21 @@ def _past(ps: str) -> str:
     return ps + "d"
 
 
+# misaki's US phonemes in its British notation, longest first: no r after vowels, goat is Q,
+# lot is ɒ, trap is a, long vowels marked, no flap T.
+_TO_BRITISH = [("ɑɹ", "ɑː"), ("ɔɹ", "ɔː"), ("ɜɹ", "ɜː"), ("əɹ", "ə"), ("ɛɹ", "ɛː"), ("ɪɹ", "ɪə"), ("ʊɹ", "ʊə"),
+               ("O", "Q"), ("ɑ", "ɒ"), ("ɔ", "ɔː"), ("æ", "a"), ("ˈi", "ˈiː"), ("ˌi", "ˌiː"), ("u", "uː"),
+               ("T", "t"), ("ɾ", "t"), ("ʔ", "t"), ("ᵻ", "ɪ")]
+_INLINE_RE = re.compile(r"\[([^\]]+)\]\(/([^)]*)/\)")
+
+
+def to_british(ps: str) -> str:
+    """US phonemes as misaki writes British ones, for British voices."""
+    for us, gb in _TO_BRITISH:
+        ps = ps.replace(us, gb)
+    return ps.replace("ɒː", "ɑː").replace("ːː", "ː")
+
+
 def _inline(word: str, ps: str) -> str:
     """misaki's inline pronunciation: says `ps`, keeps `word` as the token text."""
     label = re.sub(r"[^\w.'-]", "", word) or "x"
@@ -208,8 +229,9 @@ def spell(s: str) -> str:
         # "a" and "A" can be read as the article; every other letter reads as its name
         return _inline(s, _letters(s)) if s in "aA" else s.upper()
     up = s.upper()
-    if up.isalpha() and up.isascii() and not _lookup(up.lower()):
-        return up  # misaki spells unknown capitals itself, with its own stress
+    low = up.lower()
+    if up.isalpha() and up.isascii() and not _lookup(low) and not any(_lookup(x) for x in _stems(low)):
+        return up  # misaki spells capitals it cannot read as a word (AWS reads as "awes")
     return _inline(s, _letters(s))
 
 
@@ -246,22 +268,16 @@ def _render(value: str, word: str, plural: bool = False, depth: int = 0) -> str:
     if value.startswith("/") and value.endswith("/"):
         ps = value.strip("/")
         return _inline(word, _plural(ps) if plural else ps)
-    out = []
-    for w in value.split():
-        said = None
-        if depth < 1 and w.isalpha() and not w.isupper() and not known(w):
-            said = say_word(w, depth + 1)  # a respelling may use other words from the list
-        out.append(said or w)
-    if plural:
-        last = out[-1]
-        if last.startswith("[") or not last.isalpha() or last.isupper() or len(last) == 1:
-            out[-1] = (last + "'s") if not last.startswith("[") else last  # "engine X's"
-            if last.startswith("["):
-                m = re.match(r"\[(.*)\]\(/(.*)/\)$", last)
-                out[-1] = _inline(m.group(1), _plural(m.group(2))) if m else last
+    out: list[str] = []
+    for w in re.findall(r"(?:\b[A-Z]\b ?)+|\S+", value):  # runs of single capitals are spelled together
+        w = w.strip()
+        if re.fullmatch(r"[A-Z]( [A-Z])*", w):
+            out.append(spell(w.replace(" ", "")))
+        elif depth < 1 and w.isalpha() and not w.isupper() and not known(w):
+            out.append(say_word(w, depth + 1) or w)  # a respelling may use other words from the list
         else:
-            out[-1] = last + "s"
-    return " ".join(out)
+            out.append(w)
+    return _plural_reading(" ".join(out)) if plural else " ".join(out)
 
 
 def _listed(word: str, depth: int = 0) -> str | None:
@@ -313,6 +329,12 @@ def say_word(word: str, depth: int = 0) -> str | None:
     """Spoken text for one word (letters and digits, any case mix), or None if misaki reads it right."""
     if (hit := _listed(word, depth)) is not None:
         return hit
+    if re.fullmatch(r"\d+(?:st|nd|rd|th|s|'s)", word):
+        return None  # ordinals and decades: misaki reads these
+    m = re.fullmatch(r"(.+?)(?:['’]s|s['’])", word)
+    if m:  # possessive: the word, then -s
+        base = say_word(m.group(1), depth)
+        return None if base is None else _plural_reading(base)
     pieces = _pieces(word)
     if len(pieces) <= 1:
         return _say_piece(word, depth)
@@ -320,7 +342,7 @@ def say_word(word: str, depth: int = 0) -> str | None:
     # misaki splits camelCase itself, but not an acronym run into a word (HTTPServer)
     if all(s is None for s in said) and not re.search(r"[A-Z]{2,}[a-z]", word):
         return None
-    return " ".join(s or p for s, p in zip(said, pieces))
+    return " ".join(s or p for s, p in zip(said, pieces, strict=True))
 
 
 def _say_piece(p: str, depth: int = 0) -> str | None:
@@ -338,14 +360,10 @@ def _say_piece(p: str, depth: int = 0) -> str | None:
         return None  # the article, in prose
     if known(p):
         return None
-    if p.endswith(("'s", "’s")) and len(p) > 3:
-        base = say_word(p[:-2], depth)
-        if base is not None:
-            m = re.fullmatch(r"\[(.*)\]\(/(.*)/\)", base)
-            return _inline(p, _plural(m.group(2))) if m else base + "'s"
-        return None
     if not p.isascii() or not p.isalpha():
         return None
+    if not re.search(r"[aeiouy]", p.lower()):
+        return spell(p)  # nothing to sound out: fzf, rm
     return _inline(p, _guess(p.lower()))
 
 
@@ -382,18 +400,22 @@ def _options(w: str, j: int, i: int):
             yield (1.0 if len(s) > 2 else 1.5), ps, "word"
         elif i < n and w[i] in "aeiouy" and (ps := _lookup(s + "e", silver=len(s) > 3)):
             yield 1.2, ps, "word"  # serializ-able, compos-able
-    if len(s) >= 2 and (ps := _listed_phonemes(s)):
+    if len(s) >= 3 and (ps := _listed_phonemes(s)):
         yield 1.0, ps, "word"
     if len(s) == 1:
         yield 1.3, _letters(s), "letter"
     elif (ps := _lts(s)) is not None:
-        yield 2.5, ps, "word"
+        yield 1.8 + 0.12 * len(s), ps, "rules"  # sounding out costs more the longer it runs
 
 
 @functools.lru_cache(maxsize=4096)
 def _guess(w: str, allow_rules: bool = True) -> str:
     """Phonemes for a lowercase word no dictionary has: the cheapest split into dictionary
     words, word-list entries, affixes, letter-to-sound chunks and spelled letters."""
+    # -ied, -ier, -iest on a dictionary word ending in y (copied), which misaki does not try
+    m = re.fullmatch(r"(\w+)i(ed|er|ers|est)", w)
+    if m and (ps := _lookup(m.group(1) + "y")):
+        return {"ed": _past(ps), "er": ps + "əɹ", "ers": ps + "əɹz", "est": ps + "ɪst"}[m.group(2)]
     n = len(w)
     best: list[tuple[float, int, str, str] | None] = [None] * (n + 1)
     best[0] = (0.0, 0, "", "")
@@ -402,7 +424,7 @@ def _guess(w: str, allow_rules: bool = True) -> str:
             if best[j] is None:
                 continue
             for cost, ps, role in _options(w, j, i):
-                if not allow_rules and role == "word" and cost >= 2.5:
+                if not allow_rules and role == "rules":
                     continue
                 c = best[j][0] + cost
                 if best[i] is None or c < best[i][0]:
@@ -425,9 +447,9 @@ def _guess(w: str, allow_rules: bool = True) -> str:
     else:
         main = next((k for k, (ps, r) in enumerate(pieces) if r == "suffix" and "ˈ" in ps), None)
         if main is None:
-            main = next((k for k, r in enumerate(roles) if r != "prefix"), 0)
+            main = next((k for k, r in enumerate(roles) if r not in ("prefix", "suffix")), 0)
     out = ""
-    for k, (ps, role) in enumerate(pieces):
+    for k, (ps, _) in enumerate(pieces):
         if ps == "<s>":
             out = _plural(out)
         elif ps == "<ed>":
@@ -441,7 +463,7 @@ def _guess(w: str, allow_rules: bool = True) -> str:
 _LTS_GROUPS = sorted({
     "tion": "ʃən", "sion": "ʒən", "ture": "ʧəɹ", "ough": "O", "augh": "ɔ", "eigh": "A", "igh": "I",
     "tch": "ʧ", "dge": "ʤ", "sch": "sk", "chr": "kɹ", "que": "k",
-    "ch": "ʧ", "sh": "ʃ", "th": "θ", "ph": "f", "ck": "k", "ng": "ŋ", "qu": "kw", "wh": "w", "gh": "ɡ",
+    "ch": "ʧ", "sh": "ʃ", "th": "θ", "ph": "f", "ck": "k", "ng": "ŋ", "qu": "kw", "qw": "kw", "wh": "w", "gh": "ɡ",
     "ee": "i", "ea": "i", "oo": "u", "ou": "W", "ow": "O", "oa": "O", "ai": "A", "ay": "A", "ei": "A",
     "ey": "A", "oi": "Y", "oy": "Y", "au": "ɔ", "aw": "ɔ", "ue": "u", "ew": "ju", "ie": "i",
     "ar": "ɑɹ", "er": "əɹ", "ir": "ɜɹ", "ur": "ɜɹ", "or": "ɔɹ",
@@ -452,7 +474,7 @@ _LTS_ONE = {"a": "æ", "b": "b", "c": "k", "d": "d", "e": "ɛ", "f": "f", "g": "
 _LTS_LONG = {"a": "A", "e": "i", "i": "I", "o": "O", "u": "u", "y": "I"}
 _LTS_FINAL = {"a": "ə", "e": "i", "i": "i", "o": "O", "u": "u", "y": "i"}
 _ONSETS = frozenset(
-    "bl br ch cl cr dr dw fl fr gl gn gr kl kn kr kw ph pl pr ps qu sc sh sk sl sm sn sp st sv sw th tr "
+    "bl br ch cl cr dr dw fl fr gl gn gr kl kn kr kw ph pl pr ps qu qw sc sh sk sl sm sn sp st sv sw th tr "
     "tw wh wr zh sch scr shr sph spl spr squ str thr".split())
 
 
@@ -608,11 +630,10 @@ def _say_identifier(word: str, lexicon: dict[str, str] | None = None) -> str:
 def _say_number(num: str) -> str:
     """`5ms`, `200MB`, `3x`, `1_000`: numbers with units glued on, as words misaki reads."""
     num = num.replace("_", "")
-    m = _UNIT_TIGHT.fullmatch(num)
-    if m:
-        return _unit(m.group(1), m.group(2))
+    if (said := _tight_unit(num)) is not None:
+        return said
     m = re.fullmatch(r"(\d+)([A-Za-z]+)", num)
-    if m:
+    if m and m.group(2) not in ("st", "nd", "rd", "th", "s"):  # 3rd and 1990s read as they are
         return m.group(1) + " " + (say_word(m.group(2)) or spell(m.group(2)))
     return num
 
@@ -662,16 +683,11 @@ def _say_file(name: str) -> str:
             continue
         ext = _EXTS.get(p.lower()) if p is parts[-1] else None
         if ext is not None:
-            said = _render(ext, p) if ext.startswith("/") else _respell(ext)
+            said = _render(ext, p)
         else:
             said = _say_identifier(p)
         out.append("dot " + said)
     return " ".join(out)
-
-
-def _respell(text: str) -> str:
-    """A respelling whose words may themselves be in the word list."""
-    return " ".join(say_word(w) or w if w.isalpha() and not w.isupper() else w for w in text.split())
 
 
 def _say_path(path: str) -> str:
@@ -819,9 +835,12 @@ def _user_word(word: str, lexicon: dict[str, str]) -> str | None:
     value = lexicon.get(word)
     if value is None:
         value = next((v for k, v in lexicon.items() if k.islower() and k == word.lower()), None)
-    if value is None:
-        return None
-    return _render(value, word) if value.startswith("/") and value.endswith("/") else value
+    return None if value is None else _user_value(value, word)
+
+
+def _user_value(value: str, word: str) -> str:
+    """A user word-list value as spoken text: used as written, or `/phonemes/` said inline."""
+    return _render(value, word) if len(value) > 2 and value.startswith("/") and value.endswith("/") else value
 
 
 # -- reading prose --------------------------------------------------------------------------------
@@ -857,6 +876,14 @@ _UNIT_SPACED = "|".join(re.escape(u) for u in sorted(set(_UNITS) - _TIGHT_ONLY, 
 _UNIT_TIGHT = re.compile(rf"({_NUM})({_UNIT_ALL})")
 
 
+def _tight_unit(text: str) -> str | None:
+    """`5ms` -> 5 milliseconds, or None when `text` is not a number with a unit glued on."""
+    m = _UNIT_TIGHT.fullmatch(text)
+    if not m or re.fullmatch(r"\d{3}0s", text):  # 1990s is a decade
+        return None
+    return _unit(m.group(1), m.group(2))
+
+
 def _unit(number: str, unit: str) -> str:
     one, many = _UNITS[unit]
     number = re.sub(r"(\d)[-–](\d)", r"\1 to \2", number)
@@ -875,7 +902,7 @@ _PRODUCTS = (
 _SPAN_RE = re.compile(
     rf"""
       (?P<bigo>(?<![\w])[OΘΩ]\((?:[^()\s]|\s(?=[^()]*\))|\([^()]*\))+\))
-    | (?P<unit>(?<![\w.]){_NUM}[ ](?:{_UNIT_SPACED})(?![\w/]))
+    | (?P<unit>(?<![\w.~≈])[~≈]?{_NUM}[ ](?:{_UNIT_SPACED})(?![\w/]))
     | (?:\b(?:{_PRODUCTS})[ ](?P<prodver>\d+\.\d+)(?![\w.]))
     """,
     re.X,
@@ -885,9 +912,12 @@ _TRAIL = ".,;:!?)]}\"'”’»…"
 
 
 def _say_bigo(t: str) -> str:
-    """`O(n log n)` -> O of n log n, `O(n^2)` -> O of n squared."""
+    """`O(n log n)` -> order n log n, `O(n^2)` -> order n squared, `Θ(n)` -> theta of n.
+
+    "Order n" is as common in speech as "big O of n" and came through speech recognition
+    every time, where "big O of n log n" often lost everything after the O."""
     head, inner = t[0], t[2:-1]
-    out = [{"O": "O", "Θ": "theta", "Ω": "omega"}[head], "of"]
+    out = {"O": ["order"], "Θ": ["theta", "of"], "Ω": ["omega", "of"]}[head]
     for m in re.finditer(r"\^\s*\(?([\w]+)\)?|[²³]|sqrt|√|log|lg|ln|\d+|[A-Za-z]+|[*·×+\-/!]", inner):
         g = m.group()
         if g.startswith("^"):
@@ -900,7 +930,8 @@ def _say_bigo(t: str) -> str:
         elif g in ("log", "lg", "ln"):
             out.append("log")
         elif g.isalpha():
-            out.append(" ".join(spell(c) for c in g) if not _lookup(g) or len(g) <= 2 else g)
+            # variables as written: a lowercase n reads more clearly here than N
+            out.append(" ".join(spell(c) if c in "aA" else c for c in g) if not _lookup(g) or len(g) <= 2 else g)
         else:
             out.append({"*": "times", "·": "times", "×": "times", "+": "plus", "-": "minus", "/": "over",
                         "!": "factorial"}.get(g, g))
@@ -930,9 +961,8 @@ def _say_chunk(core: str, lexicon: dict[str, str] | None) -> str | None:
         return _say_version(ip) + (" colon " + port if port else "")
     if re.fullmatch(r"v\d+(?:\.\d+)*(?:-[A-Za-z]+\.?\d*)?|\d+\.\d+\.\d+(?:-[A-Za-z]+\.?\d*)?", core):
         return _say_version(core) if "." in core else "version " + core[1:]
-    m = _UNIT_TIGHT.fullmatch(core)
-    if m:
-        return _unit(m.group(1), m.group(2))
+    if (said := _tight_unit(core)) is not None:
+        return said
     if re.fullmatch(r"#\d+", core):
         return "number " + core[1:]
     if re.fullmatch(r"0[xX][0-9A-Fa-f]+", core):
@@ -946,15 +976,15 @@ def _say_chunk(core: str, lexicon: dict[str, str] | None) -> str | None:
             return _say_path(core)
         sides = core.split("/")  # and/or, TCP/IP, HTTP/2: misaki reads the sides, slash unsaid
         said = [_say_chunk(p, lexicon) if p else None for p in sides]
-        return None if all(x is None for x in said) else " ".join(x or p for x, p in zip(said, sides))
+        return None if all(x is None for x in said) else " ".join(x or p for x, p in zip(said, sides, strict=True))
     if re.fullmatch(rf"\.?[\w-]+(?:\.[\w-]+)*\.(?:{_EXT_RE})|\.[A-Za-z][\w.-]*", core):
         return _say_file(core)
     if re.fullmatch(r"--?[A-Za-z][\w-]*(?:=\S+)?", core):
         return _say_flag(core)
-    if re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+(?:\(\))?|[A-Za-z_]\w*\(\)", core):
-        return speak_code(core, lexicon)  # os.path.join, render()
-    if core in _OPS and (len(core) > 1 or core in "=<>→←⇒≤≥≠≈×±"):
-        return _OPS[core]
+    if re.fullmatch(r"(?=.*\w\w)[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+(?:\(\))?|[A-Za-z_]\w*\(\)|[A-Za-z_][\w.-]*=\S+", core):
+        return speak_code(core, lexicon)  # os.path.join, render(), port=8080
+    if core in _OPS and core not in ("--", "..", "...") and (len(core) > 1 or core in "=<>→←⇒≤≥≠≈×±"):
+        return _OPS[core]  # but -- and ... in prose are punctuation
     if re.fullmatch(r"[\w'’-]+", core):
         return _say_words(core)
     return None
@@ -962,14 +992,11 @@ def _say_chunk(core: str, lexicon: dict[str, str] | None) -> str | None:
 
 def _say_words(chunk: str) -> str | None:
     """A prose word, maybe hyphenated or snake_case: only the pieces misaki would get wrong change."""
-    parts = re.split(r"([-_]+)", chunk)
-    said = [None if i % 2 else say_word(p) for i, p in enumerate(parts) if p]
+    parts = [p for p in re.split(r"[-_]+", chunk) if p]
+    said = [say_word(p) for p in parts]
     if all(s is None for s in said):
         return None
-    words = [p for i, p in enumerate(parts) if p and not i % 2]
-    return " ".join(s or w for s, w in zip([s for i, s in enumerate(said) if not i % 2] if False else
-                                            [s for s, p in zip(said, [p for p in parts if p]) if not re.fullmatch(r"[-_]+", p)],
-                                            words))
+    return " ".join(s or p for s, p in zip(said, parts, strict=True))
 
 
 def _prose(text: str, lexicon: dict[str, str] | None) -> list[tuple[int, int, str]]:
@@ -981,8 +1008,10 @@ def _prose(text: str, lexicon: dict[str, str] | None) -> list[tuple[int, int, st
         if m.group("bigo"):
             marks.append((m.start(), m.end(), _say_bigo(m.group())))
         elif m.group("unit"):
-            n = re.match(_NUM, m.group()).group()
-            marks.append((m.start(), m.end(), _unit(n, m.group()[len(n):].strip())))
+            t = m.group()
+            about = "about " if t[0] in "~≈" else ""
+            n = re.match(_NUM, t.lstrip("~≈")).group()
+            marks.append((m.start(), m.end(), about + _unit(n, t.lstrip("~≈")[len(n):].strip())))
         else:
             a, b = m.span("prodver")
             marks += _prose_chunks(text, m.start(), a, lexicon)
@@ -999,8 +1028,8 @@ def _prose_chunks(text: str, a: int, b: int, lexicon: dict[str, str] | None) -> 
             s += 1
         while e > s and text[e - 1] in _TRAIL and not (text[e - 1] == ")" and text.count("(", s, e) >= text.count(")", s, e)):
             e -= 1
-        if s >= e:
-            continue
+        if s >= e or re.fullmatch(r"(?:[A-Za-z]\.){2,}", text[s:e + 1]):
+            continue  # e.g., i.e.: misaki reads these
         said = _say_chunk(text[s:e], lexicon)
         if said is not None and said != text[s:e]:
             marks.append((s, e, said))
@@ -1021,8 +1050,8 @@ def _rescue(text: str) -> str:
 
 def _plural_reading(said: str) -> str:
     """Add -s to the last word of a reading (`struct`s, `Vec`s)."""
-    m = re.search(r"\[([^\]]*)\]\(/([^)]*)/\)$", said)
-    if m:
+    m = _INLINE_RE.search(said)
+    if m and m.end() == len(said):
         return said[: m.start()] + _inline(m.group(1) + "s", _plural(m.group(2)))
     last = said.split()[-1] if said.split() else ""
     if not last.isalpha() or last.isupper() or len(last) == 1:
@@ -1038,30 +1067,33 @@ def speakable(
     code: list[tuple[int, int]] | tuple = (),
     say: list[tuple[int, int, str]] | tuple = (),
     lexicon: dict[str, str] | None = None,
+    british: bool = False,
 ) -> Spoken:
     """Spoken text for narration `display`, with segments mapping it back to display offsets.
 
     `code` are display ranges written in backticks, `say` explicit `(start, end, spoken)`
-    overrides (they always win), `lexicon` the user's word list {word: spoken}.
+    overrides (they always win), `lexicon` the user's word list {word: spoken}. With
+    `british`, the pronunciations given as phonemes are converted for a British voice.
     """
     marks: list[tuple[int, int, str]] = [(a, b, _rescue(spoken)) for a, b, spoken in say]
+    given = {(a, b) for a, b, _ in marks}  # phonemes in `say` text are kept as written
 
     def free(a: int, b: int) -> bool:
         return not any(a < tb and ta < b for ta, tb, _ in marks)
 
-    if lexicon:
-        for word, spoken in lexicon.items():
-            flags = re.I if word.islower() else 0
-            for m in re.finditer(rf"(?<!\w){re.escape(word)}(?!\w)", display, flags):
-                if free(m.start(), m.end()):
-                    marks.append((m.start(), m.end(), _user_word(m.group(), {m.group(): spoken}) or spoken))
-    for a, b in code:
+    for a, b in code:  # code reads the user's word list itself
         if a < b and free(a, b):
             said = speak_code(display[a:b], lexicon)
             m = re.match(r"(?:'s|’s|es|s)(?!\w)", display[b:])
             if m and said and free(b, b + m.end()):  # `struct`s
                 said, b = _plural_reading(said), b + m.end()
             marks.append((a, b, said))
+    if lexicon:
+        for word, spoken in lexicon.items():
+            flags = re.I if word.islower() else 0
+            for m in re.finditer(rf"(?<!\w){re.escape(word)}(?!\w)", display, flags):
+                if free(m.start(), m.end()):
+                    marks.append((m.start(), m.end(), _user_value(spoken, m.group())))
     marks.sort()
     gaps, pos = [], 0
     for a, b, _ in marks:
@@ -1072,13 +1104,21 @@ def speakable(
     for a, b in gaps:
         marks += [(a + s, a + e, said) for s, e, said in _prose(display[a:b], lexicon)]
     marks.sort()
+
+    def accent(m: re.Match) -> str:
+        """The word list marks the vowel of "father" with ː, which only British voices keep."""
+        ps = m.group(2)
+        return _inline(m.group(1), to_british(ps) if british else ps.replace("ː", ""))
+
     out = _Builder()
     pos = 0
     for a, e, spoken in marks:
         if a < pos:
             continue
-        out.add(display[pos:a], pos, a)
+        if (a, e) not in given:
+            spoken = _INLINE_RE.sub(accent, spoken)
+        out.add(display[pos:a], pos, a, copied=True)
         out.add(spoken, a, e)
         pos = e
-    out.add(display[pos:], pos, len(display))
+    out.add(display[pos:], pos, len(display), copied=True)
     return out.build()

@@ -118,7 +118,7 @@ Environment variables, also listed in [.env.example](.env.example). Command-line
 | **`SHOWNTELL_ONNX_MODEL`** | `model_quantized` | ONNX variant; `model` (fp32) can be faster on CPUs without AVX2 |
 | **`SHOWNTELL_THREADS`** | up to 6 | CPU threads for ONNX speech |
 
-Pronunciations: put `word = spoken form` lines in `~/.local/share/showntell/lexicon.txt`.
+Pronunciations: put `word = spoken form` lines in `~/.local/share/showntell/lexicon.txt`. A lowercase word matches any capitalisation, and the spoken form may be misaki phonemes between slashes (`kubectl = /kjˈubkˌʌtəl/`). showntell already knows several hundred technical terms.
 
 ## Privacy and security
 

@@ -76,7 +76,7 @@ class Narrator:
         return self.stats["audio_s"] / self.stats["compute_s"]
 
     def prepare(self, display: str, code=(), say=(), voice: str = "af_heart", speed: float = 1.0) -> tuple[str, Spoken]:
-        spoken = speakable(display, code, say, self.lexicon)
+        spoken = speakable(display, code, say, self.lexicon, british=voice.startswith("b"))
         key =hashlib.sha256(f"{self.backend.model_id}|{voice}|{speed:.2f}|{spoken.text}".encode()).hexdigest()[:24]
         return key, spoken
 
@@ -111,6 +111,9 @@ class Narrator:
     def _run(self) -> None:
         t0 = time.time()
         try:
+            from .. import pronounce
+
+            pronounce.warm()  # misaki's dictionary, so the first narration does not pay for it
             self.status.set("loading")
             self.backend.load()
             self.backend.synth("Ready.", "af_heart", 1.0)  # warms phonemes, spaCy and a voice
@@ -180,6 +183,8 @@ def timed_words(spoken: Spoken, tokens: list[Token]) -> list[dict]:
             continue
         a, b = idx, idx + len(t)
         cursor = b
+        if text.startswith("](/", b):  # misaki's inline pronunciation: its phonemes are not words
+            cursor = text.index(")", b) + 1
         d0, d1 = spoken.to_display(a, b)
         if words and words[-1]["c0"] == d0 and words[-1]["c1"] == d1:
             words[-1]["e"] = round(tk.end, 3)

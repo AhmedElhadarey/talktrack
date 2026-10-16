@@ -149,7 +149,7 @@ Narration is plain prose written to be heard. Markdown inside it is used like th
 | **`` `code` ``** | read as code: `camelCase` and `snake_case` are split into words, symbols are spoken |
 | **`**bold**`, `_italic_`** | shown in captions; no effect on the voice |
 | **`[label](#target)`** | a cue: the pointer moves to the target as the label is spoken |
-| **`[text]{say="spoken"}`** | shows `text` in captions and speaks `spoken` instead |
+| **`[text]{say="spoken"}`** | shows `text` in captions and speaks `spoken` instead; `spoken` may be phonemes between slashes, as in `say="/kˈOkəɹO/"` |
 | **`[^1]`** | reserved: citation, listed in the transcript and never read aloud |
 | **`{pause=1.5}`** | a paragraph holding only this adds silence, in seconds (at most 5) |
 
