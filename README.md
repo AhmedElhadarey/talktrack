@@ -71,32 +71,33 @@ args = ["--from", "git+https://github.com/rahimnathwani/showntell", "showntell",
 
 ### Pi
 
-Pi has no MCP support of its own before version 0.99, so it uses the [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) extension.
+Recent Pi (checked with 1.3.0) has MCP built in.
 
-1. Install the adapter:
+1. Add the server (this writes `~/.pi/agent/mcp.json`; add `-l` to write `.pi/mcp.json` in the current project instead):
 
    ```zsh
-   pi install npm:pi-mcp-adapter
+   pi mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
    ```
 
-2. Add showntell to `~/.config/mcp/mcp.json` for all projects, or `.mcp.json` in one project, merging with any servers already there:
+2. Check it with `pi mcp list`. It should say `showntell: connected, 5 tools`.
+3. Start `pi` in your project and ask for a walkthrough.
 
-   ```json
-   {
-     "mcpServers": {
-       "showntell": {
-         "command": "uvx",
-         "args": ["--from", "git+https://github.com/rahimnathwani/showntell", "showntell", "mcp"]
-       }
-     }
-   }
-   ```
+Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) extension instead. Run `pi install npm:pi-mcp-adapter`, then put this in `~/.config/mcp/mcp.json`:
 
-3. Restart `pi` and run `/mcp`; `showntell` should be listed. Ask for a walkthrough.
+```json
+{
+  "mcpServers": {
+    "showntell": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/rahimnathwani/showntell", "showntell", "mcp"]
+    }
+  }
+}
+```
 
 ### Other clients
 
-- **Cursor, VS Code, Claude Desktop, Gemini CLI and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell showntell mcp`. Most use the same `mcpServers` JSON as the Pi example.
+- **Cursor, VS Code, Claude Desktop, Gemini CLI and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell showntell mcp`. Most use the same `mcpServers` JSON as the older-Pi example.
 - **Over HTTP:** run `uvx --from git+https://github.com/rahimnathwani/showntell showntell serve` and connect the client to `http://localhost:4747/mcp`.
 
 ### Good to know
