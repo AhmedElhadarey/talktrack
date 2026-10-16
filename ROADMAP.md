@@ -26,7 +26,7 @@ Version 1.0 ships when it meets the launch criteria below. Everything else waits
 
 ## Status (16 October 2026)
 
-Phases 0 to 2 are built and every launch criterion is met on an Apple silicon Mac. What is left is publishing.
+Phases 0 to 2 are built, every launch criterion is met, and the repository is public at https://github.com/rahimnathwani/showntell with the gallery at https://rahimnathwani.github.io/showntell/.
 
 | Launch criterion | Measured | Result |
 |---|---|---|
@@ -35,7 +35,7 @@ Phases 0 to 2 are built and every launch criterion is met on an Apple silicon Ma
 | **Evaluation** | 10 prompts on Sonnet, each played at 1x from the moment the link was playable: 9 of 10 with no stalls and no render errors (one run waited 2.2 s for voicing after the agent revised an upcoming slide) | met |
 | **Pointer** | 118 of 118 cues located by speech recognition fired within 300 ms of the word; 3 more could not be located in the transcript (97.5% counting those as misses) | met |
 | **Pronunciation** | 0.55 missed technical terms per minute on the 70-sentence set; 0 per minute across the 10 evaluation walkthroughs | met |
-| **Quality** | 569 Python tests, 3 browser tests and 14 player tests pass on macOS; 569 pass on Linux arm64 in a container, where `doctor` also voices speech with ONNX. GitHub CI runs once the repository is pushed. | met locally |
+| **Quality** | GitHub CI is green: on Linux x86_64, 562 tests, 14 player tests, 3 browser tests, `doctor` voicing with ONNX and 7 ONNX tests; on macOS Apple silicon, 562 tests, `doctor` voicing with MLX and 4 MLX tests | met |
 
 | Phase | Done |
 |---|---|
@@ -45,7 +45,7 @@ Phases 0 to 2 are built and every launch criterion is met on an Apple silicon Ma
 
 Evaluation cost on Sonnet: $0.10 to $0.24 per walkthrough.
 
-**Owner steps:** create the GitHub repository and push; add a PyPI trusted publisher for `release.yml` and tag `v0.1.0`; enable GitHub Pages; confirm the trademark in USPTO TSDR; post the mlx-audio issue asking for a public word-timestamp API; announce.
+**Owner steps left:** add a PyPI trusted publisher for `release.yml` and tag `v0.1.0` (until then the README installs from GitHub); confirm the trademark in USPTO TSDR; post the mlx-audio issue asking for a public word-timestamp API; announce.
 
 ## Phase 0: Foundations
 

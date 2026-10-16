@@ -19,17 +19,17 @@ Ask your agent to walk you through a pull request, a module or a concept. It wri
 You need [uv](https://docs.astral.sh/uv/) and Python 3.12 or newer, which uv installs for you.
 
 ```zsh
-claude mcp add showntell -- uvx showntell mcp
+claude mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
 ```
 
-Then ask Claude Code: *"show me how a request gets retried in this codebase"*.
+Once showntell is on PyPI this becomes `uvx showntell mcp`. Then ask Claude Code: *"show me how a request gets retried in this codebase"*.
 
 The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model, from Hugging Face and GitHub. After that, everything works offline.
 
 | Client | Setup |
 |---|---|
-| **Claude Code** | `claude mcp add showntell -- uvx showntell mcp` |
-| **Cursor, VS Code, Codex CLI, Gemini CLI, Claude Desktop** | a stdio server with command `uvx` and arguments `showntell mcp` |
+| **Claude Code** | `claude mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp` |
+| **Cursor, VS Code, Codex CLI, Gemini CLI, Claude Desktop** | a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell showntell mcp` |
 | **Any client over HTTP** | run `showntell serve`, then connect to `http://localhost:4747/mcp` |
 
 `showntell mcp` starts a shared background daemon the first time, or reuses the running one, so the voice model stays loaded across sessions and every client uses one port. `showntell doctor` checks the setup and measures speech speed.
