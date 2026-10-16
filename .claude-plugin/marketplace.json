@@ -1,0 +1,14 @@
+{
+  "name": "showntell",
+  "owner": { "name": "Rahim Nathwani", "url": "https://github.com/rahimnathwani" },
+  "metadata": { "description": "Narrated slide walkthroughs for coding agents, voiced on your machine." },
+  "plugins": [
+    {
+      "name": "showntell",
+      "source": "./claude-plugin",
+      "description": "Narrated slide walkthroughs of code, diffs and concepts, voiced locally with Kokoro. The link plays within seconds while the rest is written.",
+      "category": "productivity",
+      "keywords": ["walkthrough", "code review", "tts", "local"]
+    }
+  ]
+}

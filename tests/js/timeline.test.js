@@ -1,0 +1,76 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { build, firedCues, revealLevel, segmentAt, slideSpans, slideStart, stateAt, wordAt } from "../../src/showntell/static/js/timeline.js";
+
+const say = (id, dur, cues = [], extra = {}) => ({ id, status: "ready", text: "one two three", duration: dur, cues, words: [], ...extra });
+const W = {
+  slides: [
+    { id: "intro", kind: "title", classes: [], visual: {}, says: [say("intro.1", 2)] },
+    {
+      id: "list", kind: "list", classes: ["build"], visual: { items: [{ id: "a" }, { id: "b" }, { id: "c" }] },
+      says: [say("list.1", 3, [{ at: 0, kind: "item", id: "a", t: 0.5 }, { at: 5, kind: "item", id: "b", t: 2 }]), say("list.2", 2, [{ at: 0, kind: "item", id: "c", t: 1 }])],
+    },
+    { id: "pause", kind: "text", classes: [], visual: {}, says: [{ id: "p.1", status: "ready", pause: 1.5 }] },
+  ],
+};
+
+test("segments are laid end to end with gaps", () => {
+  const tl = build(W);
+  assert.equal(tl.segs.length, 4);
+  assert.deepEqual(tl.segs.map((s) => s.start), [0, 2.6, 5.9, 8.5]);
+  assert.equal(tl.segs[3].gap, 0); // a pause has no extra gap
+  assert.equal(tl.total, 10);
+});
+
+test("segmentAt finds the paragraph playing at a time", () => {
+  const tl = build(W);
+  assert.equal(segmentAt(tl, 0), 0);
+  assert.equal(segmentAt(tl, 2.59), 0);
+  assert.equal(segmentAt(tl, 2.6), 1);
+  assert.equal(segmentAt(tl, 99), 3);
+});
+
+test("cues fire by local time and persist across paragraphs of a slide", () => {
+  const tl = build(W);
+  assert.deepEqual(firedCues(W, tl, 1, 0.1).map((c) => c.id), []);
+  assert.deepEqual(firedCues(W, tl, 1, 1).map((c) => c.id), ["a"]);
+  assert.deepEqual(firedCues(W, tl, 2, 0).map((c) => c.id), ["a", "b"]);
+  assert.deepEqual(firedCues(W, tl, 2, 1.2).map((c) => c.id), ["a", "b", "c"]);
+});
+
+test("build slides reveal up to the latest item pointed at, then everything", () => {
+  const tl = build(W);
+  assert.deepEqual(stateAt(W, tl, 2.7).reveal, { items: 0 });
+  assert.deepEqual(stateAt(W, tl, 3.2).reveal, { items: 1 });
+  assert.deepEqual(stateAt(W, tl, 5.0).reveal, { items: 2 });
+  assert.equal(stateAt(W, tl, 8.3).reveal, null); // after the slide's last paragraph
+});
+
+test("code reveal starts just before the first line pointed at", () => {
+  const slide = { kind: "code", classes: ["build"], visual: { start: 10 }, says: [{ cues: [{ kind: "lines", l0: 14, l1: 15 }, { kind: "lines", l0: 20, l1: 20 }] }] };
+  assert.deepEqual(revealLevel(slide, [], false), { line: 13 });
+  assert.deepEqual(revealLevel(slide, [{ kind: "lines", l0: 14, l1: 15 }], false), { line: 15 });
+  assert.equal(revealLevel({ ...slide, classes: [] }, [], false), null);
+});
+
+test("pending narration is estimated and not ready", () => {
+  const w = { slides: [{ id: "x", kind: "text", classes: [], visual: {}, says: [{ id: "x.1", status: "pending", text: "a b c d e f g h i j k l m n o p q r s t u v w x y z a" }] }] };
+  const tl = build(w);
+  assert.equal(tl.segs[0].ready, false);
+  assert.ok(tl.segs[0].dur > 9 && tl.segs[0].dur < 11);
+});
+
+test("slide spans and starts", () => {
+  const tl = build(W);
+  assert.equal(slideStart(tl, 1), 2.6);
+  const spans = slideSpans(tl, 3);
+  assert.equal(spans[1].start, 2.6);
+  assert.ok(Math.abs(spans[1].end - 8.5) < 1e-9);
+});
+
+test("wordAt", () => {
+  const s = { words: [{ s: 0.1 }, { s: 0.5 }, { s: 0.9 }] };
+  assert.equal(wordAt(s, 0), -1);
+  assert.equal(wordAt(s, 0.5), 1);
+  assert.equal(wordAt(s, 5), 2);
+});
