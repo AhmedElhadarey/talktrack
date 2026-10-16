@@ -26,22 +26,24 @@ Version 1.0 ships when it meets the launch criteria below. Everything else waits
 
 ## Status (16 October 2026)
 
-Phases 0 to 2 are built. What is left is measurement on a quiet machine and the owner's publishing steps.
+Phases 0 to 2 are built and every launch criterion is met on an Apple silicon Mac. What is left is publishing.
 
 | Launch criterion | Measured | Result |
 |---|---|---|
-| **Install** | empty uv and Hugging Face caches on an Apple silicon Mac: install 11 s, first speech 52 s including the 327 MB model download | met |
-| **Speed** | link 2.2 to 4.1 s after `start_walkthrough` in five Sonnet runs; the 4.1 s run shared the machine with a second, accidental daemon (since fixed) | re-measure |
-| **Evaluation** | the 10-prompt Sonnet run was stopped by the system for low memory after 7 runs; the completed walkthroughs played with no render errors | re-run |
-| **Pointer** | 7 of 7 cues within 300 ms of whisper word times in the first run; ONNX and MLX word starts are within 75 ms of whisper | re-run at scale |
-| **Pronunciation** | 0.55 missed technical terms per minute on the 70-sentence set (af_heart); 0.98 and 1.08 for am_michael and bf_emma | met |
-| **Quality** | 568 Python tests, 3 browser tests (every slide kind in every frame) and 14 player tests pass on macOS; Linux CI is written but has not run | Linux pending |
+| **Install** | empty uv and Hugging Face caches: install 11 s, first speech 52 s including the 327 MB model download | met |
+| **Speed** | link 0.75 to 1.44 s after `start_walkthrough` in 9 Sonnet runs with the model loaded (6.0 s for the first, cold run). The opening now rides along with the start call, which saves a model turn. | met |
+| **Evaluation** | 10 prompts on Sonnet, each played at 1x from the moment the link was playable: 9 of 10 with no stalls and no render errors (one run waited 2.2 s for voicing after the agent revised an upcoming slide) | met |
+| **Pointer** | 118 of 118 cues located by speech recognition fired within 300 ms of the word; 3 more could not be located in the transcript (97.5% counting those as misses) | met |
+| **Pronunciation** | 0.55 missed technical terms per minute on the 70-sentence set; 0 per minute across the 10 evaluation walkthroughs | met |
+| **Quality** | 569 Python tests, 3 browser tests and 14 player tests pass on macOS; 569 pass on Linux arm64 in a container, where `doctor` also voices speech with ONNX. GitHub CI runs once the repository is pushed. | met locally |
 
-| Phase | Done | Left |
-|---|---|---|
-| **0** | clean room, spec, Markdown format, document model, code from disk, packaging, rename, licence files | |
-| **1** | security, revise, cue inference, checks, `play`, step reveals, pronunciation, MLX and ONNX backends, time-driven player, transcript, seeking, accessibility, shared daemon, `doctor`, `autostart`, plugin and skill, prompts, resources, tests | full evaluation |
-| **2** | static export with captions, docs, CI, release and gallery workflows, recorder for demo video | gallery content, README demo, publishing |
+| Phase | Done |
+|---|---|
+| **0** | clean room, spec, Markdown format, document model, code from disk, packaging, rename, licence files |
+| **1** | security, revise, cue inference, checks, `play`, step reveals, pronunciation, MLX and ONNX backends, time-driven player, transcript, seeking, accessibility, shared daemon with start and instance locks, `doctor`, `autostart`, plugin and skill, prompts, resources, tests, evaluation |
+| **2** | static export with captions, docs, CI, release and gallery workflows, recorder for demo video, gallery |
+
+Evaluation cost on Sonnet: $0.10 to $0.24 per walkthrough.
 
 **Owner steps:** create the GitHub repository and push; add a PyPI trusted publisher for `release.yml` and tag `v0.1.0`; enable GitHub Pages; confirm the trademark in USPTO TSDR; post the mlx-audio issue asking for a public word-timestamp API; announce.
 
