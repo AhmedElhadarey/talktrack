@@ -152,6 +152,12 @@ export function renderSlide(slide, ctx) {
     return { root, ready, parts };
   }
 
+  if (slide.kind === "chapter") {
+    root.innerHTML = `<div class="chapter-n">Part ${slide.visual?.n || ""}</div><h1>${inline(slide.title)}</h1>${slide.shown ? `<p class="sub">${inline(slide.shown)}</p>` : ""}`;
+    parts.visual = root.querySelector("h1");
+    return { root, ready, parts };
+  }
+
   const head = el("header", "slide-head", `<h2>${inline(slide.title)}</h2>${slide.shown && slide.kind !== "text" ? `<p>${inline(slide.shown)}</p>` : ""}`);
   const body = el("div", "slide-body");
   root.append(head, body);
@@ -159,9 +165,15 @@ export function renderSlide(slide, ctx) {
 
   switch (slide.kind) {
     case "code": {
-      const { box, lines } = codeBox(v.code, v.lang, v.start || 1, v.title, null, "new", null);
+      const tag = v.steps?.length > 1 ? `Step 1 of ${v.steps.length}` : null;
+      const { box, lines } = codeBox(v.code, v.lang, v.start || 1, v.title, tag, "new", null);
       parts.lines.new = lines;
       parts.visual = box;
+      if (v.scroll) box.classList.add("scroll");
+      if (v.steps?.length > 1) {
+        parts.step = 1;
+        parts.setStep = (n, animate) => morphCode(parts, box, v, n, animate);
+      }
       body.append(box);
       break;
     }
@@ -202,15 +214,18 @@ export function renderSlide(slide, ctx) {
     }
     case "list": {
       const style = v.style || "bullets";
-      const list = el(style === "cards" ? "div" : style === "steps" ? "ol" : "ul", `list ${style}`);
+      const list = el(style === "cards" || style === "stack" ? "div" : style === "steps" ? "ol" : "ul", `list ${style}`);
       if (style === "cards") {
         const n = v.items.length;
         const cols = ctx.frame === "portrait" ? 1 : ctx.frame === "square" ? (n <= 2 ? n : 2) : n <= 3 ? n : n === 4 ? 2 : 3;
         list.style.gridTemplateColumns = `repeat(${Math.max(1, cols)}, minmax(0, 1fr))`;
       }
       v.items.forEach((it, i) => {
-        const item = el(style === "cards" ? "div" : "li", "entry",
-          `<div class="entry-text">${it.title ? `<h3>${inline(it.title)}</h3>` : ""}${it.body ? `<p>${inline(it.body)}</p>` : ""}</div>`);
+        const tick = style === "checklist" ? `<span class="tick${it.check ? " todo-done" : ""}" aria-hidden="true">${TICK}</span>` : "";
+        const item = el(style === "cards" || style === "stack" ? "div" : "li", "entry",
+          `${tick}<div class="entry-text">${it.title ? `<h3>${inline(it.title)}</h3>` : ""}${it.body ? `<p>${inline(it.body)}</p>` : ""}</div>`);
+        if (style === "checklist") item.setAttribute("aria-label", `${it.check ? "Done" : "Not done"}: ${it.title || it.body}`);
+        if (style === "stack") item.style.setProperty("--layer", i);
         if (style === "steps") item.dataset.n = i + 1;
         item.dataset.id = it.id;
         item.dataset.idx = i;
@@ -273,6 +288,38 @@ export function renderSlide(slide, ctx) {
       body.append(c);
       break;
     }
+    case "stat": {
+      const g = el("div", "stats");
+      g.style.gridTemplateColumns = `repeat(${ctx.frame === "portrait" ? 1 : Math.min(2, v.items.length) || 1}, minmax(0, 1fr))`;
+      v.items.forEach((it, i) => {
+        const card = el("div", "entry stat",
+          `<div class="label">${inline(it.label)}</div><div class="num" aria-hidden="true">${esc(statText(it, 1))}</div>`
+          + (it.before !== undefined ? `<div class="was">from ${esc(statValue(it, it.before))}</div>` : ""));
+        card.setAttribute("aria-label", `${it.label}: ${it.before !== undefined ? `from ${statValue(it, it.before)} to ` : ""}${statValue(it, it.after)}`);
+        card.dataset.id = it.id;
+        card.dataset.idx = i;
+        parts.items.set(it.id, card);
+        g.append(card);
+      });
+      parts.stats = v.items;
+      parts.visual = g;
+      body.append(g);
+      break;
+    }
+    case "chat": {
+      const c = el("div", "chat");
+      v.items.forEach((it, i) => {
+        const m = el("div", `entry msg ${it.side}`,
+          `<div class="who">${esc(it.role)}</div><div class="bubble">${it.text.split("\n").map((l) => inline(l)).join("<br>")}</div>`);
+        m.dataset.id = it.id;
+        m.dataset.idx = i;
+        parts.items.set(it.id, m);
+        c.append(m);
+      });
+      parts.visual = c;
+      body.append(c);
+      break;
+    }
     case "terminal": {
       const { box, lines } = terminalBox(v);
       parts.lines.new = lines;
@@ -301,7 +348,15 @@ export function renderSlide(slide, ctx) {
       const img = el("img");
       img.alt = v.alt || slide.title || "";
       img.src = v.src;
-      wrap.append(img);
+      if (v.frame) {
+        const f = el("div", `device ${v.frame}`);
+        if (v.frame === "browser") f.append(el("div", "bar", `<span class="dots"><i></i><i></i><i></i></span><span class="url">${esc(v.url || "")}</span>`));
+        if (v.frame === "window") f.append(el("div", "bar", `<span class="dots"><i></i><i></i><i></i></span><span class="url">${esc(v.url || "")}</span>`));
+        f.append(img);
+        wrap.append(f);
+      } else {
+        wrap.append(img);
+      }
       parts.visual = img;
       body.append(wrap);
       ready = img.decode().catch(() => ctx.report(`Image on slide ${slide.id} failed to load.`, "render_error", slide.id));
@@ -315,6 +370,58 @@ export function renderSlide(slide, ctx) {
   }
   return { root, ready, parts };
 }
+
+// ---------------------------------------------------------------- code that evolves
+
+// Switch a code box to step n. Lines that stay glide to their new place, new lines fade in.
+// Without `animate` (seeking, capture), the box simply shows step n.
+export function morphCode(parts, box, v, n, animate) {
+  n = Math.max(1, Math.min(v.steps.length, n));
+  if (parts.step === n) return;
+  const prev = v.steps[parts.step - 1], next = v.steps[n - 1];
+  const oldEls = [...parts.lines.new.values()];
+  const before = animate ? oldEls.map((e) => e.getBoundingClientRect().top) : null;
+  const fresh = codeBox(next.code, v.lang, next.start || 1, next.title || v.title, `Step ${n} of ${v.steps.length}`, "new", null);
+  box.replaceChildren(...fresh.box.childNodes);
+  parts.lines.new = fresh.lines;
+  parts.step = n;
+  const bodyEl = box.closest(".slide-body");
+  if (bodyEl) fit(bodyEl);
+  if (!animate) return;
+  // Pair unchanged lines in order; the rest are new.
+  const d = diffLines(prev.code, next.code);
+  const keptOld = oldEls.map((_, i) => i).filter((i) => !d.removed[i]);
+  const newEls = [...fresh.lines.values()];
+  const keptNew = newEls.map((_, i) => i).filter((i) => !d.added[i]);
+  const k = parseFloat(box.dataset.scale || "1") * (parseFloat(document.getElementById("stage")?.dataset.scale) || 1);
+  keptNew.forEach((ni, j) => {
+    const oi = keptOld[j];
+    if (oi === undefined) return;
+    const el = newEls[ni];
+    const dy = (before[oi] - el.getBoundingClientRect().top) / (k || 1);
+    if (Math.abs(dy) < 0.5) return;
+    el.style.transform = `translateY(${dy}px)`;
+    el.style.transition = "none";
+    requestAnimationFrame(() => { el.style.transition = ""; el.style.transform = ""; });
+  });
+  newEls.forEach((el, i) => { if (d.added[i]) el.classList.add("enter"); });
+}
+
+// ---------------------------------------------------------------- big numbers
+
+export function statValue(it, x) {
+  const s = Number(x).toLocaleString("en", { minimumFractionDigits: it.decimals, maximumFractionDigits: it.decimals });
+  return it.unit === "%" ? `${s}%` : it.unit ? `${s} ${it.unit}` : s;
+}
+
+// The number at progress f (0 to 1) of counting from `before` to `after`.
+export function statText(it, f) {
+  const from = it.before ?? 0;
+  const ease = 1 - (1 - Math.max(0, Math.min(1, f))) ** 3;
+  return statValue(it, from + (it.after - from) * ease);
+}
+
+const TICK = '<svg viewBox="0 0 24 24" width="30" height="30"><rect x="2.5" y="2.5" width="19" height="19" rx="5" class="box"/><path d="M7 12.5l3.2 3.2L17 8.8" class="mark" pathLength="1"/></svg>';
 
 // ---------------------------------------------------------------- terminal sessions
 
@@ -398,6 +505,11 @@ function drawChart(v) {
         + (last >= 0 ? t(Math.min(W - m.r, x(last)) - 8, y(s.values[last]) - 16, s.name, "slabel", "end") : "")
         + "</g>";
     });
+    (v.notes || []).forEach((note) => {
+      const vals = v.series.filter((s) => !note.series || s.id === note.series).map((s) => s.values[note.x]).filter((x) => x !== undefined);
+      if (!vals.length) return;
+      marks += noteMark(note, x(note.x), y(Math.max(...vals)), m, W, t);
+    });
   } else {
     const n = v.categories.length, k = Math.max(1, ...v.categories.map((c) => c.values.length));
     const band = iw / Math.max(1, n), gap = band * 0.24, bw = (band - gap) / k;
@@ -413,8 +525,22 @@ function drawChart(v) {
       marks += g;
     });
     if (k > 1) marks += legend(v.series, m.l, H - 22);
+    (v.notes || []).forEach((note) => {
+      const ci = v.categories.findIndex((c) => c.id === note.bar);
+      if (ci < 0) return;
+      const c = v.categories[ci];
+      marks += noteMark(note, m.l + ci * band + band / 2, y(Math.max(...c.values, 0)) - 34, m, W, t);
+    });
   }
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${head}${grid}${axes}<line x1="${m.l}" x2="${W - m.r}" y1="${y(Math.max(lo, 0))}" y2="${y(Math.max(lo, 0))}" class="axis"/>${marks}</svg>`;
+}
+
+// A callout: a short leader up from the point and the note's text.
+function noteMark(note, px, py, m, W, t) {
+  const ty = Math.max(m.t + 24, py - 64);
+  const anchor = px > W * 0.7 ? "end" : px < W * 0.3 ? "start" : "middle";
+  return `<g class="entry note" data-id="${esc(note.id)}"><line x1="${px}" y1="${py - 10}" x2="${px}" y2="${ty + 10}" class="leader"/>`
+    + `<circle cx="${px}" cy="${py}" r="11" class="ring"/>${t(px, ty, note.text, "ntext", anchor)}</g>`;
 }
 
 function drawHbar(v, W, H, m, top, step, head, t) {
@@ -468,6 +594,16 @@ async function renderDiagram(container, v, slide, ctx) {
   }
 }
 
+// A framed screenshot: limit the picture to the slide's height so the frame hugs it.
+export function sizeImage(body) {
+  const dev = body.querySelector(".device");
+  const img = dev?.querySelector("img");
+  if (!img) return;
+  const bar = dev.querySelector(".bar")?.offsetHeight || 0;
+  const edge = dev.offsetHeight - dev.clientHeight;
+  img.style.maxHeight = `${Math.max(80, body.clientHeight - bar - edge - 4)}px`;
+}
+
 // Scale the diagram to the space it has (in stage pixels, not screen pixels).
 export function sizeDiagram(svg, body) {
   if (!svg) return;
@@ -487,6 +623,15 @@ export function fit(body) {
   if (!content || content.matches(".diagram, .image, .chart")) return;
   content.style.transform = "";
   const bw = body.clientWidth, bh = body.clientHeight;
+  if (content.matches(".codebox.scroll")) {
+    // Long code keeps its size and scrolls: fit the width only, and the box to the slide's height.
+    content.style.maxHeight = "";
+    const k = Math.max(0.6, Math.min(1.15, (bw / Math.max(content.offsetWidth, content.scrollWidth)) * 0.98));
+    content.dataset.scale = k.toFixed(3);
+    content.style.maxHeight = `${Math.floor(bh / k)}px`;
+    content.style.transform = `scale(${k})`;
+    return;
+  }
   const cw = Math.max(content.offsetWidth, content.scrollWidth), ch = Math.max(content.offsetHeight, content.scrollHeight);
   if (!cw || !ch) return;
   const grow = content.matches(".codebox, .diff, .math, table.data, .tree") ? 1.3 : 1;

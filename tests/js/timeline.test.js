@@ -92,3 +92,25 @@ test("steps: every slide start, each reveal on a step-reveal slide, then everyth
   const levels = s.slice(1, 6).map((x) => JSON.stringify(stateAt(W, tl, x.t).reveal));
   assert.deepEqual(levels, ['{"items":0}', '{"items":1}', '{"items":2}', '{"items":3}', "null"]);
 });
+
+test("the code step on screen is the latest step cue fired", () => {
+  const w = { slides: [{ id: "e", kind: "code", classes: [], visual: { steps: [{}, {}, {}] }, says: [
+    say("e.1", 4, [{ at: 0, kind: "step", n: 2, t: 1 }, { at: 9, kind: "step", n: 3, t: 3 }]) ] }] };
+  const tl = build(w);
+  assert.deepEqual([0.5, 1.2, 3.5].map((t) => stateAt(w, tl, t).step), [1, 2, 3]);
+});
+
+test("an edge path reveals both its ends in a step-reveal flowchart", () => {
+  const w = { slides: [{ id: "f", kind: "diagram", classes: ["build"], visual: { type: "flowchart", order: ["a", "b", "c"] }, says: [
+    say("f.1", 4, [{ at: 0, kind: "edge", path: ["a", "b"], t: 1 }]) ] }] };
+  const tl = build(w);
+  assert.deepEqual(stateAt(w, tl, 0.5).reveal, { nodes: 0, order: ["a", "b", "c"] });
+  assert.deepEqual(stateAt(w, tl, 1.5).reveal, { nodes: 2, order: ["a", "b", "c"] });
+});
+
+test("fired cues carry the time they fired on the walkthrough's clock", () => {
+  const tl = build(W);
+  const st = stateAt(W, tl, 2.6 + 2.5);
+  assert.deepEqual(st.cues.map((c) => +c._at.toFixed(2)), [3.1, 4.6]);
+  assert.ok(Math.abs(st.sinceSlide - 2.5) < 1e-9);
+});

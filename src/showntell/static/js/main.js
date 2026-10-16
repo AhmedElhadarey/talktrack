@@ -3,7 +3,7 @@
 // current time (timeline.js) and brings the screen in line with it.
 
 import { build, mmss, segmentAt, slideEnd, slideSpans, slideStart, stateAt, steps, wordAt } from "./timeline.js";
-import { diagramEdges, diagramNodes, fit, renderSlide, sizeDiagram, textRange } from "./render.js";
+import { diagramEdges, diagramNodes, fit, renderSlide, sizeDiagram, sizeImage, statText, textRange } from "./render.js";
 import { esc, norm } from "./util.js";
 
 const $ = (s) => document.querySelector(s);
@@ -406,6 +406,7 @@ function render(force) {
     if (shown.slide !== st.slide || shown.rev !== slide.rev || shown.id !== slide.id) showSlide(st.slide);
   }
   applyVisual(st, slide, force);
+  liveFrame(st, slide);
   applyCaption(st, slide, force);
   updateTime(st);
 }
@@ -413,7 +414,7 @@ function render(force) {
 function showSlide(i) {
   const slide = W.slides[i];
   shown = { slide: i, rev: slide.rev, id: slide.id };
-  lastCueKey = lastReveal = "";
+  lastCueKey = lastReveal = zoomFor = "";
   clearMarks();
   const v = renderSlide(slide, { frame: W.frame, report });
   host.replaceChildren(v.root);
@@ -425,6 +426,7 @@ function showSlide(i) {
     if (view.root !== v.root) return;
     if (bodyEl) {
       if (slide.kind === "diagram") sizeDiagram(view.parts.svg, bodyEl);
+      else if (slide.kind === "image") sizeImage(bodyEl);
       else fit(bodyEl);
     }
     if (window.CSS?.highlights && view.parts.wordRanges.length) {
@@ -481,6 +483,11 @@ function clearMarks() {
 
 function applyVisual(st, slide, force) {
   if (!view?.done) return;
+  if (view.parts.setStep && view.parts.step !== st.step) {
+    // Code that evolves: show the version for this moment, gliding only during playback.
+    view.parts.setStep(st.step, playing && !matchMedia("(prefers-reduced-motion: reduce)").matches);
+    force = true;
+  }
   const revealKey = JSON.stringify(st.reveal);
   if (force || revealKey !== lastReveal) {
     lastReveal = revealKey;
@@ -493,10 +500,155 @@ function applyVisual(st, slide, force) {
   host.querySelectorAll(".has-active").forEach((e) => e.classList.remove("has-active"));
   host.querySelectorAll(".ln.hl").forEach((e) => e.classList.remove("hl"));
   if (window.CSS?.highlights) CSS.highlights.delete("ptr");
-  if (!st.cue) { pointer.hidden = true; return; }
+  if (scrollCode(st, cueKey)) return; // the pointer is placed once the code has scrolled
+  if (!st.cue) { pointer.hidden = true; camera(null, cueKey); return; }
   const target = cueTarget(st.cue, slide);
-  if (!target) { pointer.hidden = true; return; }
-  placePointer(target.rects, target.wide);
+  if (!target) { pointer.hidden = true; camera(null, cueKey); return; }
+  if (camera((st.cue.style || "").includes("zoom") ? target.rects : null, cueKey)) return;
+  // The camera may have just jumped: measure the target where it is now.
+  const here = cueTarget(st.cue, slide) || target;
+  placePointer(here.rects, here.wide, st.cue.style);
+}
+
+// ------------------------------------------------------------------- camera moves
+
+// Long code (`scroll`) scrolls so the latest cued lines sit in the middle; other lines dim.
+// Returns true while it is moving; the pointer is placed when it lands.
+function scrollCode(st, cueKey) {
+  const box = view.parts.visual;
+  if (!box?.classList?.contains("scroll")) return false;
+  const code = box.querySelector(".code");
+  const last = [...st.cues].reverse().find((c) => c.kind === "lines");
+  box.classList.toggle("focusing", !!last);
+  let y = 0;
+  if (last) {
+    const lines = [];
+    for (let n = last.l0; n <= last.l1; n++) if (view.parts.lines.new.get(n)) lines.push(view.parts.lines.new.get(n));
+    if (lines.length) {
+      const top = lines[0].offsetTop, bottom = lines[lines.length - 1].offsetTop + lines[lines.length - 1].offsetHeight;
+      const room = box.clientHeight - (code.offsetTop || 0);
+      y = Math.max(0, Math.min(code.scrollHeight - room, (top + bottom) / 2 - room / 2));
+    }
+  }
+  return move(code, `translateY(${-Math.round(y)}px)`, cueKey);
+}
+
+// Zoom the slide onto the cue's target (cue style `zoom`), or back out. Returns true while moving.
+let zoomFor = "";
+function camera(rects, cueKey) {
+  const bodyEl = view.body;
+  if (!bodyEl) return false;
+  if (!rects) {
+    zoomFor = "";
+    return move(bodyEl, "", cueKey);
+  }
+  if (zoomFor === cueKey) return false; // already there
+  zoomFor = cueKey;
+  // Measure the target unzoomed, then fit it to about 60% of the slide body.
+  const was = bodyEl.style.transform;
+  bodyEl.style.transition = "none";
+  bodyEl.style.transform = "";
+  const b = bodyEl.getBoundingClientRect();
+  const live = cueTarget(W.slides[shown.slide] && stateAt(W, TL, now()).cue, W.slides[shown.slide]);
+  const rs = (live?.rects || rects).filter((r) => r && (r.width || r.height));
+  bodyEl.style.transform = was;
+  void bodyEl.offsetWidth;
+  bodyEl.style.transition = "";
+  if (!rs.length) return false;
+  const k = scale();
+  const l = Math.min(...rs.map((r) => r.left)), t = Math.min(...rs.map((r) => r.top));
+  const r = Math.max(...rs.map((r) => r.right)), bt = Math.max(...rs.map((r) => r.bottom));
+  const w = (r - l) / k, h = (bt - t) / k, bw = b.width / k, bh = b.height / k;
+  const z = Math.max(1, Math.min(2.6, (0.6 * bw) / Math.max(w, 1), (0.6 * bh) / Math.max(h, 1)));
+  const cx = ((l + r) / 2 - b.left) / k, cy = ((t + bt) / 2 - b.top) / k;
+  return move(bodyEl, `translate(${bw / 2 - cx * z}px, ${bh / 2 - cy * z}px) scale(${z})`, cueKey);
+}
+
+// Apply a transform; animate it while playing, jump when seeking or capturing.
+function move(el, transform, cueKey) {
+  if (el.style.transform === transform) return false;
+  const animate = playing && !body.classList.contains("capture") && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!animate) {
+    el.style.transition = "none";
+    el.style.transform = transform;
+    void el.offsetWidth;
+    el.style.transition = "";
+    return false;
+  }
+  el.style.transform = transform;
+  pointer.hidden = true;
+  const done = (e) => {
+    if (e.target !== el) return;
+    el.removeEventListener("transitionend", done);
+    if (lastCueKey === cueKey) { lastCueKey = ""; render(true); }
+  };
+  el.addEventListener("transitionend", done);
+  return true;
+}
+
+// ------------------------------------------------------------------- things that move with time
+
+// Every frame: a dot travelling along diagram edges, numbers counting, checklist ticks.
+function liveFrame(st, slide) {
+  if (!view?.done) return;
+  const p = view.parts;
+  const t = now();
+  if (p.svg && slide.kind === "diagram") travel(st, p.svg, t);
+  if (p.stats) {
+    const cued = new Map(st.cues.filter((c) => c.kind === "item").map((c) => [c.id, c._at]));
+    const any = slide.says.some((x) => (x.cues || []).some((c) => c.kind === "item"));
+    for (const it of p.stats) {
+      const el = p.items.get(it.id)?.querySelector(".num");
+      if (!el) continue;
+      const at = cued.has(it.id) ? cued.get(it.id) : any && !st.revealAll ? null : t - st.sinceSlide;
+      const text = at === null ? statText(it, 0) : statText(it, (t - at) / STAT_COUNT_S);
+      if (el.textContent !== text) el.textContent = text;
+    }
+  }
+  if (slide.kind === "list" && slide.visual.style === "checklist") {
+    const cued = new Set(st.cues.filter((c) => c.kind === "item").map((c) => c.id));
+    const any = slide.says.some((x) => (x.cues || []).some((c) => c.kind === "item"));
+    for (const it of slide.visual.items) {
+      p.items.get(it.id)?.classList.toggle("ticked", !!it.check && (cued.has(it.id) || !any || st.revealAll));
+    }
+  }
+}
+const STAT_COUNT_S = 1.2, HOP_S = 0.9;
+
+function travel(st, svg, t) {
+  let dot = svg.querySelector("circle.packet");
+  const cue = st.cue?.kind === "edge" ? st.cue : null;
+  svg.querySelectorAll("path.lit").forEach((e) => e.classList.remove("lit"));
+  if (!cue) { if (dot) dot.style.display = "none"; return; }
+  const edges = diagramEdges(svg, slideOrder());
+  const legs = [];
+  for (let i = 0; i + 1 < cue.path.length; i++) {
+    const e = edges.find((x) => x.from === cue.path[i] && x.to === cue.path[i + 1]);
+    if (e) { e.el.classList.add("lit"); legs.push(e.el); }
+  }
+  if (!legs.length) { if (dot) dot.style.display = "none"; return; }
+  if (!dot) {
+    dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("class", "packet");
+    dot.setAttribute("r", "9");
+    svg.append(dot);
+  }
+  // Position along the joined legs: one hop per HOP_S seconds after the cue fires, then rest at the end.
+  const f = Math.max(0, Math.min(1, (t - cue._at) / (HOP_S * legs.length)));
+  const lens = legs.map((e) => e.getTotalLength());
+  let d = f * lens.reduce((a, b) => a + b, 0), i = 0;
+  while (i < legs.length - 1 && d > lens[i]) { d -= lens[i]; i++; }
+  const pt = legs[i].getPointAtLength(Math.min(d, lens[i]));
+  // Edge paths may sit inside transformed groups: map the point into the SVG's own space.
+  const m = legs[i].getCTM(), root = svg.getCTM();
+  const q = m && root ? new DOMPoint(pt.x, pt.y).matrixTransform(root.inverse().multiply(m)) : pt;
+  dot.setAttribute("cx", q.x);
+  dot.setAttribute("cy", q.y);
+  dot.style.display = "";
+}
+
+function slideOrder() {
+  return W.slides[shown.slide]?.visual?.order;
 }
 
 function applyReveal(reveal, slide) {
@@ -513,6 +665,14 @@ function applyReveal(reveal, slide) {
     const visible = new Set(reveal.order.slice(0, reveal.nodes));
     diagramNodes(p.svg).forEach((g, id) => veil(g, !visible.has(id)));
     for (const e of diagramEdges(p.svg, reveal.order)) {
+      if (!e.el.dataset.len) {
+        // Edges draw themselves in when revealed: dash the path to its own length.
+        const len = Math.ceil(e.el.getTotalLength());
+        e.el.dataset.len = len;
+        e.el.style.setProperty("--len", len);
+        e.el.style.strokeDasharray = len;
+        e.el.classList.add("draws");
+      }
       const hide = !(visible.has(e.from) && visible.has(e.to));
       veil(e.el, hide);
       veil(e.label, hide);
@@ -523,6 +683,18 @@ function applyReveal(reveal, slide) {
 // Where a cue points: a list of DOMRect-like boxes, plus side effects (active classes, highlights).
 function cueTarget(cue, slide) {
   const p = view.parts;
+  if (!cue) return null;
+  if (cue.kind === "step" || cue.kind === "edge") return null; // the code's change, or the moving dot, is the pointer
+  if (cue.kind === "region" && p.visual?.tagName === "IMG") {
+    // The picture as drawn: object-fit may leave bars inside the element.
+    const box = p.visual.getBoundingClientRect(), [x, y, w, h] = cue.box;
+    const nw = p.visual.naturalWidth || box.width, nh = p.visual.naturalHeight || box.height;
+    const k = Math.min(box.width / nw, box.height / nh);
+    const r = { left: box.left + (box.width - nw * k) / 2, top: box.top + (box.height - nh * k) / 2, width: nw * k, height: nh * k };
+    const left = r.left + (r.width * x) / 100, top = r.top + (r.height * y) / 100;
+    const width = (r.width * w) / 100, height = (r.height * h) / 100;
+    return { rects: [{ left, top, width, height, right: left + width, bottom: top + height }] };
+  }
   const range = (r) => { if (window.CSS?.highlights) CSS.highlights.set("ptr", new Highlight(r)); };
   if (cue.kind === "lines") {
     const map = p.lines[cue.side || "new"] || p.lines.new;
@@ -580,7 +752,7 @@ function cueTarget(cue, slide) {
 
 function wholeVisual() {
   const v = view.parts.visual;
-  if (!v || shown.slide < 0 || W.slides[shown.slide].kind === "title") return null;
+  if (!v || shown.slide < 0 || ["title", "chapter"].includes(W.slides[shown.slide].kind)) return null;
   const t = v.querySelector?.(".katex-display") || view.parts.svg || v;
   return { rects: [t.getBoundingClientRect()], wide: true };
 }
@@ -615,9 +787,21 @@ function findInDiagram(svg, label) {
   return part ? part.closest("g.node, g.edgeLabel, g.cluster, g.stateGroup") || part : null;
 }
 
-function placePointer(rects, wide) {
+// Pointer styles from a cue's {.circle}, {.underline}, {.arrow} or {.highlight}; drawn as SVG
+// that inks itself in, so a new cue draws a new mark.
+const MARKS = {
+  circle: '<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path pathLength="1" d="M52 4 C80 3 97 22 96 50 C95 78 74 97 48 96 C22 95 3 76 4 49 C5 24 26 5 56 7"/></svg>',
+  underline: '<svg viewBox="0 0 100 10" preserveAspectRatio="none"><path pathLength="1" d="M2 6 C20 2 34 9 52 5 S84 3 98 6"/></svg>',
+  arrow: '<svg viewBox="0 0 100 60"><path pathLength="1" d="M4 8 C30 10 58 22 84 44 M70 46 L86 46 L84 30"/></svg>',
+};
+function placePointer(rects, wide, style = "") {
   rects = rects.filter((r) => r && (r.width || r.height));
   if (!rects.length) { pointer.hidden = true; return; }
+  const kind = ["circle", "underline", "arrow", "highlight"].find((s) => style.includes(s)) || "box";
+  if (pointer.dataset.kind !== kind || kind !== "box") {
+    pointer.dataset.kind = kind;
+    pointer.innerHTML = MARKS[kind] || "";
+  }
   const l = Math.min(...rects.map((r) => r.left)), t = Math.min(...rects.map((r) => r.top));
   const r = Math.max(...rects.map((r) => r.right)), b = Math.max(...rects.map((r) => r.bottom));
   const sr = stage.getBoundingClientRect(), k = scale(), pad = wide ? 12 : 6;
@@ -625,8 +809,9 @@ function placePointer(rects, wide) {
   pointer.style.top = `${(t - sr.top) / k - pad}px`;
   pointer.style.width = `${(r - l) / k + pad * 2}px`;
   pointer.style.height = `${(b - t) / k + pad * 2}px`;
-  pointer.classList.toggle("wide", !!wide);
+  pointer.classList.toggle("wide", !!wide && kind === "box");
   pointer.hidden = false;
+  if (view?.body?.style.transform) return; // zoomed in: the target may be cropped on purpose
   const [w, h] = FRAMES[W.frame] || FRAMES.landscape;
   const x = (l - sr.left) / k, y = (t - sr.top) / k;
   if (x < -4 || y < -4 || x + (r - l) / k > w + 4 || y + (b - t) / k > h + 4) {

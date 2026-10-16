@@ -318,6 +318,7 @@ class Cue:
     target: str  # without the leading '#'
     text: str = ""  # optional exact text to narrow the target
     inferred: bool = False
+    style: str = ""  # pointer style from {.circle} and the like after the link
 
 
 @dataclass
@@ -330,6 +331,7 @@ class Narration:
     problems: list[str] = field(default_factory=list)
 
 
+CUE_STYLES = ("box", "circle", "underline", "arrow", "highlight", "zoom")
 LINK_RE = re.compile(r"\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\(\s*(#[^\s)]*)?\s*(?:\"([^\"]*)\"|'([^']*)'|\(([^)]*)\))?\s*\)")
 SPAN_RE = re.compile(r"\[([^\[\]]+)\]\{\s*say\s*=\s*(?:\"([^\"]*)\"|'([^']*)')\s*\}")
 OTHER_LINK_RE = re.compile(r"\[([^\[\]]+)\]\((?!\s*#)[^)]*\)")
@@ -396,11 +398,14 @@ def parse_narration(src: str) -> Narration:
                 _absorb(n, inner, start)
                 emit(inner.display)
                 quoted = next((g for g in (m.group(3), m.group(4), m.group(5)) if g is not None), "")
-                n.cues.append(Cue(start, len(out), inner.display, m.group(2)[1:], quoted))
+                cue = Cue(start, len(out), inner.display, m.group(2)[1:], quoted)
+                n.cues.append(cue)
                 i = m.end()
-                if i < L and src[i] == "{":  # reserved cue attributes such as {.zoom}
+                if i < L and src[i] == "{":  # cue attributes such as {.circle} or {.zoom}
                     close = src.find("}", i)
                     if close != -1:
+                        styles = [c for c in parse_attrs(src[i + 1: close])["classes"] if c in CUE_STYLES]
+                        cue.style = " ".join(dict.fromkeys(styles))
                         i = close + 1
                 continue
             m = OTHER_LINK_RE.match(src, i)
@@ -438,7 +443,7 @@ def parse_narration(src: str) -> Narration:
 
 def _absorb(outer: Narration, inner: Narration, offset: int) -> None:
     for c in inner.cues:
-        outer.cues.append(Cue(c.at + offset, c.end + offset, c.label, c.target, c.text))
+        outer.cues.append(Cue(c.at + offset, c.end + offset, c.label, c.target, c.text, style=c.style))
     outer.code += [(a + offset, b + offset) for a, b in inner.code]
     outer.say += [(a + offset, b + offset, s) for a, b, s in inner.say]
     outer.notes += inner.notes
@@ -453,8 +458,14 @@ def inline_plain(src: str) -> str:
 
 
 def parse_item(text: str) -> dict:
-    """List item: `**Title**: description {#id}` or plain text."""
+    """List item: `**Title**: description {#id}` or plain text; `[ ]` or `[x]` first makes it a
+    checklist item."""
     attrs: dict = {}
+    check = None
+    cm = re.match(r"^\[([ xX])\]\s+", text)
+    if cm:
+        check = cm.group(1).lower() == "x"
+        text = text[cm.end():]
     m = ATTRS_TAIL_RE.search(text)
     if m and "#" in m.group(1):
         attrs = parse_attrs(m.group(1))
@@ -463,7 +474,10 @@ def parse_item(text: str) -> dict:
     bm = re.match(r"^\s*(\*\*|__)(.+?)\1\s*(?:[:\u2013\u2014-]\s*)?(.*)$", text)
     if bm:
         title, body = bm.group(2).strip().rstrip(":"), bm.group(3).strip()
-    return {"id": attrs.get("id", ""), "title": title, "body": body}
+    item = {"id": attrs.get("id", ""), "title": title, "body": body}
+    if check is not None:
+        item["check"] = check
+    return item
 
 
 def parse_table(text: str) -> dict:

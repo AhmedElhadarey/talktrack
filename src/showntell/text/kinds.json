@@ -2,11 +2,12 @@
   "kinds": [
     {
       "kind": "code",
-      "fence": "```lang file=path lines=10-24",
+      "fence": "```lang file=path lines=10-24 [scroll], or several ```lang step blocks",
       "use": "specific code, read from the project",
-      "point": "#L12, #L12-18, [label](#L12 \"exact text\")",
+      "point": "#L12, #L12-18, [label](#L12 \"exact text\"); with steps, #step-2 moves to that version and later line cues count in it",
       "reveal": "lines up to the last range pointed at",
-      "example": "```python file=src/cache.py lines=10-24\n```"
+      "example": "```python step\ndef total(xs):\n    t = 0\n    for x in xs:\n        t += x\n    return t\n```\n```python step\ndef total(xs):\n    return sum(xs)\n```",
+      "format": "`scroll` keeps long code (up to 400 lines) at reading size and scrolls to each cued range, dimming the rest. Consecutive blocks marked `step` are versions of one piece of code on one slide; `#step-N` morphs to version N."
     },
     {
       "kind": "diff",
@@ -20,7 +21,7 @@
       "kind": "diagram",
       "fence": "```mermaid",
       "use": "flow, structure, states, sequences",
-      "point": "#node-id, or [label](# \"node label\")",
+      "point": "#node-id, [label](# \"node label\"), or #a->b->c to send a dot along those edges (flowcharts)",
       "reveal": "flowchart nodes in source order, edges once both ends show",
       "example": "```mermaid\nflowchart LR\n  req[Request] --> cache{Cached?}\n  cache -->|no| db[Database]\n```"
     },
@@ -42,19 +43,19 @@
     },
     {
       "kind": "list",
-      "fence": "- items, 1. items; .cards or .steps on the heading",
-      "use": "parallel parts, options, a procedure",
+      "fence": "- items, 1. items, - [x] / - [ ] checklist items; .cards, .steps or .stack on the heading",
+      "use": "parallel parts, options, a procedure, layers of a stack, a checklist",
       "point": "#id from {#id}, or the bold title lowercased with hyphens",
-      "reveal": "items up to the last one pointed at",
+      "reveal": "items up to the last one pointed at; checklist ticks draw as their item is pointed at",
       "example": "- **Memory**: fast, gone on restart {#memory}\n- **Disk**: survives restarts {#disk}"
     },
     {
       "kind": "image",
-      "fence": "![alt](path)",
+      "fence": "![alt](path){frame=browser|window|phone url=\"…\"}",
       "use": "a screenshot or plot from the project",
-      "point": "#",
+      "point": "#, or #@left,top,width,height in percent of the picture; add {.zoom} after the link to zoom onto it",
       "reveal": "none",
-      "example": "![Request timeline in the network panel](docs/timeline.png)"
+      "example": "![The shop's home page](docs/timeline.png){frame=browser url=\"shop.example.com\"}"
     },
     {
       "kind": "chart",
@@ -62,7 +63,7 @@
       "use": "numbers: before and after, shares, a trend",
       "point": "bar and hbar: #label (the bar's label, lowercased with hyphens); line: #series",
       "reveal": "bars or series in source order",
-      "format": "bar: one `label: value` line per bar; for grouped bars, a `series: a, b` line first, then `label: 1, 2`. hbar: like bar, one series, for long labels. line: an `x: …` line first, then one `series: v1, v2, …` line per series, with as many values as x values. At most 12 bars or series.",
+      "format": "bar: one `label: value` line per bar; for grouped bars, a `series: a, b` line first, then `label: 1, 2`. hbar: like bar, one series, for long labels. line: an `x: …` line first, then one `series: v1, v2, …` line per series, with as many values as x values. At most 12 bars or series. A `note x: text` line (or `note series/x: text` for one series of a line chart, `note label: text` for a bar) adds a callout; cue it as #note-1, #note-2 in order.",
       "example": "```chart bar title=\"p95 latency\" unit=\"ms\"\nseries: before, after\nread: 420, 180\nwrite: 610, 390\n```"
     },
     {
@@ -82,6 +83,44 @@
       "reveal": "entries in source order",
       "format": "One entry per line, nested by indentation or pasted from `tree`. A trailing / marks a folder; `# note` after an entry shows a short note. Show only what matters.",
       "example": "```tree\nsrc/\n  app.py   # entry point\n  cache/\n    lru.py\ntests/\n```"
+    },
+    {
+      "kind": "stat",
+      "fence": "```stat [unit=\"ms\"]",
+      "use": "one to four headline numbers, often before and after",
+      "point": "#label, lowercased with hyphens",
+      "reveal": "numbers in source order; each counts up when pointed at, or at the slide's start if none are",
+      "format": "One `label: value` or `label: before -> after` line per number. Values may carry a unit (`420 ms`, `2.1%`).",
+      "example": "```stat\np95 latency: 420 ms -> 180 ms\nerror rate: 2.1% -> 0.3%\n```"
+    },
+    {
+      "kind": "chat",
+      "fence": "```chat (or ```exchange)",
+      "use": "a conversation, a prompt and its answer, a request and its response",
+      "point": "#m1, #m2, … in order",
+      "reveal": "messages in order",
+      "format": "One message per `name: text` line; indented lines continue the message above. A user, client or browser sits on the right; otherwise the second speaker does. At most 8 messages.",
+      "example": "```chat\nuser: How do I undo my last commit?\nassistant: Run `git reset --soft HEAD~1`.\n```"
+    },
+    {
+      "kind": "chapter",
+      "fence": "## Title {.chapter}",
+      "use": "a card that opens a part of a long walkthrough, numbered Part 1, Part 2, …",
+      "point": "none",
+      "reveal": "none",
+      "format": "A heading with .chapter and an optional `>` line under it; narration is optional.",
+      "example": "## The write path {.chapter}\n> Where data lands"
     }
-  ]
+  ],
+  "cue_styles": {
+    "syntax": "[label](#target){.style}, after any cue",
+    "styles": {
+      "box": "the default frame",
+      "circle": "a hand-drawn ring around the target",
+      "underline": "a hand-drawn line under it",
+      "arrow": "an arrow pointing at it",
+      "highlight": "a marker stroke behind it",
+      "zoom": "the camera zooms onto the target until the next cue; combine with another style"
+    }
+  }
 }

@@ -105,7 +105,8 @@
      "read",
      "write",
      "list"
-    ]
+    ],
+    "notes": []
    },
    "says": [
     {
@@ -268,7 +269,8 @@
      "template-rendering",
      "json-serialisation",
      "network"
-    ]
+    ],
+    "notes": []
    },
    "says": [
     {
@@ -361,7 +363,8 @@
     "ids": [
      "p50",
      "p99"
-    ]
+    ],
+    "notes": []
    },
    "says": [
     {

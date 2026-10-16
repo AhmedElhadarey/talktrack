@@ -184,18 +184,21 @@ After [the final attempt](#L55) the error goes back to the caller.
 
 | Visual | Markdown |
 |---|---|
-| **Code** | a fenced block, or `file=path lines=10-24` to read it from disk |
+| **Code** | a fenced block, or `file=path lines=10-24` to read it from disk; `scroll` for long code; `step` blocks for code that evolves |
 | **Diff** | `old` and `new` blocks, a unified `diff` block, or `diff file=path rev=HEAD~1` |
 | **Diagram** | a `mermaid` block, any diagram type |
 | **Formula** | a `math` block or `$$ … $$`, rendered with KaTeX |
 | **Table** | a pipe table |
 | **List, steps, cards** | `-` or `1.` items; `.cards` on the heading for cards |
-| **Image** | `![alt](path)` from the project |
+| **Image** | `![alt](path)` from the project, optionally `{frame=browser}`; cues can point at a region |
 | **Chart** | `chart bar`, `chart hbar` or `chart line` with `label: value` lines |
 | **Terminal session** | a `terminal` block: `$` commands and their output |
 | **File tree** | a `tree` block, indented or pasted from `tree` |
+| **Numbers** | a `stat` block: `p95: 420 ms -> 180 ms` counts down as it is named |
+| **Exchange** | a `chat` block: `user:` and `assistant:` messages |
+| **Chapter** | `## Part title {.chapter}` |
 
-`.build` on a heading reveals parts as the narration reaches them. Four themes (dark, light, paper, high contrast) are chosen with `theme`, in front matter or in the project's `showntell.theme.json`, and viewers can switch. The full reference is [docs/format.md](docs/format.md). You can also write a walkthrough by hand and play it with `showntell play talk.md`.
+`.build` on a heading reveals parts as the narration reaches them. A cue can send a dot along diagram edges (`#client->api->db`), and a style after it changes the pointer: `{.circle}`, `{.underline}`, `{.arrow}`, `{.highlight}`, or `{.zoom}` to move the camera in. Four themes (dark, light, paper, high contrast) are chosen with `theme`, in front matter or in the project's `showntell.theme.json`, and viewers can switch. The full reference is [docs/format.md](docs/format.md). You can also write a walkthrough by hand and play it with `showntell play talk.md`.
 
 ## Commands
 

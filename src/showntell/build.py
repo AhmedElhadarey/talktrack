@@ -23,6 +23,10 @@ LIMITS = {
 }
 WORDS_PER_SECOND = 2.7
 CHART_MAX = 12
+STAT_MAX = 4
+CHAT_MAX = 8
+SCROLL_MAX = 400
+IMAGE_FRAMES = ("browser", "window", "phone")
 SPEED_RANGE = (0.8, 1.3)
 IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"}
 STOPWORDS = set(
@@ -87,6 +91,9 @@ class Builder:
         sid = self._unique_id(sid)
         s = Slide(id=sid, title=inline_plain(b.text), classes=classes, attrs=attrs, line=b.line)
         s.kind = "title" if not self.w.slides else "text"
+        if "chapter" in classes and self.w.slides:
+            s.kind = "chapter"
+            s.visual = {"n": 1 + sum(1 for x in self.w.slides if x.kind == "chapter")}
         self.w.slides.append(s)
         self.changed.add(s.id)
         return s
@@ -185,6 +192,22 @@ class Builder:
                 self._issue("chart_too_big", f"The chart on line {b.line} has {n} {'series' if vis['type'] == 'line' else 'bars'}; "
                             f"charts read well up to {CHART_MAX}.", "Group the small ones, or split the chart.", line=b.line)
             return self._set(self._slide_for_visual("chart"), "chart", vis)
+        if b.kind == "code" and b.lang == "stat":
+            vis, problems = kinds.parse_stat(b.text, b.attrs)
+            for p in problems:
+                self._issue("chart_error", f"Line {b.line}: {p}.", "See the stat format in the resource showntell://slide-kinds.", line=b.line)
+            if len(vis["items"]) > STAT_MAX:
+                self._issue("chart_too_big", f"The stat block on line {b.line} has {len(vis['items'])} numbers; a slide holds {STAT_MAX} at a glance.",
+                            "Keep the ones that matter, or use a chart.", line=b.line)
+            return self._set(self._slide_for_visual("stat"), "stat", vis)
+        if b.kind == "code" and b.lang in kinds.CHAT_LANGS:
+            vis, problems = kinds.parse_chat(b.text, b.attrs)
+            for p in problems:
+                self._issue("chart_error", f"Line {b.line}: {p}.", "Start each message with `name:`.", line=b.line)
+            if len(vis["items"]) > CHAT_MAX:
+                self._issue("chart_too_big", f"The exchange on line {b.line} has {len(vis['items'])} messages; a slide holds about {CHAT_MAX}.",
+                            "Split it across slides, or trim the messages.", line=b.line)
+            return self._set(self._slide_for_visual("chat"), "chat", vis)
         if b.kind == "code" and b.lang in kinds.TERMINAL_LANGS:
             vis = kinds.parse_terminal(b.text, b.attrs)
             self._check_code(vis)
@@ -230,6 +253,16 @@ class Builder:
             vis = {"lang": b.lang, "code": ex.code, "start": ex.start, "title": b.attrs.get("title") or self._name(b)}
             if b.attrs.get("file"):
                 vis["file"] = b.attrs["file"]
+            if "scroll" in flags:
+                vis["scroll"] = True
+            cur = self.w.slides[-1] if self.w.slides else None
+            if "step" in flags:
+                step = {k: vis[k] for k in ("code", "start", "title")}
+                if cur is not None and cur.kind == "code" and cur.visual.get("steps"):
+                    cur.visual["steps"].append(step)
+                    self._check_code(vis)
+                    return self._set(cur, "code", cur.visual)
+                vis["steps"] = [step]
             self._check_code(vis)
             return self._set(self._slide_for_visual("code"), "code", vis)
         if b.kind == "math":
@@ -257,7 +290,9 @@ class Builder:
                 while it["id"] in used:
                     it["id"] += "-2"
                 used.add(it["id"])
-            style = "cards" if "cards" in s.classes else "steps" if ("steps" in s.classes or b.attrs.get("ordered")) else "bullets"
+            style = ("cards" if "cards" in s.classes else "stack" if "stack" in s.classes
+                     else "checklist" if ("checklist" in s.classes or any("check" in it for it in items))
+                     else "steps" if ("steps" in s.classes or b.attrs.get("ordered")) else "bullets")
             return self._set(s, "list", {"style": style, "items": items})
         if b.kind == "image":
             return self._image(b)
@@ -353,7 +388,12 @@ class Builder:
         src, alt = b.attrs["src"], b.attrs.get("alt", "")
         s = self._slide_for_visual("image")
         if re.match(r"^https?://", src):
-            return self._set(s, "image", {"src": src, "alt": alt})
+            vis = {"src": src, "alt": alt}
+            if b.attrs.get("frame") in IMAGE_FRAMES:
+                vis["frame"] = b.attrs["frame"]
+                if b.attrs.get("url"):
+                    vis["url"] = b.attrs["url"][:120]
+            return self._set(s, "image", vis)
         try:
             path = sources.resolve(self.root, src)
         except sources.SourceError as e:
@@ -367,7 +407,16 @@ class Builder:
         shutil.copyfile(path, self.assets_dir / name)
         if not alt:
             self._issue("image_no_alt", f"Image {path.name} has no alt text.", "Add a short description in the brackets.", line=b.line)
-        self._set(s, "image", {"src": f"assets/{name}", "alt": alt})
+        vis = {"src": f"assets/{name}", "alt": alt}
+        frame = b.attrs.get("frame", "")
+        if frame:
+            if frame in IMAGE_FRAMES:
+                vis["frame"] = frame
+                if b.attrs.get("url"):
+                    vis["url"] = b.attrs["url"][:120]
+            else:
+                self._issue("image_error", f"Line {b.line}: frame `{frame}` is not one of {', '.join(IMAGE_FRAMES)}; showed the image unframed.", line=b.line)
+        self._set(s, "image", vis)
 
     # -- checks on visuals --------------------------------------------------------------
 
@@ -376,9 +425,13 @@ class Builder:
         lim = self.limits
         width = max((len(ln.expandtabs(4)) for ln in lines), default=0)
         where = vis.get("title") or "a code block"
-        if len(lines) > lim["lines"]:
+        if vis.get("scroll"):
+            if len(lines) > SCROLL_MAX:
+                self._issue("code_too_tall", f"{where} has {len(lines)} lines; a scrolling block holds up to {SCROLL_MAX}.",
+                            "Narrow it with lines=.")
+        elif len(lines) > lim["lines"]:
             self._issue("code_too_tall", f"{where} shows {len(lines)} lines; this frame reads well up to {lim['lines']}.",
-                        "Show a narrower range.")
+                        "Show a narrower range, or add `scroll` to the info string to scroll to each cue.")
         if width > lim["width"]:
             self._issue("code_too_wide", f"{where} has lines of {width} characters; this frame reads well up to {lim['width']}.",
                         "Show a narrower excerpt or wrap long lines.")
@@ -414,15 +467,30 @@ class Builder:
 
     def _resolve_cues(self, s: Slide, say: Say, reresolve: bool = False) -> None:
         raw: list[Cue] = getattr(say, "_cues", None) or [
-            Cue(c["at"], c["end"], c.get("label", ""), c.get("target", ""), c.get("text", ""), c.get("inferred", False))
+            Cue(c["at"], c["end"], c.get("label", ""), c.get("target", ""), c.get("text", ""), c.get("inferred", False),
+                c.get("style", ""))
             for c in say.cues
             if not c.get("inferred")
         ]
         say._cues = raw
         out = []
+        # Code that evolves: line cues refer to the step shown when they fire.
+        self._step = 1
+        for x in s.says:
+            if x is say:
+                break
+            for c in x.cues:
+                if c.get("kind") == "step":
+                    self._step = c["n"]
         for c in raw:
             r = self._resolve(s, c, quiet=not s.visual and not reresolve)
             if r:
+                if c.style:
+                    r["style"] = c.style
+                if r.get("kind") == "step":
+                    self._step = r["n"]
+                elif s.visual.get("steps") and r.get("kind") == "lines":
+                    r["step"] = self._step
                 out.append(r)
         if not raw and s.visual:
             out = infer_cues(s, say)
@@ -445,6 +513,43 @@ class Builder:
             if c.text:
                 return {**base, "kind": "text"}
             return {**base, "kind": "visual"}
+        steps = s.visual.get("steps") if s.kind == "code" else None
+        sm = re.fullmatch(r"step-?(\d+)", t, re.I)
+        if sm:
+            n = int(sm.group(1))
+            if steps and 1 <= n <= len(steps):
+                return {**base, "kind": "step", "n": n}
+            have = f"{len(steps)} steps" if steps else "no steps"
+            self._issue("cue_no_target", f"[{c.label}](#{t}): slide `{s.id}` has {have}.",
+                        "Mark each version of the code with `step` in its info string.", slide=s.id)
+            return None
+        if t.startswith("@"):
+            box = _region(t[1:])
+            if s.kind == "image" and box:
+                return {**base, "kind": "region", "box": box}
+            if s.kind != "image":
+                self._issue("cue_wrong_kind", f"[{c.label}](#{t}): regions point into images; slide `{s.id}` shows a {s.kind}.", slide=s.id)
+            else:
+                self._issue("cue_no_target", f"[{c.label}](#{t}): a region is `@left,top,width,height` in percent of the image, "
+                            "each from 0 to 100.", slide=s.id)
+            return {**base, "kind": "visual"}
+        if "->" in t:
+            path = [p.strip() for p in t.split("->")]
+            nodes = s.visual.get("nodes", {}) if s.kind == "diagram" else {}
+            if s.kind != "diagram" or s.visual.get("type") not in ("flowchart", "graph"):
+                self._issue("cue_wrong_kind", f"[{c.label}](#{t}): a path along edges needs a flowchart; slide `{s.id}` shows a {s.kind}.", slide=s.id)
+                return {**base, "kind": "visual"}
+            missing = [p for p in path if p not in nodes]
+            if missing or len(path) < 2:
+                self._issue("cue_no_target", f"[{c.label}](#{t}): no node {', '.join(f'`{x}`' for x in missing) or 'pair'} in the diagram on slide `{s.id}`. "
+                            f"Nodes: {', '.join(list(nodes)[:12])}.", slide=s.id)
+                return None
+            gaps = [f"{a}->{b}" for a, b in zip(path, path[1:], strict=False) if not _has_edge(s.visual["source"], a, b)]
+            if gaps:
+                self._issue("cue_no_target", f"[{c.label}](#{t}): the diagram on slide `{s.id}` has no edge {', '.join(gaps)}.",
+                            "Follow edges in the direction they are drawn.", slide=s.id)
+                return None
+            return {**base, "kind": "edge", "path": path}
         m = re.fullmatch(r"([+-])?L(\d+)(?:-L?(\d+))?", t, re.I)
         if m and s.kind in ("code", "diff", "terminal"):
             side = "old" if m.group(1) == "-" else "new"
@@ -453,6 +558,8 @@ class Builder:
             if b < a:
                 a, b = b, a
             vis = s.visual[side] if s.kind == "diff" else s.visual
+            if steps:
+                vis = steps[min(len(steps), max(1, getattr(self, "_step", 1))) - 1]
             lines = vis["code"].split("\n")
             first, last = vis["start"], vis["start"] + len(lines) - 1
             where = f"slide `{s.id}`" + (f" ({side} side)" if s.kind == "diff" else "")
@@ -492,11 +599,11 @@ class Builder:
                 return {**base, "kind": "item", "id": hit}
             self._issue("cue_no_target", f"[{c.label}](#{t}): no item `{t}` on slide `{s.id}`. Items: {', '.join(sorted(ids))}.", slide=s.id)
             return None
-        if s.kind in ("chart", "tree"):
+        if s.kind in ("chart", "tree", "stat", "chat"):
             pid = kinds.find_part(s.visual, t)
             if pid:
                 return {**base, "kind": "item", "id": pid}
-            what = "entry" if s.kind == "tree" else "series" if s.visual.get("type") == "line" else "bar"
+            what = {"tree": "entry", "stat": "number", "chat": "message"}.get(s.kind) or ("series" if s.visual.get("type") == "line" else "bar")
             self._issue("cue_no_target", f"[{c.label}](#{t}): no {what} `{t}` on slide `{s.id}`. "
                         f"Ids: {', '.join(s.visual.get('ids', [])[:12])}.", slide=s.id)
             return None
@@ -525,11 +632,13 @@ class Builder:
                     if c.target.strip() not in ("", s.id, "visual", "slide"):
                         self._issue("cue_no_visual", f"Slide `{s.id}` has no visual, so the cue [{c.label}](#{c.target}) has nothing to point at.",
                                     slide=s.id, line=s.line)
+        if s.kind == "chapter":
+            return
         if not any(x.text for x in s.says):
             self._issue("no_narration", f"Slide `{s.id}` has no narration.", "Every slide needs at least one spoken paragraph.",
                         slide=s.id, line=s.line)
             return
-        if s.kind in ("code", "diff", "diagram", "list", "table", "chart", "tree", "terminal") and not any(
+        if s.kind in ("code", "diff", "diagram", "list", "table", "chart", "tree", "terminal", "stat", "chat") and not any(
             not c.get("inferred") for x in s.says for c in x.cues
         ):
             self._issue("no_cues", f"Slide `{s.id}` has no cues, so the pointer only follows names showntell can match.",
@@ -538,6 +647,8 @@ class Builder:
         secs = words / WORDS_PER_SECOND
         if s.kind in ("code", "diff", "terminal"):
             n = len(s.visual.get("code", s.visual.get("new", {}).get("code", "")).split("\n"))
+            if s.visual.get("scroll"):
+                n = min(n, self.limits["lines"])
             need = 1.5 + 0.35 * n
             if secs < need * 0.6:
                 self._issue("thin_narration", f"Slide `{s.id}` shows {n} lines with about {secs:.0f} s of narration.",
@@ -629,6 +740,27 @@ GENERATED = re.compile(
 )
 
 
+def _region(spec: str) -> list[float] | None:
+    """`left,top,width,height` in percent of the image."""
+    try:
+        box = [float(x) for x in spec.split(",")]
+    except ValueError:
+        return None
+    if len(box) != 4 or any(not 0 <= v <= 100 for v in box) or box[2] <= 0 or box[3] <= 0:
+        return None
+    if box[0] + box[2] > 100.5 or box[1] + box[3] > 100.5:
+        return None
+    return box
+
+
+def _has_edge(source: str, a: str, b: str) -> bool:
+    """Whether a flowchart draws an edge from node a to node b (on one line, in that order)."""
+    arrow = r"(?:-->|---|-\.->|-\.-|==>|===|--[ox]|--\s[^-\n]*?-->|==\s[^=\n]*?==>|-\.\s[^.\n]*?\.->)"
+    node = r"(?:\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|>[^\]]*\])?"
+    pat = re.compile(rf"(?<![\w-]){re.escape(a)}{node}\s*{arrow}\s*(?:\|[^|]*\|\s*)?{re.escape(b)}(?![\w-])")
+    return any(pat.search(line) for line in source.split("\n"))
+
+
 def _generated(name: str) -> bool:
     return bool(GENERATED.search(name))
 
@@ -642,7 +774,7 @@ def _source_rank(s: Slide):
     if s.kind == "table":
         ids = v.get("ids", [])
         return lambda c: ids.index(c["id"]) if c.get("kind") == "row" and c.get("id") in ids else None
-    if s.kind in ("chart", "tree"):
+    if s.kind in ("chart", "tree", "stat", "chat"):
         ids = v.get("ids", [])
         return lambda c: ids.index(c["id"]) if c.get("kind") == "item" and c.get("id") in ids else None
     if s.kind == "diagram":
@@ -811,7 +943,7 @@ def infer_cues(s: Slide, say: Say) -> list[dict]:
             i = _find_word(low, title.lower())
             if i is not None:
                 add(i, i + len(title), kind="item", id=it["id"])
-    elif s.kind in ("chart", "tree"):
+    elif s.kind in ("chart", "tree", "stat"):
         for pid, name in kinds.labels(s.visual):
             i = _find_word(low, name.lower()) if len(name) >= 3 else None
             if i is not None:

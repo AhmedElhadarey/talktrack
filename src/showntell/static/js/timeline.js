@@ -62,7 +62,7 @@ export function firedCues(w, tl, segIndex, local) {
     const s = tl.segs[k];
     if (s.say < 0) continue;
     for (const c of slide.says[s.say].cues || []) {
-      if (k < segIndex || (c.t ?? 0) <= local + 0.05) out.push({ ...c, _say: s.say });
+      if (k < segIndex || (c.t ?? 0) <= local + 0.05) out.push({ ...c, _say: s.say, _at: s.start + (c.t ?? 0) });
     }
   }
   return out;
@@ -80,6 +80,9 @@ export function stateAt(w, tl, t) {
   const lastOfSlide = i === tl.segs.length - 1 || tl.segs[i + 1].slide !== seg.slide;
   // Step reveals finish once the slide's narration is over.
   const revealAll = lastOfSlide && !inAudio;
+  let step = 1;
+  for (const c of cues) if (c.kind === "step") step = c.n;
+  const slideStartT = tl.segs.find((s) => s.slide === seg.slide)?.start ?? 0;
   return {
     seg: i,
     slide: seg.slide,
@@ -90,6 +93,8 @@ export function stateAt(w, tl, t) {
     cues,
     revealAll,
     reveal: revealLevel(slide, cues, revealAll),
+    step, // code that evolves: the version on screen
+    sinceSlide: t - slideStartT, // seconds since the slide began
   };
 }
 
@@ -112,7 +117,7 @@ export function revealLevel(slide, cues, all) {
     for (const c of cues) if (c.kind === "row") n = Math.max(n, (v.ids || []).indexOf(c.id) + 1);
     return { rows: n };
   }
-  if (slide.kind === "chart" || slide.kind === "tree") {
+  if (["chart", "tree", "stat", "chat"].includes(slide.kind)) {
     if (!every.some((c) => c.kind === "item")) return null;
     const ids = v.ids || [];
     let n = 0;
@@ -129,9 +134,12 @@ export function revealLevel(slide, cues, all) {
   }
   if (slide.kind === "diagram" && (v.type === "flowchart" || v.type === "graph")) {
     const order = v.order || [];
-    if (!every.some((c) => c.kind === "node")) return null;
+    if (!every.some((c) => c.kind === "node" || c.kind === "edge")) return null;
     let n = 0;
-    for (const c of cues) if (c.kind === "node") n = Math.max(n, order.indexOf(c.id) + 1);
+    for (const c of cues) {
+      if (c.kind === "node") n = Math.max(n, order.indexOf(c.id) + 1);
+      if (c.kind === "edge") for (const id of c.path) n = Math.max(n, order.indexOf(id) + 1);
+    }
     return { nodes: n, order };
   }
   return null;

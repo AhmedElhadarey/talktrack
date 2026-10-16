@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Code that evolves:** consecutive `step` code blocks are versions of one piece of code; `#step-2` morphs to the next, with unchanged lines gliding into place.
+- **Long code:** `scroll` keeps up to 400 lines at reading size, scrolls to each cued range and dims the rest.
+- **Packets on diagrams:** `#a->b->c` sends a dot along flowchart edges, one hop at a time; edges on step-reveal diagrams draw themselves in.
+- **Pointer styles:** `{.circle}`, `{.underline}`, `{.arrow}` and `{.highlight}` after a cue draw hand-drawn marks; `{.zoom}` moves the camera onto the target.
+- **Numbers:** a `stat` block shows up to four headline numbers that count from before to after when named.
+- **Exchanges:** a `chat` block shows a conversation or request and response, message by message.
+- **Images:** `{frame=browser|window|phone}` draws device chrome; cues point at a region with `#@left,top,width,height`.
+- **Chart notes:** `note …:` lines add callouts that cues can name.
+- **Chapters, stacks, checklists:** `.chapter` headings make numbered part cards; `.stack` draws a list as layers; `[x]`/`[ ]` items make a checklist whose ticks draw in.
+
 - **Structured findings:** every problem returned to the agent has a stable code, a severity, the slide, the Markdown line and a separate fix; replies list errors first, at most twelve, three per code. `docs/spec.md` lists every code.
 - **New checks:** narration that reads out handles, URLs or commit hashes; step-reveal cues bunched in one paragraph or out of source order; four code slides in a row; an opening that names code first; diffs of lockfiles and generated files; slides that hold still for over 20 s once voiced. `finish_walkthrough` says which checks could not run and lists slide start times.
 - **Player findings:** the open player reports text shrunk below a readable size, content that overflows, cues pointing off the slide, slides slow to draw, and viewers left waiting; errors before the player starts are reported too.

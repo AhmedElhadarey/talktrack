@@ -347,3 +347,128 @@ def test_preview_returns_pictures_of_slides(daemon, browser):
     png = base64.b64decode(p["slides"][0]["png"])
     assert png[:8] == b"\x89PNG\r\n\x1a\n" and len(png) > 5000
     assert p["slides"][0]["png"] != p["slides"][1]["png"]
+
+
+# -- code that evolves, scrolling code, packets, numbers, regions and zoom, checklists ---------------
+
+MORE = """# More kinds
+
+The newer visuals.
+
+## Part one {#part .chapter}
+> Code
+
+## Evolving {#evolve}
+
+```python step
+def total(xs):
+    t = 0
+    for x in xs:
+        t += x
+    return t
+```
+```python step
+def total(xs):
+    return sum(xs)
+```
+
+The loop [adds each value](#L4). Then it [becomes one call](#step-2) and [sum does the work](#L2 "sum").
+
+## Long {#long}
+
+```python file=src/showntell/build.py lines=1-150 scroll
+```
+
+First [the imports](#L9). Much later, [this line](#L140).
+
+## Path {#path}
+
+```mermaid
+flowchart LR
+  c[Client] --> g[Gateway] --> s[Service]
+```
+
+A request goes [all the way through](#c->g->s) and the [gateway](#g){.circle} checks it.
+
+## Numbers {#numbers}
+
+```stat
+p95 latency: 400 ms -> 100 ms
+```
+
+The [p95 latency](#p95-latency) fell by three quarters, which took a lot of patient work over many weeks.
+
+## Screen {#screen}
+
+![The demo](docs/media/demo.gif){frame=browser url="example.com"}
+
+The [top left](#@0,0,50,40){.zoom} is where it starts.
+
+## Ship {#ship}
+
+- [x] **Tests**: pass {#tests}
+- [ ] **Announce**: later {#announce}
+
+The [tests](#tests) pass, and the [announcement](#announce) waits.
+"""
+
+
+def _at(page, slide_id: str, cue: int, after: float) -> float:
+    """Global time `after` seconds past cue number `cue` of a slide."""
+    return page.evaluate(
+        """([sid, ci, off]) => import('./' + document.body.dataset.static + '/js/timeline.js').then((m) =>
+             fetch('data.json').then((r) => r.json()).then((w) => {
+               const tl = m.build(w); const si = w.slides.findIndex((s) => s.id === sid); const at = [];
+               for (const s of tl.segs.filter((s) => s.slide === si)) if (s.say >= 0)
+                 for (const c of w.slides[si].says[s.say].cues || []) at.push(s.start + (c.t || 0));
+               return at[ci] + off; }))""",
+        [slide_id, cue, after],
+    )
+
+
+def test_newer_visuals_follow_the_narration(daemon, browser):
+    call = _rpc(daemon)
+    r = call("start", title="More kinds", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    a = call("add", handle=r["handle"], markdown=MORE)
+    assert not [i for i in a["issues"] if i["severity"] == "error"], a["issues"]
+    call("playable", handle=r["handle"], timeout=10)
+    for _ in range(50):
+        if not call("finish", handle=r["handle"], questions=None)["pending"]:
+            break
+        time.sleep(0.2)
+    url = r["url"].replace("localhost", "127.0.0.1") + "/"
+    page = browser.new_page(viewport={"width": 1440, "height": 900})
+    errors = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+
+    def at(slide_id, cue, after, js):
+        page.goto(url)
+        page.wait_for_function("window.__showntell !== undefined")
+        t = _at(page, slide_id, cue, after)
+        page.goto(f"{url}?t={t:.2f}")
+        page.wait_for_timeout(700)
+        return page.evaluate(js)
+
+    page.goto(url + "?from=part&to=part")
+    page.wait_for_selector(".k-chapter")
+    assert page.text_content(".k-chapter .chapter-n") == "Part 1"
+    assert at("evolve", 0, 0.3, "document.querySelector('.codebox .tag').textContent") == "Step 1 of 2"
+    tag, line = at("evolve", 2, 0.3, "[document.querySelector('.codebox .tag').textContent, document.querySelector('.ln.hl .tx').textContent]")
+    assert tag == "Step 2 of 2" and "sum" in line
+    shift, focusing = at("long", 1, 0.3, "[getComputedStyle(document.querySelector('.codebox.scroll .code')).transform, document.querySelector('.codebox.scroll').classList.contains('focusing')]")
+    assert shift not in ("none", "") and focusing
+    x1 = at("path", 0, 0.2, "+document.querySelector('circle.packet').getAttribute('cx')")
+    x2 = at("path", 0, 1.2, "+document.querySelector('circle.packet').getAttribute('cx')")
+    assert x2 > x1 > 0  # the packet travels left to right
+    assert at("path", 1, 0.3, "document.querySelector('#pointer').dataset.kind") == "circle"
+    early = at("numbers", 0, 0.2, "document.querySelector('.stat .num').textContent")
+    late = at("numbers", 0, 3.0, "document.querySelector('.stat .num').textContent")
+    assert late == "100 ms" and early not in ("100 ms", "400 ms")
+    inside, zoomed = at("screen", 0, 0.4, """(() => { const p = document.querySelector('#pointer').getBoundingClientRect();
+        const i = document.querySelector('.device img').getBoundingClientRect();
+        return [p.left >= i.left - 12 && p.top >= i.top - 12, !!document.querySelector('.slide-body').style.transform]; })()""")
+    assert inside and zoomed
+    ticked = at("ship", 1, 0.3, "[...document.querySelectorAll('.entry.ticked')].map((e) => e.dataset.id)")
+    assert ticked == ["tests"]
+    assert not errors, errors
+    page.close()
