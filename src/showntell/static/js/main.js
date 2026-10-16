@@ -304,7 +304,7 @@ function showSlide(i) {
   v.root.addEventListener("animationend", () => { if (view?.root === v.root) { lastCueKey = ""; render(true); } }, { once: true });
   const bodyEl = v.root.querySelector(".slide-body");
   view = { ...v, body: bodyEl, done: false };
-  v.ready.then(() => {
+  v.ready.then(() => document.fonts?.ready).then(() => {
     if (view.root !== v.root) return;
     if (bodyEl) {
       if (slide.kind === "diagram") sizeDiagram(view.parts.svg, bodyEl);
@@ -418,7 +418,9 @@ function cueTarget(cue, slide) {
         return { rects: [e.getBoundingClientRect()] };
       }
     }
-    const r = p.visual && findText(p.visual, cue.text);
+    // KaTeX keeps an invisible MathML copy first; search only what is drawn.
+    const drawn = p.visual?.querySelector?.(".katex-html") || p.visual;
+    const r = drawn && findText(drawn, cue.text);
     if (r) { range(r); return { rects: [...r.getClientRects()] }; }
   }
   return wholeVisual();

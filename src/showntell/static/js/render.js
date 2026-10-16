@@ -22,11 +22,13 @@ function loadScript(src) {
 
 function loadCss(href) {
   if (!loaded[href]) {
-    const l = document.createElement("link");
-    l.rel = "stylesheet";
-    l.href = href;
-    document.head.append(l);
-    loaded[href] = Promise.resolve();
+    loaded[href] = new Promise((res) => {
+      const l = document.createElement("link");
+      l.rel = "stylesheet";
+      l.href = href;
+      l.onload = l.onerror = res; // a missing stylesheet should not stop the slide
+      document.head.append(l);
+    });
   }
   return loaded[href];
 }
@@ -70,7 +72,7 @@ async function mermaidReady() {
         noteTextColor: v("--fg"),
         noteBorderColor: v("--accent"),
       },
-      flowchart: { htmlLabels: true, curve: "basis", padding: 14 },
+      flowchart: { htmlLabels: true, curve: "basis", padding: 14, subGraphTitleMargin: { top: 6, bottom: 10 } },
       sequence: { actorMargin: 60, messageFontSize: 18, actorFontSize: 18, noteFontSize: 16 },
     });
   }
@@ -78,8 +80,7 @@ async function mermaidReady() {
 }
 
 async function katexReady() {
-  loadCss(`${STATIC}/vendor/katex/katex.min.css`);
-  await loadScript(`${STATIC}/vendor/katex/katex.min.js`);
+  await Promise.all([loadCss(`${STATIC}/vendor/katex/katex.min.css`), loadScript(`${STATIC}/vendor/katex/katex.min.js`)]);
   return window.katex;
 }
 
@@ -165,6 +166,18 @@ export function renderSlide(slide, ctx) {
       break;
     }
     case "diff": {
+      const oldEmpty = !v.old.code.trim(), newEmpty = !v.new.code.trim();
+      if (oldEmpty !== newEmpty) {
+        // Only added (or only removed) lines: one pane says it more clearly than an empty one.
+        const side = oldEmpty ? "new" : "old";
+        const vv = v[side];
+        const { box, lines } = codeBox(vv.code, v.lang, vv.start || 1, vv.title, oldEmpty ? "Added" : "Removed", side,
+          vv.code.split("\n").map(() => true));
+        parts.lines[side] = lines;
+        parts.visual = box;
+        body.append(box);
+        break;
+      }
       const wrap = el("div", "diff");
       const d = diffLines(v.old.code, v.new.code);
       const o = codeBox(v.old.code, v.lang, v.old.start || 1, v.old.title, "Before", "old", d.removed);
@@ -332,7 +345,8 @@ export function diagramNodes(svg) {
     else if (g.dataset?.id) out.set(g.dataset.id, g);
   }
   // Sequence diagrams: actor boxes carry the participant name.
-  for (const t of svg.querySelectorAll("rect.actor")) {
+  // Mermaid draws each participant twice; prefer the box at the top.
+  for (const t of [...svg.querySelectorAll("rect.actor-top"), ...svg.querySelectorAll("rect.actor")]) {
     const name = t.getAttribute("name");
     if (name && !out.has(name)) out.set(name, t.parentElement);
   }
