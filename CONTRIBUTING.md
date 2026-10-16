@@ -9,7 +9,7 @@ uv sync
 uv run pytest                          # fast tests; no voice model needed
 uv run pytest -m "mlx or onnx or slow" # tests that need models or start processes
 uv run ruff check . && uv run ruff format --check .
-node --test tests/js                   # player logic
+node --test tests/js/*.test.js         # player logic
 ```
 
 Run a daemon without a voice model with `uv run showntell serve --speech fake --port 4800`.
