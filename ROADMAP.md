@@ -8,7 +8,7 @@ Version 1.0 ships when it meets the launch criteria below. Everything else waits
 
 | Decision | Choice |
 |---|---|
-| **Name** | showntell. Free on PyPI. The npm name is taken (a dormant React library) and so is the GitHub organisation, so the repo lives under a personal account. Trademark search before the rename. |
+| **Name** | showntell. Free on PyPI. The npm name is taken (a dormant React library) and so is the GitHub organisation, so the repo lives under a personal account. The one US registration for SHOWNTELL (Reg. 4700403, narrative-story software) is reported cancelled since March 2022; confirm in USPTO TSDR before launch. A 2015 university screen-recording tool also used the name. |
 | **Licence** | MIT |
 | **Slide format** | Markdown-based |
 | **Speech** | Kokoro-82M, English. MLX on Apple silicon; ONNX (the timestamped export, which returns per-token durations) everywhere else |

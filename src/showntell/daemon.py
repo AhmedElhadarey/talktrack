@@ -48,6 +48,15 @@ def health(port: int, timeout: float = 1.0) -> dict | None:
 
 
 def _alive(pid: int) -> bool:
+    if os.name == "nt":
+        # os.kill(pid, 0) terminates the process on Windows; ask the OS for a handle instead.
+        import ctypes
+
+        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
     try:
         os.kill(pid, 0)
         return True
@@ -96,8 +105,11 @@ def ensure(cfg: Config, log=print) -> dict:
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     logfile = open(cfg.data_dir / "daemon.log", "ab")
     args = [sys.executable, "-m", "showntell", "serve", "--port", str(cfg.port), "--host", cfg.host, "--data", str(cfg.data_dir)]
-    subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=logfile, stderr=logfile, start_new_session=True,
-                     env={**os.environ, "PYTHONUNBUFFERED": "1"})
+    detach: dict = {"start_new_session": True}
+    if os.name == "nt":  # outlive the MCP client's console
+        detach = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
+    subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=logfile, stderr=logfile,
+                     env={**os.environ, "PYTHONUNBUFFERED": "1"}, **detach)
     deadline = time.time() + 30
     while time.time() < deadline:
         lock = running(cfg)
