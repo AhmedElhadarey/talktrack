@@ -1,0 +1,191 @@
+"""Command line: `showntell mcp | serve | play | export | list | doctor`."""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import logging
+import os
+import sys
+import webbrowser
+from pathlib import Path
+
+from .config import Config
+
+
+def _common(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--data", help="data folder (SHOWNTELL_DATA, default ~/.local/share/showntell)")
+    p.add_argument("--port", type=int, help="port (SHOWNTELL_PORT, default 4747)")
+    p.add_argument("--host", help="interface to bind (SHOWNTELL_HOST, default 127.0.0.1)")
+
+
+def _cfg(args) -> Config:
+    cfg = Config()
+    if getattr(args, "data", None):
+        cfg.data_dir = Path(args.data).expanduser()
+    if getattr(args, "port", None):
+        cfg.port = args.port
+    if getattr(args, "host", None):
+        cfg.host = args.host
+    for k in ("voice", "speech", "public_url"):
+        if getattr(args, k, None):
+            setattr(cfg, k, getattr(args, k))
+    if getattr(args, "open", False):
+        cfg.open_browser = True
+    return cfg
+
+
+def main(argv: list[str] | None = None) -> None:
+    p = argparse.ArgumentParser(prog="showntell", description="Narrated slide walkthroughs for coding agents, voiced on your machine.")
+    sub = p.add_subparsers(dest="cmd")
+
+    m = sub.add_parser("mcp", help="run as a stdio MCP server (starts or reuses the background daemon)")
+    _common(m)
+    s = sub.add_parser("serve", help="run the daemon in the foreground (HTTP MCP at /mcp and the player)")
+    _common(s)
+    s.add_argument("--voice", help="default voice (SHOWNTELL_VOICE)")
+    s.add_argument("--speech", choices=["auto", "mlx", "onnx", "fake"], help="speech backend (SHOWNTELL_SPEECH)")
+    s.add_argument("--public-url", help="base URL used in links when serving to other devices")
+    s.add_argument("--open", action="store_true", help="open each walkthrough in the browser once playable")
+    pl = sub.add_parser("play", help="voice and play a Markdown walkthrough file")
+    _common(pl)
+    pl.add_argument("file")
+    pl.add_argument("--project", help="folder that file= paths are relative to (default: the git root or the file's folder)")
+    pl.add_argument("--no-open", action="store_true")
+    ex = sub.add_parser("export", help="write a walkthrough as a static folder that plays from any web server")
+    _common(ex)
+    ex.add_argument("source", help="a walkthrough id, link or Markdown file")
+    ex.add_argument("out", help="output folder")
+    ex.add_argument("--mp3", action="store_true", help="compress audio to MP3")
+    ls = sub.add_parser("list", help="list recent walkthroughs")
+    _common(ls)
+    d = sub.add_parser("doctor", help="check models, speech speed, port and daemon")
+    _common(d)
+    d.add_argument("--speech", choices=["auto", "mlx", "onnx", "fake"])
+    sub.add_parser("version", help="print the version")
+
+    args = p.parse_args(argv)
+    if args.cmd is None:
+        # MCP clients usually launch the bare command; a terminal user wants help.
+        if not sys.stdin.isatty():
+            args = p.parse_args(["mcp"])
+        else:
+            p.print_help()
+            return
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s",
+                        datefmt="%H:%M:%S", stream=sys.stderr)
+    for noisy in ("httpx", "mcp.server.streamable_http", "mcp.server.lowlevel.server", "huggingface_hub"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
+    cfg = _cfg(args)
+    if args.cmd == "serve":
+        from .app import serve
+
+        serve(cfg)
+    elif args.cmd == "mcp":
+        run_shim(cfg)
+    elif args.cmd == "play":
+        play(cfg, args)
+    elif args.cmd == "export":
+        from .export import export_cli
+
+        export_cli(cfg, args)
+    elif args.cmd == "list":
+        list_cmd(cfg)
+    elif args.cmd == "doctor":
+        from .doctor import doctor
+
+        doctor(cfg, args)
+    elif args.cmd == "version":
+        from . import __version__
+
+        print(__version__)
+
+
+def run_shim(cfg: Config) -> None:
+    from . import daemon
+    from .server import create_mcp
+    from .service import RemoteService
+
+    def say(msg: str) -> None:
+        print(msg, file=sys.stderr)
+
+    lock = daemon.ensure(cfg, log=say)
+    service = RemoteService(f"http://127.0.0.1:{lock['port']}", lock["token"])
+    mcp = create_mcp(service, project_dir_default=os.getcwd())
+    asyncio.run(mcp.run_stdio_async())
+
+
+def _project_for(file: Path) -> Path:
+    import subprocess
+
+    try:
+        out = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=file.parent, capture_output=True, text=True, timeout=5)
+        if out.returncode == 0 and out.stdout.strip():
+            return Path(out.stdout.strip())
+    except Exception:
+        pass
+    return file.parent
+
+
+def play(cfg: Config, args) -> None:
+    from . import daemon
+    from .format import Parser
+    from .service import RemoteService
+
+    file = Path(args.file).expanduser().resolve()
+    if not file.is_file():
+        raise SystemExit(f"{file} not found")
+    text = file.read_text()
+    title, frame, voice, speed = file.stem.replace("-", " ").replace("_", " ").title(), "landscape", "", 1.0
+    for b in Parser().feed(text):
+        if b.kind == "front":
+            title = b.attrs.get("title", title)
+            frame = b.attrs.get("frame", frame)
+            voice = b.attrs.get("voice", voice)
+            try:
+                speed = float(b.attrs.get("speed", speed))
+            except ValueError:
+                pass
+        elif b.kind == "heading":
+            if title == file.stem.replace("-", " ").replace("_", " ").title():
+                title = b.text
+            break
+    project = Path(args.project).resolve() if args.project else _project_for(file)
+    lock = daemon.ensure(cfg, log=lambda m: print(m, file=sys.stderr))
+
+    async def go() -> None:
+        svc = RemoteService(f"http://127.0.0.1:{lock['port']}", lock["token"])
+        r = await svc.start(title, frame, voice, speed, str(project))
+        a = await svc.add(r["handle"], text)
+        for issue in a["issues"]:
+            print(f"- {issue}", file=sys.stderr)
+        await svc.playable(r["handle"], 60)
+        f = await svc.finish(r["handle"], None)
+        for issue in f["issues"]:
+            print(f"- {issue}", file=sys.stderr)
+        print(f["url"])
+        if not args.no_open:
+            webbrowser.open(f["url"])
+
+    asyncio.run(go())
+
+
+def list_cmd(cfg: Config) -> None:
+    from .service import mmss
+
+    walk = cfg.data_dir / "walkthroughs"
+    if not walk.is_dir():
+        print("No walkthroughs yet.")
+        return
+    import json
+
+    rows = []
+    for d in walk.iterdir():
+        st = d / "state.json"
+        if st.is_file():
+            data = json.loads(st.read_text())
+            dur = sum(x.get("duration", 0) or x.get("pause", 0) for s in data.get("slides", []) for x in s.get("says", []))
+            rows.append((data.get("updated", 0), data["id"], data.get("title", ""), len(data.get("slides", [])), dur))
+    for _, wid, title, n, dur in sorted(rows, reverse=True)[:30]:
+        print(f"{wid}  {mmss(dur):>5}  {n:>2} slides  {title}")

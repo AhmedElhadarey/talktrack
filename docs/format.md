@@ -1,0 +1,199 @@
+# showntell format, version 1
+
+A walkthrough is a Markdown document. Headings start slides, fenced blocks and lists are what the viewer sees, and plain paragraphs are what the narrator says. Links inside narration move the pointer.
+
+````markdown
+# How the cache lookup works
+> A read-through cache in sixty lines
+
+Every request checks a small in-memory cache before it touches the database.
+
+## The lookup {#lookup}
+
+```python file=src/cache.py lines=10-24
+```
+
+The method starts by [checking the dictionary](#L12 "if key in self._data").
+On a miss it [calls the loader](#L18) and stores the result.
+````
+
+## Document
+
+| Part | Rule |
+|---|---|
+| **Front matter** | optional, only at the very start, between `---` lines. Keys: `title`, `frame`, `voice`, `speed`. Tools pass these as arguments instead. |
+| **Slide** | every heading (`#`, `##` or `###`) starts a slide. The level does not matter. |
+| **Title slide** | the first slide renders as a title slide when it has no visual. A `>` quote under it is the subtitle. |
+| **Visual** | at most one per slide: a code block, a diff, a diagram, a formula, a table, a list or an image |
+| **Shown text** | `>` quote lines are shown on the slide, never spoken |
+| **Narration** | every other paragraph is spoken. Each paragraph is voiced separately, with a short pause after it. |
+| **Questions** | a slide whose heading has the `.questions` class is not shown; its list items become the questions offered at the end |
+
+Text before the first heading belongs to an automatic title slide that uses the walkthrough's title.
+
+## Heading attributes
+
+A heading may end with attributes in braces: `## The lookup {#lookup .build}`.
+
+| Attribute | Meaning |
+|---|---|
+| **`#id`** | the slide's id, used to revise it later. Letters, digits, `-` and `_`. Generated from the title when missing. |
+| **`.cards`** | show a list as a grid of cards |
+| **`.steps`** | show a list as numbered steps (same as writing `1.` items) |
+| **`.build`** | step reveal: parts appear as narration points at them |
+| **`.questions`** | the end-of-walkthrough questions, not a slide |
+| **`alt="..."`** | text alternative for a diagram or image |
+| **`voice=`, `speed=`** | reserved: per-slide voice and speed |
+
+## Visuals
+
+### Code
+
+````markdown
+```python
+def get(self, key):
+    ...
+```
+````
+
+The info string after the language may hold options:
+
+| Option | Meaning |
+|---|---|
+| **`file=path`** | read the code from this file in the project. Leave the block body empty. |
+| **`lines=10-24`** | with `file=`: the line range to show |
+| **`start=10`** | number the first line 10 when the code is written inline |
+| **`title="..."`** | caption above the code; defaults to the file name |
+
+Line numbers in the gutter are the file's own line numbers, and cues use the same numbers.
+
+### Diff
+
+Three ways to show a change side by side:
+
+````markdown
+```python old
+total = 0
+for x in xs: total += x
+```
+```python new
+total = sum(xs)
+```
+````
+
+````markdown
+```diff
+-total = 0
+-for x in xs: total += x
++total = sum(xs)
+```
+````
+
+````markdown
+```diff file=src/stats.py rev=HEAD~1
+```
+````
+
+With `file=` and `rev=`, the server runs git: `rev=A` compares commit `A` with the working tree, and `rev=A..B` compares two commits. It shows the changed region with a few lines of context.
+
+### Diagram
+
+````markdown
+```mermaid
+flowchart LR
+  req[Request] --> hit{In cache?}
+  hit -->|yes| ret[Return value]
+  hit -->|no| load[Load from database]
+```
+````
+
+Any Mermaid diagram type works. Give each node a short id so narration can point at it.
+
+### Formula
+
+````markdown
+```math
+\mathrm{softmax}(z)_i = \frac{e^{z_i}}{\sum_j e^{z_j}}
+```
+````
+
+A `$$ ... $$` block works too. The content is LaTeX rendered with KaTeX.
+
+### Table
+
+A GitHub-style pipe table. Cells may hold inline code and emphasis.
+
+### List
+
+```markdown
+- **Memory**: fast, gone on restart {#memory}
+- **Disk**: survives restarts {#disk}
+```
+
+Bullets give a bulleted list and `1.` items give numbered steps; add `.cards` to the heading for cards. An item may start with a bold title, followed by `:` or a dash and a description. A trailing `{#id}` names the item for cues. Nested lists are flattened.
+
+### Image
+
+```markdown
+![Request timeline in the browser's network panel](docs/timeline.png)
+```
+
+A path is read from the project folder and copied into the walkthrough. An `https://` URL is shown as is.
+
+## Narration
+
+Narration is plain prose written to be heard. Markdown inside it is used like this:
+
+| Markup | Effect |
+|---|---|
+| **`` `code` ``** | read as code: `camelCase` and `snake_case` are split into words, symbols are spoken |
+| **`**bold**`, `_italic_`** | shown in captions; no effect on the voice |
+| **`[label](#target)`** | a cue: the pointer moves to the target as the label is spoken |
+| **`[text]{say="spoken"}`** | shows `text` in captions and speaks `spoken` instead |
+| **`[^1]`** | reserved: citation, listed in the transcript and never read aloud |
+| **`{pause=1.5}`** | a paragraph holding only this adds silence, in seconds |
+
+## Cues
+
+A cue is a Markdown link inside narration. The label is spoken normally. The pointer moves when the first word of the label is spoken, so put the link a little before the moment you want the viewer to look.
+
+| Target | Points at |
+|---|---|
+| **`#L12`** | line 12 of the slide's code |
+| **`#L12-18`** | lines 12 to 18 |
+| **`#-L5`** | line 5 of the old side of a diff |
+| **`#+L7`**, **`#L7`** | line 7 of the new side of a diff |
+| **`#id`** | a list item, card, diagram node or table row with that id |
+| **`#`** | the slide's whole visual |
+
+A title in quotes narrows the target to that exact text: `[the guard](#L12 "if key in self._data")` highlights only that text on line 12. With `#` alone, the quoted text is searched for anywhere in the visual: `[the decision](# "In cache?")` points at the diagram node with that label.
+
+Cues only point within the current slide.
+
+When narration has no cues at all, showntell infers some by matching its words against code identifiers, node labels and list titles.
+
+## Step reveal
+
+With `.build` on the heading, the slide starts mostly empty and fills in as the narration points:
+
+| Visual | Behaviour |
+|---|---|
+| **List, cards** | items appear up to the latest item pointed at |
+| **Code** | lines appear up to the end of the latest line range pointed at |
+| **Flowchart** | nodes appear in source order up to the latest node pointed at; an edge appears once both its ends are visible |
+
+Everything is visible once the slide's narration ends.
+
+## Frames and limits
+
+| Frame | Size | Code lines | Code width |
+|---|---|---|---|
+| **landscape** | 1280 × 720 | 18 | 80 |
+| **square** | 960 × 960 | 24 | 60 |
+| **portrait** | 720 × 1280 | 30 | 40 |
+
+Longer code still renders, but smaller. A diff shows both sides at half these widths in landscape and square, and stacks the sides in portrait.
+
+## Reserved for later versions
+
+Pronunciation of other languages, citations, per-slide voice and speed, camera moves (a `{.zoom}` class after a cue link), charts, terminal sessions, file trees, quizzes and scene animations. Parsers must ignore attributes and classes they do not know.

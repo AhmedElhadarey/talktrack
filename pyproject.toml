@@ -1,0 +1,76 @@
+[project]
+name = "showntell"
+version = "0.1.0"
+description = "Narrated slide walkthroughs for coding agents, voiced on your machine"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+authors = [
+    { name = "Rahim Nathwani", email = "rahim@encona.com" }
+]
+keywords = ["mcp", "tts", "kokoro", "walkthrough", "code review", "claude code"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Software Development :: Documentation",
+]
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28",
+    "huggingface-hub>=0.34",
+    "mcp>=2.3,<3",
+    # misaki's English path, without the espeak-ng fallback (GPL); see the `espeak` extra
+    "misaki>=0.9.4,<0.10",
+    "num2words>=0.5.14",
+    "spacy>=3.8,<3.9",
+    "mlx-audio==0.5.9; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "onnxruntime>=1.20",
+    "numpy>=2.0",
+    "soundfile>=0.13",
+    "tqdm>=4.66",
+    "uvicorn>=0.35",
+]
+
+[project.optional-dependencies]
+# Pronounces words missing from misaki's dictionary with espeak-ng. espeak-ng is GPL-3.0.
+espeak = ["phonemizer-fork>=3.3", "espeakng-loader>=0.2.4"]
+
+[project.urls]
+Homepage = "https://github.com/rahimnathwani/showntell"
+Issues = "https://github.com/rahimnathwani/showntell/issues"
+
+[project.scripts]
+showntell = "showntell:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.2",
+    "ruff>=0.14",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "mlx: needs Apple silicon and the cached Kokoro MLX model",
+    "onnx: needs the cached Kokoro ONNX model",
+    "slow: takes more than a few seconds",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501", "B008"]

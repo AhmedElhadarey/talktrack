@@ -1,0 +1,26 @@
+{
+  "diff": {
+    "title": "Walk through a change",
+    "description": "Narrated walkthrough of a commit range, a branch or the working tree.",
+    "args": {
+      "target": "What to cover: a commit range such as main..HEAD, a branch name, or \"the working tree\"."
+    },
+    "template": "Make a narrated showntell walkthrough of the changes in {target}. Read the diff with git first and work out what changed and why. Open with the purpose of the change, go through the edits that matter in the order a reviewer needs them, and close with consequences: risks, follow-up work and how to test it. Show code read from disk with `diff file=... rev=...` or `file=` and `lines=` blocks rather than retyping it. Skip renames and formatting unless they matter. Share the link with me as soon as it is playable."
+  },
+  "file": {
+    "title": "Walk through a file",
+    "description": "Narrated walkthrough of one source file.",
+    "args": {
+      "path": "Path of the file, relative to the project root."
+    },
+    "template": "Make a narrated showntell walkthrough of {path}. Read the file first. Start with what it is for and where it fits in the project, then go through its main parts in the order a newcomer needs them, and end with how it is used and what to watch out for. Show code from disk with `file={path}` and `lines=` ranges, and point at the lines you talk about. Share the link with me as soon as it is playable."
+  },
+  "topic": {
+    "title": "Walk through a topic",
+    "description": "Narrated walkthrough of a concept, algorithm, design or piece of maths.",
+    "args": {
+      "topic": "The concept, algorithm, architecture or question to cover."
+    },
+    "template": "Make a narrated showntell walkthrough of {topic}. Go from the problem it solves, to how it works, to its consequences and trade-offs. Use diagrams, formulas, tables or short code examples where they help, and tie it to code in this project when there is a real example, read from disk. Share the link with me as soon as it is playable."
+  }
+}

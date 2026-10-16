@@ -1,0 +1,369 @@
+"""Walkthrough sessions: creation, appending, revising, speech, persistence and change events.
+
+All mutation happens on the asyncio loop. Speech results arrive on the speech thread and
+are handed to the loop with `call_soon_threadsafe`.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import re
+import secrets
+import shutil
+import time
+import webbrowser
+from pathlib import Path
+
+from .build import Builder
+from .format import Parser
+from .model import FRAMES, STATE_VERSION, Say, Slide, Walkthrough, public_slide
+from .speech.base import VOICES
+from .speech.narrator import Narrator, cue_time
+
+log = logging.getLogger("showntell.store")
+
+MAX_SOURCE_BYTES = 1_000_000
+MAX_SLIDES = 80
+ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
+
+
+class Session:
+    """A walkthrough loaded in memory, with its builder and live subscribers."""
+
+    def __init__(self, store: Store, w: Walkthrough) -> None:
+        self.store = store
+        self.w = w
+        self.builder = Builder(w, store.walk_dir(w.id) / "assets")
+        self.subscribers: set[asyncio.Queue] = set()
+        self.player_issues: list[str] = []
+        self.reported: set[str] = set()
+        self.source = ""
+        self._playable: asyncio.Event = asyncio.Event()
+        self._save_handle: asyncio.TimerHandle | None = None
+
+    # -- writing ------------------------------------------------------------------------
+
+    def add(self, markdown: str) -> dict:
+        if self.w.status == "finished":
+            self.w.status = "writing"  # adding after finishing reopens it
+        if len(self.source) + len(markdown) > MAX_SOURCE_BYTES:
+            raise ValueError("this walkthrough is over 1 MB of Markdown; start a new one")
+        before = len(self.w.slides)
+        self.source += markdown if markdown.endswith("\n") else markdown + "\n"
+        b = self.builder
+        b.issues, b.new_says, b.changed = [], [], set()
+        b.add(markdown)
+        if len(self.w.slides) > MAX_SLIDES:
+            b.issues.append(f"This walkthrough has {len(self.w.slides)} slides; keep it under {MAX_SLIDES}.")
+        for slide, say in b.new_says:
+            self._voice(slide, say)
+        self._changed(b.changed)
+        return {"slides": len(self.w.slides) - before, "says": len(b.new_says), "issues": list(b.issues)}
+
+    def revise(self, slide_id: str, markdown: str) -> dict:
+        idx = next((i for i, s in enumerate(self.w.slides) if s.id == slide_id), None)
+        if idx is None:
+            raise ValueError(f"no slide `{slide_id}`. Slides: {', '.join(s.id for s in self.w.slides)}")
+        old = self.w.slides[idx]
+        text = markdown.strip()
+        if not re.match(r"^#{1,6}\s", text):
+            text = f"## {old.title}\n\n{text}"
+        scratch = Walkthrough(id=self.w.id, key="", report_key="", title=self.w.title, frame=self.w.frame,
+                              voice=self.w.voice, speed=self.w.speed, root=self.w.root, sha=self.w.sha)
+        b = Builder(scratch, self.store.walk_dir(self.w.id) / "assets")
+        b.add(text + "\n")
+        issues = list(b.issues)
+        if not scratch.slides:
+            raise ValueError("the Markdown has no slide in it")
+        if len(scratch.slides) > 1:
+            issues.append(f"revise_slide replaces one slide; kept the first of {len(scratch.slides)}.")
+        new = scratch.slides[0]
+        new.id, new.rev, new.line = old.id, old.rev + 1, old.line
+        if new.kind == "title" and idx > 0:
+            new.kind = "text"
+        for i, say in enumerate(new.says):
+            say.id = f"{new.id}.{i + 1}.{new.rev}"
+        self.w.slides[idx] = new
+        b._check_finished_slide(new)
+        issues = list(dict.fromkeys(issues + [x for x in b.issues if x not in issues]))
+        voiced = 0
+        for say in new.says:
+            if not say.pause:
+                voiced += self._voice(new, say)
+        self.source += f"\n<!-- revised {slide_id} -->\n{text}\n"
+        self._changed({new.id})
+        return {"slide": new.id, "rev": new.rev, "says": len(new.says), "revoiced": voiced, "issues": issues}
+
+    def finish(self, questions: list[str] | None) -> list[str]:
+        b = self.builder
+        b.issues = []
+        b.check_all()
+        if b.parser.pending.strip():
+            b.issues.append("A code block was never closed; it was dropped.")
+            b.parser.pending = ""
+        if questions:
+            self.w.questions = [q.strip() for q in questions if q and q.strip()][:4]
+        self.w.status = "finished"
+        self._changed(set(), meta=True)
+        self.save_now()
+        return list(b.issues)
+
+    # -- speech -------------------------------------------------------------------------
+
+    def _voice(self, slide: Slide, say: Say) -> int:
+        """Request audio for a narration. Returns 1 if it needs voicing, 0 if cached."""
+        if say.pause or not say.text:
+            return 0
+        narrator = self.store.narrator
+        key, spoken = narrator.prepare(say.text, say.code, say.overrides, self.w.voice, self.w.speed)
+        say.key = key
+        say.status = "pending"
+        order = 0
+        for s in self.w.slides:
+            if s is slide:
+                order += s.says.index(say) if say in s.says else len(s.says)
+                break
+            order += len(s.says)
+        sid = say.id
+        loop = self.store.loop
+        hit = narrator.cached(key)
+
+        def done(result: dict) -> None:
+            if loop is None or (loop.is_running() and _on_loop(loop)):
+                self._audio(slide.id, sid, result)
+            else:
+                loop.call_soon_threadsafe(self._audio, slide.id, sid, result)
+
+        narrator.request(key, spoken, self.w.voice, self.w.speed, order, done)
+        return 0 if hit else 1
+
+    def _audio(self, slide_id: str, say_id: str, result: dict) -> None:
+        slide = next((s for s in self.w.slides if s.id == slide_id), None)
+        say = next((x for x in slide.says if x.id == say_id), None) if slide else None
+        if say is None:
+            return  # revised away meanwhile
+        if result.get("status") == "ready":
+            say.status, say.duration, say.words, say.error = "ready", result["duration"], result["words"], ""
+            for c in say.cues:
+                c["t"] = round(cue_time(c["at"], say.words, say.duration, len(say.text)), 3)
+        else:
+            say.status, say.error = "error", result.get("error", "speech failed")
+        if self.first_say() is say:
+            self._playable.set()
+        self._changed({slide_id})
+
+    def first_say(self) -> Say | None:
+        for s in self.w.slides:
+            for x in s.says:
+                if x.text:
+                    return x
+        return None
+
+    async def wait_playable(self, timeout: float) -> str:
+        first = self.first_say()
+        if first is None:
+            return "empty"
+        if first.status != "pending":
+            return first.status
+        try:
+            await asyncio.wait_for(self._playable.wait(), timeout)
+        except TimeoutError:
+            return "pending"
+        first = self.first_say()
+        return first.status if first else "empty"
+
+    # -- events and persistence -----------------------------------------------------------
+
+    def subscribe(self) -> asyncio.Queue:
+        q: asyncio.Queue = asyncio.Queue()
+        self.subscribers.add(q)
+        return q
+
+    def unsubscribe(self, q: asyncio.Queue) -> None:
+        self.subscribers.discard(q)
+
+    def _changed(self, slide_ids: set[str], meta: bool = False) -> None:
+        self.w.updated = time.time()
+        for q in self.subscribers:
+            q.put_nowait({"slides": set(slide_ids), "meta": meta})
+        self._schedule_save()
+
+    def delta(self, slide_ids: set[str], meta: bool) -> dict:
+        """What changed, for the live player: changed slides plus the current order."""
+        return {
+            "type": "delta",
+            "status": self.w.status,
+            "title": self.w.title,
+            "questions": self.w.questions,
+            "notes": self.w.notes,
+            "order": [s.id for s in self.w.slides],
+            "slides": [public_slide(s) for s in self.w.slides if s.id in slide_ids],
+        }
+
+    def report(self, message: str) -> None:
+        message = re.sub(r"\s+", " ", message).strip()[:300]
+        if message and message not in self.reported:
+            self.reported.add(message)
+            self.player_issues.append(message)
+
+    def take_player_issues(self) -> list[str]:
+        out, self.player_issues = self.player_issues, []
+        return out
+
+    def _schedule_save(self) -> None:
+        loop = self.store.loop
+        if loop is None:
+            self.save_now()
+            return
+        if self._save_handle is None:
+            self._save_handle = loop.call_later(0.3, self.save_now)
+
+    def save_now(self) -> None:
+        self._save_handle = None
+        d = self.store.walk_dir(self.w.id)
+        d.mkdir(parents=True, exist_ok=True)
+        tmp = d / "state.json.part"
+        tmp.write_text(json.dumps(self.w.to_state()))
+        tmp.rename(d / "state.json")
+        (d / "source.md").write_text(self.source)
+
+    @property
+    def url(self) -> str:
+        return f"{self.store.base_url}/w/{self.w.id}{self.store.link_suffix}"
+
+    @property
+    def handle(self) -> str:
+        return f"{self.w.id}.{self.w.key}"
+
+
+def _on_loop(loop: asyncio.AbstractEventLoop) -> bool:
+    try:
+        return asyncio.get_running_loop() is loop
+    except RuntimeError:
+        return False
+
+
+class Store:
+    def __init__(self, data_dir: Path, base_url: str, narrator: Narrator, default_voice: str = "af_heart",
+                 open_browser: bool = False, link_suffix: str = "") -> None:
+        self.data_dir = data_dir
+        self.base_url = base_url.rstrip("/")
+        self.narrator = narrator
+        self.default_voice = default_voice
+        self.open_browser = open_browser
+        self.link_suffix = link_suffix  # e.g. "?t=token" when serving beyond localhost
+        self.loop: asyncio.AbstractEventLoop | None = None
+        self.sessions: dict[str, Session] = {}
+        (data_dir / "walkthroughs").mkdir(parents=True, exist_ok=True)
+
+    def walk_dir(self, wid: str) -> Path:
+        return self.data_dir / "walkthroughs" / wid
+
+    def create(self, title: str, frame: str = "landscape", voice: str = "", speed: float = 1.0,
+               root: str | None = None) -> Session:
+        if frame not in FRAMES:
+            raise ValueError(f"frame must be one of {', '.join(FRAMES)}")
+        voice = voice or self.default_voice
+        if voice not in VOICES:
+            raise ValueError(f"unknown voice {voice!r}; choose one of {', '.join(VOICES)}")
+        w = Walkthrough(
+            id=secrets.token_urlsafe(16),
+            key=secrets.token_urlsafe(16),
+            report_key=secrets.token_urlsafe(12),
+            title=(title or "Untitled walkthrough").strip()[:120],
+            frame=frame,
+            voice=voice,
+            speed=max(0.7, min(1.4, float(speed or 1.0))),
+            root=root,
+            created=time.time(),
+            updated=time.time(),
+        )
+        s = Session(self, w)
+        self.sessions[w.id] = s
+        s.save_now()
+        return s
+
+    def get(self, wid: str) -> Session | None:
+        if not ID_RE.match(wid or ""):
+            return None
+        if wid in self.sessions:
+            return self.sessions[wid]
+        path = self.walk_dir(wid) / "state.json"
+        if not path.is_file():
+            return None
+        try:
+            d = json.loads(path.read_text())
+        except json.JSONDecodeError:
+            log.warning("unreadable state for %s", wid)
+            return None
+        if d.get("version", 0) > STATE_VERSION:
+            log.warning("%s was saved by a newer showntell", wid)
+        w = Walkthrough.from_state(d)
+        s = Session(self, w)
+        src = self.walk_dir(wid) / "source.md"
+        s.source = src.read_text() if src.is_file() else ""
+        # Rebuild the parser position so later appends continue cleanly.
+        s.builder.parser = Parser()
+        s.builder.parser.started = True
+        self.sessions[wid] = s
+        for slide in w.slides:
+            for say in slide.says:
+                if say.text and say.status != "ready":
+                    s._voice(slide, say)
+                elif say.text and say.status == "ready" and not self.narrator.audio_path(say.key).is_file():
+                    s._voice(slide, say)
+        if s.first_say() and s.first_say().status == "ready":
+            s._playable.set()
+        return s
+
+    def by_handle(self, handle: str) -> Session:
+        wid, _, key = (handle or "").strip().partition(".")
+        s = self.get(wid)
+        if s is None or not secrets.compare_digest(s.w.key, key):
+            raise ValueError("unknown handle; use the handle returned by start_walkthrough")
+        return s
+
+    def list(self, limit: int = 50) -> list[dict]:
+        out = []
+        for d in self.walk_dir("x").parent.iterdir():
+            st = d / "state.json"
+            if not st.is_file():
+                continue
+            try:
+                data = json.loads(st.read_text())
+            except json.JSONDecodeError:
+                continue
+            says = [x for s in data.get("slides", []) for x in s.get("says", [])]
+            out.append({
+                "id": data["id"],
+                "title": data.get("title", ""),
+                "handle": f"{data['id']}.{data.get('key', '')}",
+                "created": data.get("created", 0),
+                "updated": data.get("updated", 0),
+                "status": data.get("status", ""),
+                "frame": data.get("frame", "landscape"),
+                "slides": len(data.get("slides", [])),
+                "duration": sum(x.get("duration", 0) or x.get("pause", 0) for x in says),
+                "url": f"{self.base_url}/w/{data['id']}{self.link_suffix}",
+            })
+        out.sort(key=lambda r: r["updated"], reverse=True)
+        return out[:limit]
+
+    def delete(self, wid: str) -> bool:
+        if not ID_RE.match(wid or ""):
+            return False
+        self.sessions.pop(wid, None)
+        d = self.walk_dir(wid)
+        if d.is_dir():
+            shutil.rmtree(d)
+            return True
+        return False
+
+    def on_playable(self, s: Session) -> None:
+        if self.open_browser:
+            try:
+                webbrowser.open(s.url)
+            except Exception:
+                pass

@@ -1,0 +1,9 @@
+{
+  "started": "Started {handle}. Link: {url}\nNext: call add_slides now with only the title slide and one or two short spoken sentences.",
+  "playable": "Playable after {seconds} s: {url}\nSend this link to the user now, in a message, before your next tool call. Then keep adding one to three whole slides per add_slides call. The authoring guide follows.",
+  "pending": "Slides saved. The opening audio is still being made, but the link already works: {url}\nShare it with the user now; playback starts when the audio is ready. Then keep adding slides.",
+  "voice_error": "Slides saved, but voicing failed: {error}\nLink: {url}. Continue with the next add_slides call. If the error repeats, stop and ask the user to run `showntell doctor`.",
+  "need_opening": "Nothing to play yet: no narration so far. Send the title slide with at least one spoken sentence, a plain paragraph rather than a > line.",
+  "finished": "Finished: {slides} slides, {duration}. {url}\nTell the user the walkthrough is finished and give them the link. Do not repeat the script.",
+  "loading": "The voice model is not ready yet: {status}. Your slides are saved and will be voiced once it is. Keep adding slides; a later reply will say when the link is playable."
+}

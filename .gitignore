@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+
+# Local output
+/out/
+/exports/
+*.wav
+!tests/fixtures/*.wav
+node_modules/
+
+# OS
+.DS_Store
