@@ -72,6 +72,9 @@ body.square .slide { padding: 52px 52px 44px; }
 body.portrait .slide-head h2 { font-size: 44px; }
 .slide-head p { margin: 10px 0 0; font-size: 22px; line-height: 1.45; color: var(--muted); }
 .slide-body { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.slide-body > * { flex: none; transform-origin: center center; }
+.slide-body > .codebox, .slide-body > table.data { max-width: none; }
+.slide-body > .diagram, .slide-body > .image { flex: 1 1 auto; }
 
 .slide.k-title { justify-content: center; padding: 88px; }
 body.portrait .slide.k-title { padding: 64px 48px; }

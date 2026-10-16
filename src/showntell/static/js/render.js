@@ -304,17 +304,22 @@ export function sizeDiagram(svg, body) {
   svg.setAttribute("height", Math.floor(vb.height * k));
 }
 
-// Shrink (or modestly grow) code, tables and formulas so they fit the slide body.
+// Shrink (or modestly grow) code, tables and formulas so they fit the slide body. A transform
+// rather than CSS zoom: bounding boxes of text ranges inside a transform are reported exactly,
+// which keeps the pointer on the words it points at.
 export function fit(body) {
   const content = body.firstElementChild;
   if (!content || content.matches(".diagram, .image")) return;
-  content.style.zoom = 1;
+  content.style.transform = "";
   const bw = body.clientWidth, bh = body.clientHeight;
-  const cw = content.scrollWidth, ch = content.scrollHeight;
+  const cw = Math.max(content.offsetWidth, content.scrollWidth), ch = Math.max(content.offsetHeight, content.scrollHeight);
   if (!cw || !ch) return;
   const grow = content.matches(".codebox, .diff, .math, table.data") ? 1.3 : 1;
-  const z = Math.min(grow, bw / cw, bh / ch) * 0.98;
-  if (Math.abs(z - 1) > 0.02) content.style.zoom = Math.max(0.35, z);
+  let k = Math.min(grow, bw / cw, bh / ch) * 0.98;
+  if (Math.abs(k - 1) <= 0.02) k = 1;
+  k = Math.max(0.3, k);
+  content.dataset.scale = k.toFixed(3);
+  if (k !== 1) content.style.transform = `scale(${k})`;
 }
 
 // Mermaid flowchart nodes: map node id -> <g> element.

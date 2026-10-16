@@ -53,6 +53,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "playwright>=1.50",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.2",
     "ruff>=0.14",
@@ -65,6 +66,7 @@ markers = [
     "mlx: needs Apple silicon and the cached Kokoro MLX model",
     "onnx: needs the cached Kokoro ONNX model",
     "slow: takes more than a few seconds",
+    "browser: drives headless Chromium through Playwright",
 ]
 
 [tool.ruff]

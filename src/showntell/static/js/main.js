@@ -295,6 +295,8 @@ function showSlide(i) {
   clearMarks();
   const v = renderSlide(slide, { frame: W.frame, report });
   host.replaceChildren(v.root);
+  // The slide eases in from a few pixels below; measure the pointer again once it has landed.
+  v.root.addEventListener("animationend", () => { if (view?.root === v.root) { lastCueKey = ""; render(true); } }, { once: true });
   const bodyEl = v.root.querySelector(".slide-body");
   view = { ...v, body: bodyEl, done: false };
   v.ready.then(() => {
@@ -617,8 +619,9 @@ function setPlayIcon() {
 function showOverlay() {
   const o = $("#overlay");
   o.hidden = false;
+  const atTitle = (TL.segs[pos.seg]?.slide ?? 0) === 0;
   const titleSlide = W.slides[0]?.kind === "title";
-  o.classList.toggle("over-title", titleSlide);
+  o.classList.toggle("over-title", titleSlide && atTitle);
   $("#overlay-title").textContent = titleSlide ? "" : stripMd(W.title);
   const ready = TL.segs[0]?.ready;
   $("#big-play").disabled = !ready;
