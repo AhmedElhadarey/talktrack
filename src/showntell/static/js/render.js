@@ -45,7 +45,7 @@ async function mermaidReady() {
       theme: "base",
       fontFamily: v("--sans"),
       themeVariables: {
-        darkMode: true,
+        darkMode: v("--scheme") !== "light",
         background: v("--stage"),
         fontSize: "20px",
         primaryColor: v("--node"),

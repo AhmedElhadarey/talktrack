@@ -138,7 +138,7 @@ def export(data_dir: Path, wid: str, out: Path, mp3: bool = False, static_href: 
                 shutil.copyfile(src, out / "audio" / f"{key}.wav")
     data["status"] = "finished"
     (out / "data.json").write_text(json.dumps(data))
-    (out / "index.html").write_text(render_player(w.title, w.frame, "", static_href, live=False))
+    (out / "index.html").write_text(render_player(w.title, w.frame, "", static_href, live=False, theme=w.theme, tokens=w.tokens))
     (out / "captions.vtt").write_text(vtt(w))
     src_md = data_dir / "walkthroughs" / wid / "source.md"
     if src_md.is_file():

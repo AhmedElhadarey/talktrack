@@ -196,10 +196,11 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
         speed: Annotated[float, Field(description=arg_text("start_walkthrough", "speed"))] = 1.0,
         project_dir: Annotated[str, Field(description=arg_text("start_walkthrough", "project_dir"))] = "",
         opening: Annotated[str, Field(description=arg_text("start_walkthrough", "opening"))] = "",
+        theme: Annotated[Literal["", "dark", "light", "paper", "contrast"], Field(description=arg_text("start_walkthrough", "theme"))] = "",
         ctx: Context = None,  # type: ignore[assignment]
     ) -> CallToolResult:
         try:
-            r = await service.start(title, frame, voice, speed, await _root(ctx, project_dir))
+            r = await service.start(title, frame, voice, speed, await _root(ctx, project_dir), theme)
         except ValueError as e:
             return _error(str(e))
         head = reply("started", "Handle: {handle}\nLink (not playable yet): {url}\nNext: call add_slides now with only the title slide and one or two spoken sentences.",
@@ -333,7 +334,8 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
         s = session_or_404(request)
         if not s:
             return HTMLResponse("Walkthrough not found", status_code=404)
-        return HTMLResponse(render_player(s.w.title, s.w.frame, s.w.report_key, "../../static", live=True),
+        return HTMLResponse(render_player(s.w.title, s.w.frame, s.w.report_key, "../../static", live=True,
+                                          theme=s.w.theme, tokens=s.w.tokens),
                             headers={"Cache-Control": "no-store"})
 
     @mcp.custom_route("/w/{wid}/data.json", methods=["GET"])
@@ -473,9 +475,15 @@ def _file(base: Path, rel: str, immutable: bool = False) -> Response:
     return FileResponse(path, headers=headers)
 
 
-def render_player(title: str, frame: str, report_key: str, static: str, live: bool) -> str:
+def render_player(title: str, frame: str, report_key: str, static: str, live: bool, theme: str = "dark",
+                  tokens: dict | None = None) -> str:
+    from .themes import THEMES, clean_tokens, style_attr
+
     page = (STATIC / "player.html").read_text()
+    theme = theme if theme in THEMES else "dark"
+    style = html.escape(style_attr(clean_tokens(tokens or {})[0]))
     return (page.replace("{{TITLE}}", html.escape(title)).replace("{{FRAME}}", frame)
+            .replace("{{THEME}}", theme).replace("{{TOKENS}}", style)
             .replace("{{REPORT_KEY}}", report_key if live else "").replace("{{STATIC}}", static)
             .replace("{{LIVE}}", "1" if live else "0").replace("{{VERSION}}", __version__))
 

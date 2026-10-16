@@ -117,6 +117,13 @@ class Builder:
                     self.w.voice = a["voice"]
                 else:
                     self._issue("front_matter", f"Front matter voice `{a['voice']}` is unknown; kept {self.w.voice}.", line=b.line)
+            if a.get("theme"):
+                from .themes import THEMES
+
+                if a["theme"] in THEMES:
+                    self.w.theme = a["theme"]
+                else:
+                    self._issue("front_matter", f"Front matter theme `{a['theme']}` is not one of {', '.join(THEMES)}; kept {self.w.theme}.", line=b.line)
             if a.get("speed"):
                 try:
                     self.w.speed = max(SPEED_RANGE[0], min(SPEED_RANGE[1], float(a["speed"])))

@@ -60,7 +60,8 @@ async def test_start_schema_offers_frames_and_voices(mcp):
     async with mcp as client:
         (t,) = [t for t in (await client.list_tools()).tools if t.name == "start_walkthrough"]
         props = t.input_schema["properties"]
-        assert set(props) == {"title", "frame", "voice", "speed", "project_dir", "opening"}
+        assert set(props) == {"title", "frame", "voice", "speed", "project_dir", "opening", "theme"}
+        assert set(props["theme"]["enum"]) == {"", "dark", "light", "paper", "contrast"}
         assert "af_heart" in props["voice"]["description"]
         assert t.input_schema["required"] == ["title"]
 

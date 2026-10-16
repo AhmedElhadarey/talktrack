@@ -18,6 +18,7 @@ CODES: dict[str, tuple[str, str]] = {
     "block_open": ("warning", "a code block is still open at the end of a call"),
     "block_dropped": ("error", "a code block was never closed and was dropped"),
     "front_matter": ("warning", "a front matter value is invalid and was ignored"),
+    "theme_file": ("warning", "the project's showntell.theme.json has a value that was ignored"),
     "extra_visual": ("warning", "a slide got a second visual, which moved to a new slide"),
     "old_without_new": ("warning", "an `old` block had no `new` block after it"),
     "code_body_ignored": ("info", "a `file=` block had a body, which was ignored"),

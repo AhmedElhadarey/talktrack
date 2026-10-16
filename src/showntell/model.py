@@ -48,6 +48,8 @@ class Walkthrough:
     report_key: str
     title: str
     frame: str = "landscape"
+    theme: str = "dark"
+    tokens: dict = field(default_factory=dict)  # project colour overrides, already checked
     voice: str = "af_heart"
     speed: float = 1.0
     root: str | None = None
@@ -86,6 +88,8 @@ class Walkthrough:
             "id": self.id,
             "title": self.title,
             "frame": self.frame,
+            "theme": self.theme,
+            "tokens": self.tokens,
             "status": self.status,
             "questions": self.questions,
             "notes": self.notes,

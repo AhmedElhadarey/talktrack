@@ -1,0 +1,221 @@
+/* Themes: every colour the player uses, as tokens, per theme. player.css uses only these.
+   A walkthrough picks a theme (start_walkthrough `theme`, front matter `theme:`), a viewer may
+   override it (?theme=, or the menu), and a project may override single tokens with
+   showntell.theme.json. Contrast is checked by tests/test_themes.py. */
+
+:root, [data-theme="dark"] {
+  color-scheme: dark;
+  --scheme: dark;
+  --bg: #0a0c10;
+  --stage: #11151c;
+  --panel: #181d26;
+  --panel-2: #212835;
+  --panel-deep: #0d1015;
+  --panel-glass: rgba(20, 24, 32, 0.94);
+  --line: #2a3240;
+  --fg: #ebeef3;
+  --muted: #98a2b3;
+  --caption: #c9d1dc;
+  --caption-now: #ffffff;
+  --accent: #ffc857;
+  --on-accent: #1a1406;
+  --accent-soft: rgba(255, 200, 87, 0.2);
+  --accent-faint: rgba(255, 200, 87, 0.09);
+  --accent-glow: rgba(255, 200, 87, 0.38);
+  --node: #1b2330;
+  --node-line: #6fb6ff;
+  --note: #2b2a1f;
+  --danger: #f87171;
+  --add: rgba(46, 160, 67, 0.18);
+  --add-strong: rgba(63, 185, 80, 0.5);
+  --add-fg: #3fb950;
+  --del: rgba(248, 81, 73, 0.15);
+  --del-strong: rgba(248, 81, 73, 0.5);
+  --del-fg: #f85149;
+  --code-bg: #0c1016;
+  --code-head: #0f141b;
+  --code-fg: #c9d1d9;
+  --ln: #5d6878;
+  --scrim: rgba(7, 9, 12, 0.62);
+  --scrim-light: rgba(7, 9, 12, 0.35);
+  --shadow: rgba(0, 0, 0, 0.5);
+  --edge: rgba(255, 255, 255, 0.04);
+  --glow-1: rgba(111, 182, 255, 0.05);
+  --glow-2: rgba(255, 200, 87, 0.04);
+  --hl-keyword: #ff7b72;
+  --hl-title: #d2a8ff;
+  --hl-attr: #79c0ff;
+  --hl-string: #a5d6ff;
+  --hl-built-in: #ffa657;
+  --hl-comment: #8b949e;
+  --hl-name: #7ee787;
+  --hl-section: #6fb6ff;
+  --hl-bullet: #f2cc60;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --scheme: light;
+  --bg: #e9edf2;
+  --stage: #ffffff;
+  --panel: #f3f5f8;
+  --panel-2: #e4e9ef;
+  --panel-deep: #f7f8fa;
+  --panel-glass: rgba(255, 255, 255, 0.95);
+  --line: #d0d7de;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --caption: #31373e;
+  --caption-now: #000000;
+  --accent: #9a5b00;
+  --on-accent: #ffffff;
+  --accent-soft: rgba(212, 140, 20, 0.22);
+  --accent-faint: rgba(212, 140, 20, 0.1);
+  --accent-glow: rgba(212, 140, 20, 0.3);
+  --node: #f1f5fb;
+  --node-line: #0969da;
+  --note: #fff8c5;
+  --danger: #cf222e;
+  --add: rgba(46, 160, 67, 0.15);
+  --add-strong: rgba(46, 160, 67, 0.35);
+  --add-fg: #1a7f37;
+  --del: rgba(207, 34, 46, 0.1);
+  --del-strong: rgba(207, 34, 46, 0.3);
+  --del-fg: #cf222e;
+  --code-bg: #f6f8fa;
+  --code-head: #eef1f4;
+  --code-fg: #1f2328;
+  --ln: #747e88;
+  --scrim: rgba(240, 243, 247, 0.7);
+  --scrim-light: rgba(240, 243, 247, 0.35);
+  --shadow: rgba(31, 35, 40, 0.15);
+  --edge: rgba(31, 35, 40, 0.08);
+  --glow-1: rgba(9, 105, 218, 0.03);
+  --glow-2: rgba(212, 140, 20, 0.03);
+  --hl-keyword: #cf222e;
+  --hl-title: #8250df;
+  --hl-attr: #0550ae;
+  --hl-string: #0a3069;
+  --hl-built-in: #953800;
+  --hl-comment: #636c76;
+  --hl-name: #116329;
+  --hl-section: #0550ae;
+  --hl-bullet: #953800;
+}
+
+[data-theme="paper"] {
+  color-scheme: light;
+  --scheme: light;
+  --bg: #e8e1d4;
+  --stage: #fbf7ef;
+  --panel: #f3ede1;
+  --panel-2: #e9e1d2;
+  --panel-deep: #f6f1e7;
+  --panel-glass: rgba(251, 247, 239, 0.95);
+  --line: #d6cbb7;
+  --fg: #2a241e;
+  --muted: #645a4e;
+  --caption: #3a332b;
+  --caption-now: #000000;
+  --accent: #a3410f;
+  --on-accent: #ffffff;
+  --accent-soft: rgba(196, 90, 30, 0.2);
+  --accent-faint: rgba(196, 90, 30, 0.09);
+  --accent-glow: rgba(196, 90, 30, 0.28);
+  --node: #f4ecdd;
+  --node-line: #2f5f8a;
+  --note: #f6e7b6;
+  --danger: #b42318;
+  --add: rgba(60, 130, 60, 0.15);
+  --add-strong: rgba(60, 130, 60, 0.35);
+  --add-fg: #2f6b2f;
+  --del: rgba(180, 35, 24, 0.1);
+  --del-strong: rgba(180, 35, 24, 0.3);
+  --del-fg: #b42318;
+  --code-bg: #f4eee2;
+  --code-head: #ede5d6;
+  --code-fg: #2a241e;
+  --ln: #8f8473;
+  --scrim: rgba(244, 238, 226, 0.7);
+  --scrim-light: rgba(244, 238, 226, 0.35);
+  --shadow: rgba(60, 45, 25, 0.16);
+  --edge: rgba(60, 45, 25, 0.08);
+  --glow-1: rgba(47, 95, 138, 0.03);
+  --glow-2: rgba(196, 90, 30, 0.03);
+  --hl-keyword: #a3261b;
+  --hl-title: #6a3d9a;
+  --hl-attr: #2f5f8a;
+  --hl-string: #3d5a1e;
+  --hl-built-in: #8a4b00;
+  --hl-comment: #6b6152;
+  --hl-name: #2f6b2f;
+  --hl-section: #2f5f8a;
+  --hl-bullet: #8a4b00;
+}
+
+[data-theme="contrast"] {
+  color-scheme: dark;
+  --scheme: dark;
+  --bg: #000000;
+  --stage: #000000;
+  --panel: #111111;
+  --panel-2: #1c1c1c;
+  --panel-deep: #050505;
+  --panel-glass: rgba(10, 10, 10, 0.97);
+  --line: #5a5a5a;
+  --fg: #ffffff;
+  --muted: #d0d0d0;
+  --caption: #ffffff;
+  --caption-now: #000000;
+  --accent: #ffd60a;
+  --on-accent: #000000;
+  --accent-soft: #ffd60a;
+  --accent-faint: rgba(255, 214, 10, 0.16);
+  --accent-glow: rgba(255, 214, 10, 0.5);
+  --node: #0d0d0d;
+  --node-line: #7cc4ff;
+  --note: #2a2600;
+  --danger: #ff8080;
+  --add: rgba(80, 220, 100, 0.22);
+  --add-strong: rgba(80, 220, 100, 0.6);
+  --add-fg: #6ef08a;
+  --del: rgba(255, 110, 100, 0.2);
+  --del-strong: rgba(255, 110, 100, 0.6);
+  --del-fg: #ff8a80;
+  --code-bg: #000000;
+  --code-head: #0d0d0d;
+  --code-fg: #ffffff;
+  --ln: #a0a0a0;
+  --scrim: rgba(0, 0, 0, 0.75);
+  --scrim-light: rgba(0, 0, 0, 0.45);
+  --shadow: rgba(0, 0, 0, 0.6);
+  --edge: rgba(255, 255, 255, 0.35);
+  --glow-1: transparent;
+  --glow-2: transparent;
+  --hl-keyword: #ff9e94;
+  --hl-title: #e2c2ff;
+  --hl-attr: #9fd3ff;
+  --hl-string: #c4e5ff;
+  --hl-built-in: #ffc285;
+  --hl-comment: #bdbdbd;
+  --hl-name: #9ff0a8;
+  --hl-section: #9fd3ff;
+  --hl-bullet: #ffe066;
+}
+
+/* Syntax colours from the tokens (highlight.js class names). */
+.hljs { color: var(--code-fg); background: var(--code-bg); }
+.hljs-doctag, .hljs-keyword, .hljs-meta .hljs-keyword, .hljs-template-tag, .hljs-template-variable, .hljs-type, .hljs-variable.language_ { color: var(--hl-keyword); }
+.hljs-title, .hljs-title.class_, .hljs-title.class_.inherited__, .hljs-title.function_ { color: var(--hl-title); }
+.hljs-attr, .hljs-attribute, .hljs-literal, .hljs-meta, .hljs-number, .hljs-operator, .hljs-selector-attr, .hljs-selector-class, .hljs-selector-id, .hljs-variable { color: var(--hl-attr); }
+.hljs-meta .hljs-string, .hljs-regexp, .hljs-string { color: var(--hl-string); }
+.hljs-built_in, .hljs-symbol { color: var(--hl-built-in); }
+.hljs-code, .hljs-comment, .hljs-formula { color: var(--hl-comment); }
+.hljs-name, .hljs-quote, .hljs-selector-pseudo, .hljs-selector-tag { color: var(--hl-name); }
+.hljs-subst, .hljs-emphasis, .hljs-strong { color: var(--code-fg); }
+.hljs-section { color: var(--hl-section); font-weight: 700; }
+.hljs-bullet { color: var(--hl-bullet); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+.hljs-addition { color: var(--add-fg); background-color: var(--add); }
+.hljs-deletion { color: var(--del-fg); background-color: var(--del); }

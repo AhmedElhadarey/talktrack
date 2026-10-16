@@ -16,12 +16,14 @@ import time
 import webbrowser
 from pathlib import Path
 
+from . import themes
 from .build import SPEED_RANGE, Builder
 from .format import Parser
 from .issues import Issue, player_issue
 from .model import FRAMES, STATE_VERSION, Say, Slide, Walkthrough, public_slide
 from .speech.base import VOICES
 from .speech.narrator import Narrator, cue_time
+from .themes import THEMES
 
 log = logging.getLogger("showntell.store")
 
@@ -327,6 +329,7 @@ class Store:
         self.base_url = base_url.rstrip("/")
         self.narrator = narrator
         self.default_voice = default_voice
+        self.default_theme = themes.DEFAULT
         self.open_browser = open_browser
         self.link_suffix = link_suffix  # e.g. "?t=token" when serving beyond localhost
         self.loop: asyncio.AbstractEventLoop | None = None
@@ -337,9 +340,12 @@ class Store:
         return self.data_dir / "walkthroughs" / wid
 
     def create(self, title: str, frame: str = "landscape", voice: str = "", speed: float = 1.0,
-               root: str | None = None) -> Session:
+               root: str | None = None, theme: str = "") -> Session:
         if frame not in FRAMES:
             raise ValueError(f"frame must be one of {', '.join(FRAMES)}")
+        if theme and theme not in THEMES:
+            raise ValueError(f"theme must be one of {', '.join(THEMES)}")
+        project_theme, tokens, theme_problems = themes.project_theme(root)
         voice = voice or self.default_voice
         if voice not in VOICES:
             raise ValueError(f"unknown voice {voice!r}; choose one of {', '.join(VOICES)}")
@@ -349,6 +355,8 @@ class Store:
             report_key=secrets.token_urlsafe(12),
             title=(title or "Untitled walkthrough").strip()[:120],
             frame=frame,
+            theme=theme or project_theme or self.default_theme,
+            tokens=tokens,
             voice=voice,
             speed=max(SPEED_RANGE[0], min(SPEED_RANGE[1], float(speed or 1.0))),
             root=root,
@@ -356,6 +364,7 @@ class Store:
             updated=time.time(),
         )
         s = Session(self, w)
+        s.late_issues += [Issue("theme_file", p, "Fix the file; the rest of it still applies.") for p in theme_problems]
         self.sessions[w.id] = s
         s.save_now()
         return s

@@ -922,6 +922,8 @@ $("#speed").value = String(rate);
 $("#speed").onchange = (e) => { rate = parseFloat(e.target.value) || 1; audio.playbackRate = rate; store.set("rate", rate); };
 $("#pause-after").checked = pauseAfterSlide;
 $("#pause-after").onchange = (e) => { pauseAfterSlide = e.target.checked; store.set("pauseAfterSlide", pauseAfterSlide); };
+$("#theme").value = store.get("theme", "") || "";
+$("#theme").onchange = (e) => { store.set("theme", e.target.value || null); location.reload(); };
 $("#pause-steps").checked = pauseSteps;
 $("#pause-steps").onchange = (e) => { pauseSteps = e.target.checked; store.set("pauseSteps", pauseSteps); };
 $("#present").onclick = () => { const u = new URL(location.href); u.searchParams.set("present", "1"); location.href = u.toString(); };
