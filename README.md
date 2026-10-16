@@ -11,8 +11,8 @@ Ask your agent to walk you through a pull request, a module or a concept. It wri
 - **Local:** speech runs on your Mac or PC. No API keys, no hosted service, no telemetry. Code never leaves your machine except to the model you already use.
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
-- **Checked:** every call returns problems to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, diagrams that failed to render in the open player.
-- **Shareable:** export any walkthrough as a static folder with captions to host anywhere, or as an MP4.
+- **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the open player, diagrams that failed to render or text shrunk too small to read. The agent can also look at pictures of its slides with `preview_slides`.
+- **Shareable:** export a walkthrough as a static folder with captions or as an MP4, embed it with `<showntell-player>`, link to a range of slides, or present it yourself with speaker notes.
 
 How it compares with a screen recording, a written PR description and a rendered MP4 explainer, including where those win: [docs/comparison.md](docs/comparison.md).
 
@@ -41,7 +41,7 @@ The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB el
 2. Start a new `claude` session and run `/mcp`; `showntell` should be listed as connected.
 3. Ask for a walkthrough, or use a built-in prompt: `/mcp__showntell__diff HEAD~1..HEAD`, `/mcp__showntell__file src/app.py` or `/mcp__showntell__topic how TLS works`.
 
-**Or install the plugin** instead of step 1. It bundles the same server with a skill that tells Claude when a walkthrough fits and how to pace one:
+**Or install the plugin** instead of step 1. You get the MCP server plus a skill: guidance on when a walkthrough beats a written answer, and how to pace one:
 
 ```zsh
 claude plugin marketplace add rahimnathwani/showntell
@@ -191,8 +191,11 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **Table** | a pipe table |
 | **List, steps, cards** | `-` or `1.` items; `.cards` on the heading for cards |
 | **Image** | `![alt](path)` from the project |
+| **Chart** | `chart bar`, `chart hbar` or `chart line` with `label: value` lines |
+| **Terminal session** | a `terminal` block: `$` commands and their output |
+| **File tree** | a `tree` block, indented or pasted from `tree` |
 
-`.build` on a heading reveals parts as the narration reaches them. The full reference is [docs/format.md](docs/format.md). You can also write a walkthrough by hand and play it with `showntell play talk.md`.
+`.build` on a heading reveals parts as the narration reaches them. Four themes (dark, light, paper, high contrast) are chosen with `theme`, in front matter or in the project's `showntell.theme.json`, and viewers can switch. The full reference is [docs/format.md](docs/format.md). You can also write a walkthrough by hand and play it with `showntell play talk.md`.
 
 ## Commands
 
@@ -225,6 +228,26 @@ uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell' s
 | **Checks** | the file's duration must match the timeline within 0.2 s, or the export fails |
 
 Needs [FFmpeg](https://ffmpeg.org/) on PATH and the `video` extra (Playwright). Without Playwright, folder exports still work and skip `poster.png`.
+
+## In the player
+
+| Feature | How |
+|---|---|
+| **Play a range** | `?from=slide-id&to=slide-id` plays those slides and stops; `revise_slide` replies with such a link for the changed slide |
+| **Present it yourself** | the menu's "Present with notes", or `?present=1`: no voice, Space or → for the next step, narration as notes, and an audience window that follows |
+| **Pause at each step** | the menu: stops after each paragraph that revealed a part |
+| **Ask for a change** | the menu copies a request naming the slide, the time and what the narration says, to paste to your agent |
+| **Theme** | the menu, or `?theme=light` |
+| **Keyboard** | Space, ←/→ 5 s, Shift ←/→ slides, C captions, T transcript; lists are one tab stop with arrow keys |
+
+### Embedding
+
+```html
+<script src="https://your.host/static/embed.js"></script>
+<showntell-player src="https://your.host/my-walkthrough/" poster="https://your.host/my-walkthrough/poster.png"></showntell-player>
+```
+
+The element plays an exported folder or a live link in an iframe, forwards `ready`, `slidechange`, `timeupdate`, `durationchange`, `waiting`, `play`, `pause` and `ended` events, and has `play()`, `pause()` and `seek(seconds)`. With `poster`, the player loads on the first click. Browsers block public pages from loading a link on your own machine, so embed exported folders, not `localhost` links.
 
 ## Settings
 

@@ -5,7 +5,7 @@
     "args": {
       "target": "What to cover: a commit range such as main..HEAD, a branch name, or \"the working tree\"."
     },
-    "template": "Make a narrated showntell walkthrough of the changes in {target}. Read the diff with git first and work out what changed and why. Open with the purpose of the change, go through the edits that matter in the order a reviewer needs them, and close with consequences: risks, follow-up work and how to test it. Show code read from disk with `diff file=... rev=...` or `file=` and `lines=` blocks rather than retyping it. Skip renames and formatting unless they matter. Share the link with me as soon as it is playable."
+    "template": "Make a narrated showntell walkthrough of the changes in {target}. First run `git diff --shortstat` on the range to size it: under about 50 changed lines, 4 to 6 slides; up to about 300, 6 to 10; more, 10 to 14, and say on a slide what was left out. Read the diff and work out what changed and why, then pick its shape: new capability (what it lets you do, how it works, how to use it and its limits); bug fix (the symptom, the cause, the fix, evidence it now works); restructuring (what was hard before, the new structure, what behaves the same and how that was checked); or a batch of small changes (grouped by theme, one slide per group). If it mixes shapes, lead with the one a reviewer most needs. Before writing, pick two to four hunks of at most about 12 lines each to show. Skip lockfiles, generated files, renames and pure formatting unless they are the point. Open with what the change does for the user, not with code names. Show code read from disk with `diff file=... rev=...` or `file=` and `lines=` blocks rather than retyping it, and after two or three code slides show the behaviour: a sequence diagram or a terminal session. Close with risks, follow-up work and how to test it. Share the link with me as soon as it is playable."
   },
   "file": {
     "title": "Walk through a file",
@@ -21,6 +21,6 @@
     "args": {
       "topic": "The concept, algorithm, architecture or question to cover."
     },
-    "template": "Make a narrated showntell walkthrough of {topic}. Go from the problem it solves, to how it works, to its consequences and trade-offs. Use diagrams, formulas, tables or short code examples where they help, and tie it to code in this project when there is a real example, read from disk. Share the link with me as soon as it is playable."
+    "template": "Make a narrated showntell walkthrough of {topic}. Go from the problem it solves, to how it works, to its consequences and trade-offs. Use diagrams, formulas, tables, charts for numbers or short code examples where they help, and tie it to code in this project when there is a real example, read from disk. Share the link with me as soon as it is playable."
   }
 }

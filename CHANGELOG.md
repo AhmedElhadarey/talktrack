@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Structured findings:** every problem returned to the agent has a stable code, a severity, the slide, the Markdown line and a separate fix; replies list errors first, at most twelve, three per code. `docs/spec.md` lists every code.
+- **New checks:** narration that reads out handles, URLs or commit hashes; step-reveal cues bunched in one paragraph or out of source order; four code slides in a row; an opening that names code first; diffs of lockfiles and generated files; slides that hold still for over 20 s once voiced. `finish_walkthrough` says which checks could not run and lists slide start times.
+- **Player findings:** the open player reports text shrunk below a readable size, content that overflows, cues pointing off the slide, slides slow to draw, and viewers left waiting; errors before the player starts are reported too.
+- **Slide-ready wait:** narration for a new slide waits up to 1.5 s for its diagram or formula to finish drawing.
+- **New slide kinds:** ```` ```chart ```` (bar, hbar, line), ```` ```terminal ```` and ```` ```tree ````, with cues, step reveals and checks; `showntell://slide-kinds` describes every kind with an example.
+- **Themes:** dark, light, paper and high contrast, all meeting WCAG text contrast; chosen by `theme`, front matter, or the project's `showntell.theme.json`, and switchable by the viewer.
+- **preview_slides:** a tool that returns pictures of slides, fully revealed, for the agent to check.
+- **Ranges and presenting:** `?from=slide&to=slide` plays a range and stops, and `revise_slide` links to the revised slide alone; "Pause after each step"; `?present=1` steps through by hand without the voice, with notes and an audience window; a menu item copies a change request for the current slide.
+- **Embedding:** `static/embed.js` defines `<showntell-player>` with events, `play`, `pause`, `seek` and a lazy poster.
+- **Captions:** WebVTT phrases break where the voice pauses or a sentence ends.
+- **Tests:** golden player state for three walkthroughs, Linux pixel baselines (`scripts/update_baselines.sh`), a contrast test for every theme.
+- **Idle cost:** the player's animation loop stops while paused.
+
 - **MP4 export:** `showntell export ID OUT.mp4` captures every frame by seeking the player in headless Chromium: H.264 at 30 fps (`--fps`), 1920x1080 for landscape, AAC narration placed on the timeline, captions as a mov_text track (`--burn-captions` to draw them too), parallel workers (`--workers`), duration checked against the timeline. 13 to 16 times real time on an M-series Mac. Needs the new `video` extra (Playwright) and FFmpeg.
 - **Capture mode:** `?capture=1` on the player hides everything but the stage, plays no audio, turns animation off and exposes `window.__showntell.duration()` and `seek(t)`. `showntell.capture.capture_frames` returns PNG frames at given times.
 - **Posters:** folder exports write `poster.png`, the title slide, and reference it in `og:image` and `twitter:image` tags, when Playwright is installed.

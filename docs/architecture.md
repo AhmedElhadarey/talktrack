@@ -29,7 +29,7 @@ graph TB
 ## Request path
 
 1. **Shim:** `showntell mcp` reads `daemon.json` in the data folder. If no daemon of the same version is healthy, it starts `showntell serve` in the background and waits for `/health`. Its MCP tools forward to the daemon's RPC route with the token from the lockfile.
-2. **Service:** `LocalService` implements the five tools. The MCP layer (`server.py`) formats replies, waits for the opening audio with progress notifications, and attaches the guide to the first playable reply.
+2. **Service:** `LocalService` implements the tools. The MCP layer (`server.py`) formats replies, waits for the opening audio with progress notifications, and attaches the guide to the first playable reply.
 3. **Builder:** `format.Parser` turns each chunk into blocks; the chunk end closes open blocks except fences. `build.Builder` turns blocks into slides, reads code from disk or git (`sources.py`), resolves and infers cues, and records problems.
 4. **Narrator:** every narration paragraph becomes a speech job. `pronounce.speakable` rewrites code and units into speakable text with a character map back to the display text; the job key is a hash of model, voice, speed and spoken text. One worker thread voices jobs in order of their position in their walkthrough.
 5. **Events:** each change marks slides as changed; the SSE route coalesces changes for 50 ms and sends only the changed slides plus the slide order.
@@ -37,6 +37,18 @@ graph TB
 ## Player
 
 `static/js/timeline.js` turns the walkthrough into segments (one per paragraph, with gaps) on a single clock and answers "what should be on screen at time *t*": slide, fired cues, step-reveal level and current word. `main.js` advances the clock from the audio element while a paragraph plays and from wall time during gaps, then applies that state to the DOM through `render.js`. Seeking, live updates and export all go through the same function.
+
+## Findings
+
+Every check, on the server or in the player, produces an `issues.Issue`: a stable code from `issues.CODES`, a severity, the slide, the Markdown line, the message and a fix. Builder findings are returned on the call that caused them. Timing findings (`still_slide`) need audio, so they wait in the session and go out with the next call. The open player posts its findings (layout measured after a slide settles, render and audio errors, waits) to `/w/<id>/report` with the walkthrough's report key; only player codes are accepted from it, and its messages reach the agent marked as untrusted. `server.py` orders replies by severity and folds repeats.
+
+## Themes
+
+`static/themes.css` defines every colour as a token, once per theme; `player.css` uses only tokens, and a test keeps raw colours out of it. The page carries the walkthrough's theme on `<html data-theme>` and a project's checked overrides as inline custom properties; a small script in the page head applies the viewer's choice before first paint. Mermaid reads the tokens when it starts.
+
+## Embedding and presenting
+
+When the player runs inside an iframe it posts its events to the parent (`ready`, `slidechange`, `timeupdate`, `durationchange`, `waiting`, `ended`, `playbackerror`) and takes `play`, `pause` and `seek` messages; `static/embed.js` wraps that in a custom element. Presenter mode (`?present=1`) never starts the clock: each key press seeks to the next step from `timeline.steps`, and a `BroadcastChannel` named after the walkthrough keeps an audience window on the same time.
 
 ## Capture and video export
 

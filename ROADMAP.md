@@ -42,6 +42,7 @@ Phases 0 to 2 are built, every launch criterion is met, and the repository is pu
 | **0** | clean room, spec, Markdown format, document model, code from disk, packaging, rename, licence files |
 | **1** | security, revise, cue inference, checks, `play`, step reveals, pronunciation, MLX and ONNX backends, time-driven player, transcript, seeking, accessibility, shared daemon with start and instance locks, `doctor`, `autostart`, plugin and skill, prompts, resources, tests, evaluation |
 | **2** | static export with captions, docs, CI, release and gallery workflows, recorder for demo video, a five-walkthrough gallery made with Opus (links 0.38 to 0.81 s, $0.22 to $0.64 each), README demo |
+| **2.5** | ideas adapted from a study of HyperFrames (an HTML-to-video framework): coded findings with fixes, layout findings measured by the open player, timing and coverage checks, slide-ready wait, MP4 export by frame capture, posters, `preview_slides`, themes with contrast tests, charts, terminal sessions and file trees, a slide-kind catalogue, ranges, presenter mode, `<showntell-player>`, pause-aware captions, golden player state and Linux pixel baselines, plugin marketplace and Gemini extension, one version everywhere, a wheel smoke test |
 
 Evaluation cost on Sonnet: $0.09 to $0.24 per walkthrough, $1.40 for the ten.
 
@@ -181,11 +182,11 @@ All Phase 1 items are done and the evaluation meets the launch criteria.
 
 | Area | Items |
 |---|---|
-| **Slide kinds** | camera (zoom and pan on a cue), scene animation drawn by our own SVG engine, chart, terminal, file tree, quiz, formula-part pointer |
+| **Slide kinds** | camera (zoom and pan on a cue), scene animation (manim-web tested 16 October 2026 and not ready: wrong frames after seeking; SVG with a seekable timeline worked 5 of 5), quiz, formula-part pointer |
 | **Trust** | citations with a sources panel, open-in-editor links, stale-code marks, syntax checks on code blocks |
 | **Voice** | Kokoro's other languages (check which give word timings), voice blends, per-slide voice and speed, second speaker, sentence-level audio for slow CPUs, recording your own voice |
-| **Sharing** | MP4 export, MP3 and podcast feed, read view, CI recipe for pull requests, embedding, themes |
-| **Player** | audio-only mode with lock-screen controls, light theme, live parameters |
+| **Sharing** | MP3 and podcast feed, read view, CI recipe for pull requests |
+| **Player** | audio-only mode with lock-screen controls, live parameters |
 | **Product** | courses, teaching styles, asking a question from the player, MCP Apps inline player, retention and compressed audio, generated images |
 
 ## Not planned
