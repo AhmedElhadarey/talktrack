@@ -224,7 +224,11 @@ def test_every_kind_renders(daemon, browser, frame):
             }"""
         )
         shot = ART / f"{frame}-{i:02d}-{slide['kind']}.png"
-        page.screenshot(path=str(shot), animations="disabled")  # transitions finished, so frames repeat exactly
+        # Let the slide finish easing in (the player then re-places the pointer) and every
+        # transition settle, so the same frame comes out on every run.
+        page.wait_for_function("document.getAnimations().every((a) => a.playState !== 'running')", timeout=5000)
+        page.wait_for_timeout(150)
+        page.screenshot(path=str(shot), animations="disabled")
         compare_baseline(shot)
         assert f"k-{slide['kind']}" in state["cls"]
         assert not state["errors"], state["errors"]
