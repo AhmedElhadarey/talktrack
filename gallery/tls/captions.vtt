@@ -1,0 +1,253 @@
+WEBVTT
+
+1
+00:00:00.275 --> 00:00:05.350
+TLS 1.3 sets up an encrypted connection in a single round trip.
+
+2
+00:00:05.325 --> 00:00:09.338
+We'll follow each message, see why one trip is enough, and trace
+
+3
+00:00:09.188 --> 00:00:11.725
+every key back to one shared secret.
+
+4
+00:00:12.700 --> 00:00:14.650
+Here is the full exchange.
+
+5
+00:00:14.650 --> 00:00:18.275
+The client speaks first, the server answers with a single flight of
+
+6
+00:00:18.125 --> 00:00:21.625
+messages, and the client closes with its own Finished.
+
+7
+00:00:21.638 --> 00:00:24.325
+After that, application data flows.
+
+8
+00:00:24.288 --> 00:00:26.600
+Let's take the messages one at a time.
+
+9
+00:00:27.575 --> 00:00:30.975
+The ClientHello opens with a random value and a list of cipher
+
+10
+00:00:30.825 --> 00:00:31.750
+suites.
+
+11
+00:00:31.700 --> 00:00:33.900
+It names the groups it supports.
+
+12
+00:00:33.850 --> 00:00:35.975
+The key move is the key share.
+
+13
+00:00:35.962 --> 00:00:40.237
+Instead of asking which group the server wants, the client guesses, usually
+
+14
+00:00:40.087 --> 00:00:45.350
+X25519, and sends an ephemeral public key immediately.
+
+15
+00:00:45.400 --> 00:00:48.000
+Last come the host name and protocol.
+
+16
+00:00:48.950 --> 00:00:52.725
+The server picks a suite and answers with its own key share.
+
+17
+00:00:52.750 --> 00:00:56.625
+Now each side holds its private key and the other's public key,
+
+18
+00:00:56.612 --> 00:00:59.775
+so both compute the same Diffie-Hellman secret.
+
+19
+00:00:59.788 --> 00:01:03.150
+Everything the server sends after this point is encrypted.
+
+20
+00:01:04.125 --> 00:01:07.275
+EncryptedExtensions carries leftover settings.
+
+21
+00:01:07.225 --> 00:01:10.050
+The Certificate says who the server claims to be.
+
+22
+00:01:10.075 --> 00:01:14.887
+CertificateVerify proves it: the server signs a hash of every message so
+
+23
+00:01:14.737 --> 00:01:18.050
+far, which only the private key holder can do.
+
+24
+00:01:18.125 --> 00:01:22.363
+Finished is a MAC over the whole transcript, proving nobody tampered with
+
+25
+00:01:22.213 --> 00:01:23.925
+any earlier message.
+
+26
+00:01:24.875 --> 00:01:29.413
+The client validates the chain, checks the signature, and checks the server's
+
+27
+00:01:29.263 --> 00:01:30.300
+Finished.
+
+28
+00:01:30.300 --> 00:01:34.287
+Then it sends its own Finished, and can send application data in
+
+29
+00:01:34.137 --> 00:01:35.800
+the very same flight.
+
+30
+00:01:35.775 --> 00:01:39.350
+The server can even send data straight after its own Finished.
+
+31
+00:01:40.350 --> 00:01:44.975
+In TLS 1.2, the first trip only agreed on algorithms, and the
+
+32
+00:01:44.825 --> 00:01:47.125
+key exchange needed a second trip.
+
+33
+00:01:47.125 --> 00:01:51.750
+TLS 1.3 merges them: the client sends its key share up front,
+
+34
+00:01:51.712 --> 00:01:53.125
+betting on a group.
+
+35
+00:01:53.150 --> 00:01:57.850
+TLS 1.3 also trimmed the menu to a handful of strong groups,
+
+36
+00:01:57.800 --> 00:02:00.200
+so the bet almost always wins.
+
+37
+00:02:00.187 --> 00:02:03.975
+That's how the first application data arrives after one round trip.
+
+38
+00:02:04.925 --> 00:02:08.738
+If the server doesn't support the client's guessed group, it replies with
+
+39
+00:02:08.588 --> 00:02:11.700
+a HelloRetryRequest naming the group it wants.
+
+40
+00:02:11.712 --> 00:02:15.775
+The client sends a second ClientHello and the handshake costs two round
+
+41
+00:02:15.625 --> 00:02:16.550
+trips.
+
+42
+00:02:16.513 --> 00:02:18.875
+That's the worst case, and it's rare.
+
+43
+00:02:19.850 --> 00:02:23.550
+Every key descends from one schedule built on HKDF.
+
+44
+00:02:23.500 --> 00:02:26.875
+It starts with the early secret, made from a pre-shared key if
+
+45
+00:02:26.725 --> 00:02:29.250
+resuming, or zeros otherwise.
+
+46
+00:02:29.250 --> 00:02:33.050
+Mixing in the Diffie-Hellman shared secret gives the handshake secret.
+
+47
+00:02:33.038 --> 00:02:36.913
+From it come two traffic secrets, one per direction, that encrypt the
+
+48
+00:02:36.763 --> 00:02:39.350
+server's flight and the client's Finished.
+
+49
+00:02:39.375 --> 00:02:43.225
+One more step gives the master secret, and from that the application
+
+50
+00:02:43.075 --> 00:02:45.125
+traffic secrets for real data.
+
+51
+00:02:46.150 --> 00:02:50.175
+Each derivation takes a parent secret, a label such as "s hs
+
+52
+00:02:50.025 --> 00:02:53.175
+traffic", and a hash of the transcript so far.
+
+53
+00:02:53.188 --> 00:02:57.363
+So the keys depend on every handshake message: if an attacker alters
+
+54
+00:02:57.213 --> 00:03:01.088
+one byte of the ClientHello, both sides derive different keys and the
+
+55
+00:03:00.938 --> 00:03:02.700
+Finished check fails.
+
+56
+00:03:02.675 --> 00:03:07.525
+Because the Diffie-Hellman keys are ephemeral and thrown away, recorded traffic stays
+
+57
+00:03:07.375 --> 00:03:10.675
+safe even if the server's certificate key leaks later.
+
+58
+00:03:10.737 --> 00:03:12.450
+That's forward secrecy.
+
+59
+00:03:13.425 --> 00:03:18.075
+To recap: the client guesses ahead, so one round trip suffices.
+
+60
+00:03:18.025 --> 00:03:20.650
+The server encrypts almost everything.
+
+61
+00:03:20.663 --> 00:03:24.125
+Signatures and MACs prove identity and integrity.
+
+62
+00:03:24.075 --> 00:03:27.738
+And a single key schedule ties every key to the shared secret
+
+63
+00:03:27.588 --> 00:03:28.875
+and the transcript.

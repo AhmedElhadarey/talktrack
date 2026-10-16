@@ -41,7 +41,7 @@ Phases 0 to 2 are built and every launch criterion is met on an Apple silicon Ma
 |---|---|
 | **0** | clean room, spec, Markdown format, document model, code from disk, packaging, rename, licence files |
 | **1** | security, revise, cue inference, checks, `play`, step reveals, pronunciation, MLX and ONNX backends, time-driven player, transcript, seeking, accessibility, shared daemon with start and instance locks, `doctor`, `autostart`, plugin and skill, prompts, resources, tests, evaluation |
-| **2** | static export with captions, docs, CI, release and gallery workflows, recorder for demo video, gallery |
+| **2** | static export with captions, docs, CI, release and gallery workflows, recorder for demo video, a five-walkthrough gallery made with Opus (links 0.38 to 0.81 s, $0.22 to $0.64 each), README demo |
 
 Evaluation cost on Sonnet: $0.10 to $0.24 per walkthrough.
 

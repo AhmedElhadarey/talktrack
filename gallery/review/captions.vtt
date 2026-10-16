@@ -1,0 +1,197 @@
+WEBVTT
+
+1
+00:00:00.275 --> 00:00:04.950
+This commit fixes three player bugs: clipped code, a pointer that misses
+
+2
+00:00:04.800 --> 00:00:08.200
+its words, and a play button drawn over the wrong slide.
+
+3
+00:00:08.200 --> 00:00:11.225
+We'll walk the real diff, then cover what to watch.
+
+4
+00:00:12.200 --> 00:00:16.500
+Before this commit, long code lines were clipped instead of shrunk.
+
+5
+00:00:16.475 --> 00:00:19.400
+The pointer drifted off the words it pointed at.
+
+6
+00:00:19.350 --> 00:00:22.550
+And the play button sat over the title area even when you
+
+7
+00:00:22.400 --> 00:00:24.150
+resumed mid-walkthrough.
+
+8
+00:00:25.125 --> 00:00:28.250
+The old code reset and applied CSS zoom.
+
+9
+00:00:28.225 --> 00:00:32.450
+Under zoom, text-range bounding boxes come back in the wrong coordinate space,
+
+10
+00:00:32.375 --> 00:00:33.900
+so the pointer missed.
+
+11
+00:00:33.875 --> 00:00:37.988
+The new code [clears the transform](# "transform = """), then measures the natural size, taking
+
+12
+00:00:37.838 --> 00:00:40.300
+the larger of offset and scroll width.
+
+13
+00:00:40.275 --> 00:00:44.813
+It computes a scale, snaps near-one values to exactly one, clamps at
+
+14
+00:00:44.663 --> 00:00:47.900
+zero point three, and applies it as a transform.
+
+15
+00:00:47.887 --> 00:00:51.100
+The scale is also stored on the element so the measure script
+
+16
+00:00:50.950 --> 00:00:51.925
+can read it.
+
+17
+00:00:52.900 --> 00:00:56.850
+A transform doesn't change layout, so the content must keep its natural
+
+18
+00:00:56.700 --> 00:00:57.675
+size.
+
+19
+00:00:57.675 --> 00:01:01.775
+Flex none stops the flexbox squeezing it, and max width none lets
+
+20
+00:01:01.625 --> 00:01:05.025
+a long code line run wide so it gets measured and shrunk
+
+21
+00:01:04.875 --> 00:01:06.300
+instead of clipped.
+
+22
+00:01:06.338 --> 00:01:09.725
+Scaling from the centre keeps it centred in the slide body.
+
+23
+00:01:09.750 --> 00:01:13.950
+Diagrams and images still flex, because they size themselves.
+
+24
+00:01:14.950 --> 00:01:18.575
+Each slide eases in from a few pixels below, so a pointer
+
+25
+00:01:18.425 --> 00:01:20.650
+measured at once is slightly off.
+
+26
+00:01:20.650 --> 00:01:24.712
+Now, on animation end, if this slide is still current, the cue
+
+27
+00:01:24.562 --> 00:01:27.400
+key is cleared and the pointer re-measured.
+
+28
+00:01:27.412 --> 00:01:31.175
+In the overlay, at title checks the current segment, so the button
+
+29
+00:01:31.025 --> 00:01:34.450
+only sits over the title when the title slide is showing.
+
+30
+00:01:35.425 --> 00:01:39.250
+The new test file starts a daemon with fake speech, builds one
+
+31
+00:01:39.100 --> 00:01:43.450
+walkthrough with every slide kind, and runs it in landscape, square and
+
+32
+00:01:43.300 --> 00:01:44.500
+portrait.
+
+33
+00:01:44.537 --> 00:01:47.488
+For each slide it seeks to just after a cue, takes a
+
+34
+00:01:47.338 --> 00:01:52.250
+screenshot into a git-ignored folder, then asserts the slide kind, no render
+
+35
+00:01:52.100 --> 00:01:56.338
+errors, the visual inside the stage, and the pointer within twenty pixels
+
+36
+00:01:56.188 --> 00:01:56.875
+of it.
+
+37
+00:01:57.900 --> 00:01:59.400
+Five things to watch.
+
+38
+00:01:59.400 --> 00:02:03.137
+First: a transform leaves the layout box at full size, so a
+
+39
+00:02:02.987 --> 00:02:07.063
+wide box still overflows the slide body; it's hidden today only because
+
+40
+00:02:06.913 --> 00:02:08.950
+the slide has overflow hidden.
+
+41
+00:02:08.975 --> 00:02:12.725
+Second: the floor dropped from zero point three five to zero point
+
+42
+00:02:12.575 --> 00:02:15.175
+three, and anything needing less still clips.
+
+43
+00:02:15.175 --> 00:02:19.713
+Third: animation end bubbles, so a child animation added later would trigger
+
+44
+00:02:19.563 --> 00:02:23.050
+the re-measure early; checking the event target would harden it.
+
+45
+00:02:23.000 --> 00:02:26.625
+With reduced motion there is no animation, which is fine.
+
+46
+00:02:27.025 --> 00:02:30.900
+Fourth: the test's variable is called first but takes the last cue;
+
+47
+00:02:30.912 --> 00:02:32.800
+harmless, but misleading.
+
+48
+00:02:32.837 --> 00:02:38.262
+Fifth: the browser tests skip unless Playwright's Chromium is installed, so CI
+
+49
+00:02:38.112 --> 00:02:39.750
+won't run them by default.

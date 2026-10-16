@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>showntell gallery</title><link rel="icon" href="static/icon.svg" type="image/svg+xml">
+<style>
+:root { color-scheme: dark; --bg: #0a0c10; --panel: #151a22; --line: #262e3b; --fg: #ebeef3; --muted: #98a2b3; --accent: #ffc857; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 64px 16px 96px; }
+header { display: flex; align-items: center; gap: 14px; }
+header img { width: 40px; height: 40px; }
+h1 { margin: 0; font-size: 34px; letter-spacing: -0.02em; }
+.lede { color: var(--muted); font-size: 18px; max-width: 680px; margin: 14px 0 36px; }
+.lede a { color: var(--accent); }
+ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+li a { display: flex; flex-direction: column; gap: 8px; height: 100%; padding: 20px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 16px; color: inherit; text-decoration: none; transition: border-color 0.2s, transform 0.2s; }
+li a:hover, li a:focus-visible { border-color: var(--accent); transform: translateY(-2px); }
+.frame { display: block; width: 44px; height: 26px; border-radius: 5px; background: linear-gradient(135deg, #1f2733, #2b3442); border: 1px solid var(--line); }
+.frame.square { width: 30px; height: 30px; } .frame.portrait { width: 20px; height: 34px; }
+.t { font-weight: 700; font-size: 19px; line-height: 1.3; }
+.b { color: var(--muted); font-size: 15px; flex: 1; }
+.m { color: var(--muted); font-size: 13px; }
+footer { margin-top: 48px; color: var(--muted); font-size: 14px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+</style></head>
+<body><main>
+<header><img src="static/icon.svg" alt=""><h1>showntell</h1></header>
+<p class="lede">Narrated walkthroughs written by coding agents and voiced on a laptop with Kokoro. Each one below was made by asking an agent a question; nothing was edited by hand. <a href="https://github.com/rahimnathwani/showntell">Get showntell</a>.</p>
+<ul>
+<li><a href="tour/"><span class="frame landscape"></span><span class="t">A tour of showntell</span><span class="b">Asked to give a newcomer a tour of this repository: what showntell does, how a walkthrough travels from the agent&#x27;s Markdown to the browser, and where the speech comes from.</span><span class="m">10 slides · 2:52</span></a></li>
+<li><a href="review/"><span class="frame landscape"></span><span class="t">Review: commit 8db41e4</span><span class="b">Asked to review commit 8db41e4 in this repo for another developer: what problem it fixes in the player, how the fix works, and anything to watch.</span><span class="m">7 slides · 2:39</span></a></li>
+<li><a href="tls/"><span class="frame landscape"></span><span class="t">The TLS 1.3 handshake</span><span class="b">Asked to explain the TLS 1.3 handshake: what each message does, why it needs only one round trip, and where the keys come from.</span><span class="m">11 slides · 3:28</span></a></li>
+<li><a href="attention/"><span class="frame landscape"></span><span class="t">Scaled dot-product attention</span><span class="b">Asked to explain scaled dot-product attention in transformers, including why the scores are divided by the square root of the key dimension.</span><span class="m">9 slides · 2:55</span></a></li>
+<li><a href="rebase/"><span class="frame portrait"></span><span class="t">Git rebase versus merge</span><span class="b">Asked to explain git rebase versus merge, with diagrams of the commit graph..</span><span class="m">6 slides · 1:04</span></a></li>
+</ul>
+<footer>Exported with <code>showntell export</code>. Audio is MP3; captions are in each folder as <code>captions.vtt</code>.</footer>
+</main></body></html>

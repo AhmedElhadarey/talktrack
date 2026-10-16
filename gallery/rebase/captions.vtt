@@ -1,0 +1,89 @@
+WEBVTT
+
+1
+00:00:00.325 --> 00:00:03.625
+Merge and rebase both bring a feature branch up to date with
+
+2
+00:00:03.475 --> 00:00:04.325
+main.
+
+3
+00:00:04.300 --> 00:00:06.800
+They differ in the history they leave behind.
+
+4
+00:00:07.775 --> 00:00:11.775
+Feature branched off at commit B. Since then, main gained commit C,
+
+5
+00:00:11.750 --> 00:00:15.150
+and feature gained D and E. The branches have diverged.
+
+6
+00:00:16.125 --> 00:00:20.338
+git merge feature creates a new merge commit, M, with two parents: C and
+
+7
+00:00:20.188 --> 00:00:20.900
+E.
+
+8
+00:00:21.625 --> 00:00:23.125
+Nothing is rewritten.
+
+9
+00:00:23.150 --> 00:00:27.225
+D and E keep their original hashes, so the graph records exactly
+
+10
+00:00:27.075 --> 00:00:28.900
+what happened, in parallel.
+
+11
+00:00:29.875 --> 00:00:34.237
+git rebase main, run on feature, lifts D and E off and replays them
+
+12
+00:00:34.087 --> 00:00:35.325
+on top of C.
+
+13
+00:00:36.000 --> 00:00:39.575
+The results, D prime and E prime, are new commits with new
+
+14
+00:00:39.425 --> 00:00:40.500
+hashes.
+
+15
+00:00:40.475 --> 00:00:43.950
+The history becomes one straight line, as if you started the work
+
+16
+00:00:43.800 --> 00:00:44.575
+today.
+
+17
+00:00:45.575 --> 00:00:49.300
+Merge keeps the true history and resolves conflicts once.
+
+18
+00:00:49.312 --> 00:00:53.475
+Rebase gives a clean line, but you may resolve conflicts commit by
+
+19
+00:00:53.325 --> 00:00:54.150
+commit.
+
+20
+00:00:55.125 --> 00:00:57.800
+Rebase freely on work only you have.
+
+21
+00:00:57.850 --> 00:01:02.125
+Never rebase commits others already pulled: their copies still point at the
+
+22
+00:01:01.975 --> 00:01:04.550
+old hashes, and the histories split.

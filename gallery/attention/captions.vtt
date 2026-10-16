@@ -1,0 +1,225 @@
+WEBVTT
+
+1
+00:00:00.275 --> 00:00:04.475
+Attention lets each token pull information from every other token.
+
+2
+00:00:04.450 --> 00:00:08.250
+We'll build the formula piece by piece, then run a tiny example
+
+3
+00:00:08.100 --> 00:00:09.075
+by hand.
+
+4
+00:00:10.075 --> 00:00:13.225
+Every token is projected into three vectors.
+
+5
+00:00:13.175 --> 00:00:15.875
+The query says what a token is looking for.
+
+6
+00:00:15.862 --> 00:00:18.850
+The key is what other tokens match against.
+
+7
+00:00:18.800 --> 00:00:22.087
+And the value is what actually gets passed along once a match
+
+8
+00:00:21.937 --> 00:00:22.900
+is found.
+
+9
+00:00:23.900 --> 00:00:25.500
+Read it inside out.
+
+10
+00:00:25.487 --> 00:00:29.188
+Q K transpose takes the dot product of every query with every
+
+11
+00:00:29.038 --> 00:00:32.525
+key, giving a grid of raw similarity scores.
+
+12
+00:00:33.200 --> 00:00:36.025
+Then we divide by the square root of d k, the key
+
+13
+00:00:35.875 --> 00:00:36.900
+dimension.
+
+14
+00:00:36.912 --> 00:00:39.675
+Hold that thought; it's the main event later.
+
+15
+00:00:40.375 --> 00:00:44.387
+Softmax turns each row of scores into weights that are positive and
+
+16
+00:00:44.237 --> 00:00:45.525
+sum to one.
+
+17
+00:00:45.575 --> 00:00:50.350
+Finally, multiplying by V blends the value vectors using those weights.
+
+18
+00:00:51.300 --> 00:00:53.975
+Here's a toy setup with key dimension four.
+
+19
+00:00:53.975 --> 00:00:57.513
+We have one query, and three tokens, each with a key and
+
+20
+00:00:57.363 --> 00:00:59.050
+a two dimensional value.
+
+21
+00:00:59.725 --> 00:01:02.125
+Key one points the same way as the query.
+
+22
+00:01:02.113 --> 00:01:04.150
+Key two is orthogonal to it.
+
+23
+00:01:04.112 --> 00:01:06.225
+Key three overlaps partly.
+
+24
+00:01:07.225 --> 00:01:09.000
+First, the dot products.
+
+25
+00:01:08.987 --> 00:01:12.200
+Key one matches on two positions, so it scores two.
+
+26
+00:01:12.237 --> 00:01:15.450
+Key two scores zero, and key three scores one.
+
+27
+00:01:16.100 --> 00:01:19.175
+The key dimension is four, so we divide by two.
+
+28
+00:01:19.212 --> 00:01:22.750
+That gives scaled scores of one, zero, and one half.
+
+29
+00:01:23.750 --> 00:01:27.850
+Softmax exponentiates each score and divides by the total.
+
+30
+00:01:27.862 --> 00:01:31.350
+The weights come out at roughly half, a fifth, and a third.
+
+31
+00:01:32.000 --> 00:01:35.625
+The output is the weighted blend of the values: about point eight
+
+32
+00:01:35.475 --> 00:01:37.425
+one and point four nine.
+
+33
+00:01:37.438 --> 00:01:40.550
+Key one dominates, but the others still contribute.
+
+34
+00:01:41.525 --> 00:01:45.975
+Assume the query and key components are independent, with mean zero and
+
+35
+00:01:45.825 --> 00:01:49.850
+variance one, which is roughly what initialisation gives you.
+
+36
+00:01:50.500 --> 00:01:53.962
+The dot product is a sum of d k such products, each
+
+37
+00:01:53.812 --> 00:01:55.350
+with variance one.
+
+38
+00:01:55.375 --> 00:01:58.550
+So the variance of the score is d k, and its spread
+
+39
+00:01:58.400 --> 00:02:00.950
+grows like the square root of d k.
+
+40
+00:02:01.600 --> 00:02:05.150
+Dividing by the square root of d k brings the variance back
+
+41
+00:02:05.000 --> 00:02:08.000
+to one, no matter how wide the model is.
+
+42
+00:02:09.000 --> 00:02:13.600
+Even in our tiny example, skipping the scale sharpens the weights noticeably.
+
+43
+00:02:14.300 --> 00:02:18.175
+Now picture a real model with d k of five hundred twelve.
+
+44
+00:02:18.175 --> 00:02:21.925
+Scores have a spread of about twenty-three, so gaps of twenty or
+
+45
+00:02:21.775 --> 00:02:23.125
+more are normal.
+
+46
+00:02:23.162 --> 00:02:25.975
+Softmax becomes effectively one-hot.
+
+47
+00:02:26.625 --> 00:02:28.225
+That's the real problem.
+
+48
+00:02:28.175 --> 00:02:33.000
+The softmax gradient is proportional to w times one minus w, which
+
+49
+00:02:32.850 --> 00:02:36.000
+is near zero when every weight is zero or one.
+
+50
+00:02:36.012 --> 00:02:37.400
+Training stalls.
+
+51
+00:02:37.400 --> 00:02:41.488
+Scaling keeps scores in the range where softmax still has a useful
+
+52
+00:02:41.338 --> 00:02:42.075
+slope.
+
+53
+00:02:43.075 --> 00:02:46.775
+To recap: compute scores, scale them by the square root of the
+
+54
+00:02:46.625 --> 00:02:51.125
+key dimension, softmax them into weights, and blend the values.
+
+55
+00:02:51.113 --> 00:02:54.900
+The scale is cheap, and it's what keeps attention trainable as models
+
+56
+00:02:54.750 --> 00:02:55.725
+get wider.

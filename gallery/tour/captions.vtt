@@ -1,0 +1,217 @@
+WEBVTT
+
+1
+00:00:00.300 --> 00:00:04.975
+showntell turns Markdown written by a coding agent into a narrated slide
+
+2
+00:00:04.825 --> 00:00:05.825
+walkthrough.
+
+3
+00:00:05.875 --> 00:00:09.200
+We'll follow one walkthrough from the tool call to your speakers.
+
+4
+00:00:10.150 --> 00:00:11.525
+There are three parts.
+
+5
+00:00:11.475 --> 00:00:14.950
+The agent sends Markdown through MCP tools.
+
+6
+00:00:14.937 --> 00:00:18.200
+A local daemon parses it and voices it with Kokoro.
+
+7
+00:00:18.150 --> 00:00:20.550
+And the player in your browser plays it back.
+
+8
+00:00:21.525 --> 00:00:23.825
+Every tool call lands in _append.
+
+9
+00:00:23.775 --> 00:00:27.900
+On the first call, it polls until the opening is voiced, usually
+
+10
+00:00:27.750 --> 00:00:29.450
+a fraction of a second.
+
+11
+00:00:29.438 --> 00:00:33.150
+Then the reply tells the agent to send the link right away.
+
+12
+00:00:33.188 --> 00:00:36.625
+You start watching while the agent is still writing the body.
+
+13
+00:00:37.650 --> 00:00:41.000
+Inside the session, the builder parses the new Markdown.
+
+14
+00:00:40.988 --> 00:00:47.000
+Headings become slides, fenced blocks become visuals, and plain paragraphs become narration.
+
+15
+00:00:46.987 --> 00:00:50.750
+Then each new paragraph is sent off to be voiced, and subscribers
+
+16
+00:00:50.600 --> 00:00:52.575
+hear which slides changed.
+
+17
+00:00:52.625 --> 00:00:56.463
+Problems, like a cue pointing at a missing line, go back to
+
+18
+00:00:56.313 --> 00:00:57.975
+the agent in the reply.
+
+19
+00:00:58.950 --> 00:01:02.325
+The narrator is one worker thread with a priority queue.
+
+20
+00:01:02.338 --> 00:01:05.937
+A cached paragraph returns at once: the key is a hash of
+
+21
+00:01:05.787 --> 00:01:10.975
+the model, voice, speed and spoken text, so nothing is voiced twice.
+
+22
+00:01:10.987 --> 00:01:14.600
+Two sessions asking for the same audio share one job.
+
+23
+00:01:14.613 --> 00:01:18.287
+Otherwise the job is queued by its position in the walkthrough, so
+
+24
+00:01:18.137 --> 00:01:20.750
+earlier slides are always voiced first.
+
+25
+00:01:21.725 --> 00:01:26.488
+The voice is Kokoro, an open eighty two million parameter model, running
+
+26
+00:01:26.338 --> 00:01:27.800
+on your own machine.
+
+27
+00:01:27.775 --> 00:01:32.438
+On Apple silicon, auto picks MLX; everywhere else it falls back to
+
+28
+00:01:32.288 --> 00:01:33.675
+ONNX Runtime.
+
+29
+00:01:33.625 --> 00:01:36.125
+There's also a fake backend for tests.
+
+30
+00:01:36.125 --> 00:01:39.900
+Both real backends return the samples plus a start and end time
+
+31
+00:01:39.750 --> 00:01:41.000
+for every word.
+
+32
+00:01:41.975 --> 00:01:44.600
+Those word times are what move the pointer.
+
+33
+00:01:44.613 --> 00:01:48.350
+Each cue is a Markdown link in the narration, at a character
+
+34
+00:01:48.200 --> 00:01:49.250
+offset.
+
+35
+00:01:49.262 --> 00:01:52.950
+cue_time finds the first word at or after that offset.
+
+36
+00:01:52.925 --> 00:01:56.300
+If that word starts a new sentence, the pointer moves a little
+
+37
+00:01:56.150 --> 00:02:00.525
+early, into the pause, so your eyes arrive before the voice does.
+
+38
+00:02:01.475 --> 00:02:04.425
+The player opens a server sent event stream.
+
+39
+00:02:04.375 --> 00:02:06.425
+It first gets the whole walkthrough.
+
+40
+00:02:06.488 --> 00:02:10.813
+After that, bursts of changes are merged, and only the changed slides
+
+41
+00:02:10.663 --> 00:02:11.625
+are sent.
+
+42
+00:02:11.612 --> 00:02:15.125
+So a slide whose audio just finished arrives on its own.
+
+43
+00:02:16.125 --> 00:02:19.413
+In the browser, build lays every paragraph end to end on a
+
+44
+00:02:19.263 --> 00:02:20.775
+single timeline.
+
+45
+00:02:20.775 --> 00:02:25.287
+Voiced paragraphs use their real duration; unvoiced ones get an estimate from
+
+46
+00:02:25.137 --> 00:02:26.425
+the word count.
+
+47
+00:02:26.438 --> 00:02:30.325
+A segment is ready once its audio exists, and the player waits
+
+48
+00:02:30.175 --> 00:02:32.300
+there if it catches up with the writer.
+
+49
+00:02:32.337 --> 00:02:36.562
+Everything on screen, the slide, the pointer and the caption, is a
+
+50
+00:02:36.412 --> 00:02:38.675
+pure function of that clock time.
+
+51
+00:02:39.650 --> 00:02:42.850
+To recap: the server gets the link out early.
+
+52
+00:02:42.837 --> 00:02:46.250
+The builder turns Markdown into slides and checks them.
+
+53
+00:02:46.225 --> 00:02:49.775
+The narrator voices each paragraph locally with Kokoro.
+
+54
+00:02:49.750 --> 00:02:52.600
+And the player puts it together, word by word.

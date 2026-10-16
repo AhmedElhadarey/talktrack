@@ -4,6 +4,10 @@ Narrated slide walkthroughs for coding agents, voiced on your machine.
 
 Ask your agent to walk you through a pull request, a module or a concept. It writes slides and narration in Markdown; showntell voices them locally with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) and hands back a link that starts playing in about a second, while the rest is still being written. A pointer follows the narration through code, diagrams and lists, word by word.
 
+![A walkthrough playing: the pointer moves through a diagram and then through code as the narration names each part](docs/media/demo.gif)
+
+**[Watch the gallery](https://rahimnathwani.github.io/showntell/)**: five walkthroughs written by Claude Opus and voiced on a laptop, unedited: a tour of this repository, a code review of one of its commits, the TLS 1.3 handshake, scaled dot-product attention, and git rebase versus merge on a phone-shaped frame.
+
 - **Local:** speech runs on your Mac or PC. No API keys, no hosted service, no telemetry. Code never leaves your machine except to the model you already use.
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
