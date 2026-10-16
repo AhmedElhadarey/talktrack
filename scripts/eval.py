@@ -122,6 +122,7 @@ async def play_live(url: str) -> dict:
         await b.close()
         return {"stalls": m.get("stalls", 0), "stall_s": round(m.get("stallSeconds", 0), 1),
                 "render_errors": m.get("renderErrors", []) + errors, "ended": m.get("ended", False),
+                "findings": m.get("findings", []), "start_delay_s": m.get("startDelay"), "holds": m.get("holds", 0),
                 "watch_s": round(time.time() - t0, 1)}
 
 
