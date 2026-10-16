@@ -8,7 +8,7 @@ Version 1.0 ships when it meets the launch criteria below. Everything else waits
 
 | Decision | Choice |
 |---|---|
-| **Name** | showntell. Free on PyPI. The npm name is taken (a dormant React library) and so is the GitHub organisation, so the repo lives under a personal account. The one US registration for SHOWNTELL (Reg. 4700403, narrative-story software) is reported cancelled since March 2022; confirm in USPTO TSDR before launch. A 2015 university screen-recording tool also used the name. |
+| **Name** | showntell. Free on PyPI. The npm name is taken (a dormant React library) and so is the GitHub organisation, so the repo lives under a personal account. USPTO TSDR, checked 16 October 2026: SHOWNTELL (Reg. 4700403, narrative-story software) was cancelled on 2 March 2022 for want of a Section 8 declaration; SHOW 'N TELL (toys) and SHOW&TELL (filmmaker collaboration software) are dead applications. Not a full clearance search. A 2015 university screen-recording tool also used the name. |
 | **Licence** | MIT |
 | **Slide format** | Markdown-based |
 | **Speech** | Kokoro-82M, English. MLX on Apple silicon; ONNX (the timestamped export, which returns per-token durations) everywhere else |
@@ -45,7 +45,7 @@ Phases 0 to 2 are built, every launch criterion is met, and the repository is pu
 
 Evaluation cost on Sonnet: $0.10 to $0.24 per walkthrough.
 
-**Owner steps left:** add a PyPI trusted publisher for `release.yml` and tag `v0.1.0` (until then the README installs from GitHub); confirm the trademark in USPTO TSDR; post the mlx-audio issue asking for a public word-timestamp API; announce.
+**Owner steps left:** add a PyPI trusted publisher for `release.yml` and tag `v0.1.0` (until then the README installs from GitHub); post the mlx-audio issue asking for a public word-timestamp API; announce.
 
 ## Phase 0: Foundations
 
