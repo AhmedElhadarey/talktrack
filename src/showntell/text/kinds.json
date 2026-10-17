@@ -103,6 +103,15 @@
       "example": "```chat\nuser: How do I undo my last commit?\nassistant: Run `git reset --soft HEAD~1`.\n```"
     },
     {
+      "kind": "svg",
+      "fence": "```svg, or ```svg file=path with an empty body",
+      "use": "something physical, spatial or visual: light, an orbit, a lens, a molecule, a circuit, a geometric proof, a screen layout",
+      "point": "#id of any element; an element's <title> or own text, or its slug (#air-molecule); #@left,top,width,height a region in percent of the drawing; [label](# \"text\") finds drawn text; add {.zoom} for small parts",
+      "reveal": "with .build, the outermost elements with ids, in source order; a cue at an id nested inside one reveals that part; unfilled strokes (rays, arrows, outlines) draw themselves in",
+      "format": "One <svg> with a viewBox. The slide body's shape fills the slide: 0 0 1150 560 landscape, 0 0 860 800 square, 0 0 640 1080 portrait; in those, font-size 24 or more reads well, and text under about 12 px on the slide is flagged (text_too_small). file= reads an SVG from the project, such as an export from draw.io, Excalidraw or Inkscape. Kept: shapes, paths, text, groups, gradients, markers, clip paths, masks, filters, <style> rules, <title>. Removed and reported (svg_removed): scripts, event handlers, links outside the drawing, foreignObject (embedded HTML), SMIL animation; motion comes from reveals and cues. Give each thing the narration names its own <g id=\"…\">, in the order it is named. Use real colours where colour carries meaning; otherwise theme colours, which follow light and dark: var(--fg) for text and outlines, var(--muted), var(--accent), var(--line), var(--panel) for fills, var(--stage) for the slide background.",
+      "example": "```svg\n<svg viewBox=\"0 0 1150 560\">\n  <g id=\"sun\"><circle cx=\"140\" cy=\"140\" r=\"70\" fill=\"#ffd166\"/><text x=\"140\" y=\"260\" font-size=\"28\" text-anchor=\"middle\" fill=\"var(--fg)\">Sun</text></g>\n  <g id=\"air\"><title>Air molecule</title><path d=\"M215 165 L560 260\" stroke=\"var(--fg)\" stroke-width=\"6\" fill=\"none\"/><circle cx=\"580\" cy=\"266\" r=\"18\" fill=\"var(--muted)\"/></g>\n  <g id=\"blue\"><title>Scattered blue</title><path d=\"M595 280 L880 450\" stroke=\"#4f8cff\" stroke-width=\"8\" fill=\"none\"/><text x=\"895\" y=\"490\" font-size=\"28\" fill=\"var(--fg)\">Your eye</text></g>\n</svg>\n```"
+    },
+    {
       "kind": "chapter",
       "fence": "## Title {.chapter}",
       "use": "a card that opens a part of a long walkthrough, numbered Part 1, Part 2, …",

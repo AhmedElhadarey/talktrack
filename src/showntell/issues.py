@@ -36,6 +36,7 @@ CODES: dict[str, tuple[str, str]] = {
     "block_error": ("error", "a line in a chart, stat or chat block could not be read and was left out"),
     "block_too_big": ("warning", "a chart, stat or chat block has more parts than the frame shows comfortably"),
     "tree_error": ("warning", "a file tree's nesting is inconsistent"),
+    "svg_removed": ("warning", "a drawing had elements or attributes the player does not allow, which were removed"),
     # cues
     "cue_off_code": ("error", "a cue points at lines the slide does not show"),
     "cue_no_target": ("error", "a cue names an item, row or node that does not exist"),

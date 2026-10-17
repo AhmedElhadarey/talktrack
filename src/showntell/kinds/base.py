@@ -26,7 +26,8 @@ class Kind:
     `parse(body, attrs)` returns the visual the player draws and problems with the block, each
     reported as `error_code`. `check(visual, line, limits)` returns size findings. A kind whose
     parts are code lines (`lines`) takes #L cues and the code size checks; otherwise cues name
-    parts through `find_part`, and `part(visual)` is what a missing target is called."""
+    parts through `find` (by default `find_part`), and `part(visual)` is what a missing target
+    is called. A part nested in another names its outer part in the visual's `part_of`."""
 
     name: str
     langs: tuple[str, ...]
@@ -37,6 +38,10 @@ class Kind:
     error_code: str = "block_error"
     hint: str = ""  # said before the format when a block has problems
     infer: bool = True  # cues may be inferred from narration that names a part
+    find: Callable[[dict, str], str | None] = lambda vis, target: find_part(vis, target)
+    labels: Callable[[dict], list[tuple[str, str]]] = lambda vis: labels(vis)
+    reads_file: bool = False  # `file=` reads the block's body from the project
+    regions: bool = False  # cues may point at `#@left,top,width,height` in percent of the visual
 
     def fix(self) -> str:
         """The fix for a problem with the block: the hint, then the format from the catalogue."""

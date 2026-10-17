@@ -89,12 +89,14 @@ class CueResolver:
             return None
         if t.startswith("@"):
             box = _region(t[1:])
-            if s.kind == "image" and box:
+            regions = s.kind == "image" or bool(kinds.get(s.kind) and kinds.get(s.kind).regions)
+            if regions and box:
                 return {**base, "kind": "region", "box": box}
-            if s.kind != "image":
-                self._issue("cue_wrong_kind", f"[{c.label}](#{t}): regions point into images; slide `{s.id}` shows a {s.kind}.", slide=s.id)
+            if not regions:
+                self._issue("cue_wrong_kind", f"[{c.label}](#{t}): regions point into images and drawings; slide `{s.id}` shows a {s.kind}.",
+                            slide=s.id)
             else:
-                self._issue("cue_no_target", f"[{c.label}](#{t}): a region is `@left,top,width,height` in percent of the image, "
+                self._issue("cue_no_target", f"[{c.label}](#{t}): a region is `@left,top,width,height` in percent of the {s.kind}, "
                             "each from 0 to 100.", slide=s.id)
             return {**base, "kind": "visual"}
         seq = re.fullmatch(r"([\w-]+?)\s*(?:<<)?-{1,2}(?:>>|>|x|\))\s*([\w-]+)", t)
@@ -179,9 +181,10 @@ class CueResolver:
             self._issue("cue_no_target", f"[{c.label}](#{t}): no item `{t}` on slide `{s.id}`. Items: {', '.join(sorted(ids))}.", slide=s.id)
             return None
         if kinds.part_kind(s.kind):
-            pid = kinds.find_part(s.visual, t)
+            pid = kinds.get(s.kind).find(s.visual, t)
             if pid:
-                return {**base, "kind": "item", "id": pid}
+                outer = s.visual.get("part_of", {}).get(pid)  # a part inside another reveals with it
+                return {**base, "kind": "item", "id": pid, **({"part": outer} if outer else {})}
             what = kinds.get(s.kind).part(s.visual)
             self._issue("cue_no_target", f"[{c.label}](#{t}): no {what} `{t}` on slide `{s.id}`. "
                         f"Ids: {', '.join(s.visual.get('ids', [])[:12])}.", slide=s.id)
@@ -293,7 +296,7 @@ def infer_cues(s: Slide, say: Say) -> list[dict]:
             if i is not None:
                 add(i, i + len(title), kind="item", id=it["id"])
     elif kinds.part_kind(s.kind) and kinds.get(s.kind).infer:
-        for pid, name in kinds.labels(s.visual):
+        for pid, name in kinds.get(s.kind).labels(s.visual):
             i = _find_word(low, name.lower()) if len(name) >= 3 else None
             if i is not None:
                 add(i, i + len(name), kind="item", id=pid)

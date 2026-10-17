@@ -187,6 +187,7 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **Code** | a fenced block, or `file=path lines=10-24` to read it from disk; `scroll` for long code; `step` blocks for code that evolves |
 | **Diff** | `old` and `new` blocks, a unified `diff` block, or `diff file=path rev=HEAD~1` |
 | **Diagram** | a `mermaid` block, any diagram type |
+| **Drawing** | an `svg` block, or `svg file=path` for an SVG from draw.io, Excalidraw or Inkscape; cues point at elements by id |
 | **Formula** | a `math` block or `$$ … $$`, rendered with KaTeX |
 | **Table** | a pipe table |
 | **List, steps, cards** | `-` or `1.` items; `.cards` on the heading for cards |

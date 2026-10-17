@@ -73,5 +73,25 @@
   "id": "mcp",
   "kind": "concept",
   "prompt": "Use showntell to explain what an MCP client and server say to each other when a tool is called: initialize, tools/list and tools/call, with the messages they exchange."
+ },
+ {
+  "id": "sky",
+  "kind": "science",
+  "prompt": "Use showntell to explain why the sky is blue."
+ },
+ {
+  "id": "tides",
+  "kind": "science",
+  "prompt": "Use showntell to explain what causes ocean tides, and why most coasts get two a day."
+ },
+ {
+  "id": "seasons",
+  "kind": "science",
+  "prompt": "Use showntell to explain why Earth has seasons."
+ },
+ {
+  "id": "lens",
+  "kind": "science",
+  "prompt": "Use showntell to explain how a magnifying glass focuses light."
  }
 ]

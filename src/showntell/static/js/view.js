@@ -139,6 +139,7 @@ function applyReveal(reveal, slide) {
   const veil = (el, on) => el && el.classList.toggle("veiled", on);
   if (!reveal) {
     host.querySelectorAll(".veiled").forEach((e) => e.classList.remove("veiled"));
+    p.items.forEach((e) => e.classList.remove("veiled")); // a drawing's parts sit in a shadow root, out of the query's reach
     return;
   }
   if ("items" in reveal) p.items.forEach((el) => veil(el, +el.dataset.idx >= reveal.items));

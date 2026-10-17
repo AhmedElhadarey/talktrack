@@ -26,12 +26,13 @@ import image from "./kinds/image.js";
 import list from "./kinds/list.js";
 import math from "./kinds/math.js";
 import stat from "./kinds/stat.js";
+import svg from "./kinds/svg.js";
 import table from "./kinds/table.js";
 import terminal from "./kinds/terminal.js";
 import { chapter, title } from "./kinds/title.js";
 import tree from "./kinds/tree.js";
 
-export const KINDS = { title, chapter, code, diff, list, table, diagram, math, chart, stat, chat, terminal, tree, image };
+export const KINDS = { title, chapter, code, diff, list, table, diagram, math, chart, stat, chat, terminal, tree, image, svg };
 
 // Narration-only slides: the shown text as paragraphs.
 const text = {

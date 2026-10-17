@@ -13,6 +13,7 @@ Settle the arc before the next call. A viewer cannot skim back, so the order mus
 - **Chapters:** past about ten slides, open each part with `## Title {.chapter}`: a numbered card, optional `>` line, no narration needed.
 - **Read first:** open the files and diffs you will show before writing the body. If playback catches up, the player pauses.
 - **Show behaviour.** After two or three code or diff slides, show the code running: a Mermaid sequence or state diagram, or a terminal session (`code_run`).
+- **Show the thing.** A concept or science explainer draws what it explains: the sun, the ray, the lens. Mermaid is for flows, structure and states, not pictures of objects.
 
 Pick the change's shape; for a mix, lead with what a reviewer most needs.
 
@@ -32,6 +33,7 @@ Pick the visual that carries the idea; only the title and brief transitions go w
 | **Small fix, before → after** | one ```` ```python step ```` block per version, back to back; without `step` the second block becomes a new slide |
 | **A change** | `old`/`new` blocks, a `diff` block, or `diff file=... rev=...` |
 | **Flow, structure, states** | Mermaid: short node ids (`api`, `db`), labels of one to four words without parentheses or quotes, `alt="..."` on the heading |
+| **Physical, spatial or visual idea** | drawing: ```` ```svg ```` holding one `<svg viewBox="{{DRAWING}}">`, or `svg file=` an SVG export |
 | **Comparison** | table: a few rows, short cells |
 | **Parallel parts, options, layers** | list; `.cards` or `.stack` on the heading |
 | **Procedure** | `1.` items or `.steps` |
@@ -46,6 +48,7 @@ Pick the visual that carries the idea; only the title and brief transitions go w
 
 - **Charts.** Options go on the fence line, never in the body: ```` ```chart bar title="p95 latency" unit="ms" ````. Then one `label: value` line per bar; for grouped bars, a `series: before, after` line first, then `read: 420, 180`. A `chart line` body must start with `x: 1, 2, 4`, then one `name: v1, v2, v3` line per series. `note <bar or x value>: text` adds a callout.
 - **Lists.** Keep items to a few words; narration carries the detail. Don't nest.
+- **Drawings.** Draw to viewBox `{{DRAWING}}`: it fills the slide. Wrap each thing the narration names in `<g id="...">`, in the order named; with `.build` each appears when cued and unfilled strokes (rays, arrows) draw in. Real colours where colour carries meaning; otherwise `var(--fg)` for text and outlines, `var(--muted)`, `var(--accent)`, `var(--line)`, `var(--panel)`, which follow the theme. Text `font-size` 24 or more; under about 12 px on the slide is `text_too_small`. No scripts, outside links, HTML or animation (`svg_removed`).
 
 ## Write for the ear
 
@@ -99,6 +102,7 @@ Targets by visual; a slug is lowercase with hyphens:
 | **Chat** | `#m1`, `#m2` in order |
 | **Tree** | path (`#src/cache/lru.py`) or unique name (`#lru.py`) |
 | **Image** | region `#@left,top,width,height` in percent |
+| **Drawing** | element id (`#ray`), `<title>` or text slug (`#air-molecule`), region as for images |
 | **Any visual** | `#` the whole visual; `[label](# "text")` finds that text in it: a node label, a cell, a formula term |
 
 ## Reveal in steps

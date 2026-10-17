@@ -108,7 +108,7 @@ export function revealLevel(slide, cues, all) {
   const every = slide.says.flatMap((x) => x.cues || []);
   const upTo = (kind, ids) => {
     let n = 0;
-    for (const c of cues) if (c.kind === kind) n = Math.max(n, ids.indexOf(c.id) + 1);
+    for (const c of cues) if (c.kind === kind) n = Math.max(n, ids.indexOf(c.part ?? c.id) + 1); // a nested part reveals its outer one
     return n;
   };
   if (every.some((c) => c.kind === "item")) return { items: upTo("item", v.ids || (v.items || []).map((it) => it.id)) };

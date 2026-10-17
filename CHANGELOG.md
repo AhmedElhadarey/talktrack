@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Drawings:** an ```` ```svg ```` block, inline or read with `file=`, draws what code and boxes can't: light, orbits, lenses, layouts. Elements with ids take cues and reveal in steps, strokes draw themselves in, and theme colours are available as `var(--fg)` and friends. The builder keeps only drawing elements and attributes; anything that could run or fetch is removed and reported (`svg_removed`).
+- **Chart callouts:** a note on the tallest bar no longer crowds the title and the value label.
+
 - **Layout checked at finish:** with Playwright installed, `finish_walkthrough` draws every slide fully revealed in headless Chromium, so findings such as `text_too_small` and `overflow` reach the agent before it stops, without anyone opening the link (`SHOWNTELL_FINISH_CHECK=0` turns it off).
 - **Shorter guide:** the authoring guide went from about 2,470 to 1,830 words, checked against the old one by A/B evaluation; a chart, stat, chat or tree block that fails to parse now returns its format in the finding.
 - **More cue forms:** `#Sender->>Receiver` points at a message in a sequence diagram, and `#row-N` works on tables whose rows have ids.

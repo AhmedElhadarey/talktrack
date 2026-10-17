@@ -179,8 +179,9 @@ def _source_rank(s: Slide):
         ids = v.get("ids", [])
         return lambda c: ids.index(c["id"]) if c.get("kind") == "row" and c.get("id") in ids else None
     if kinds.part_kind(s.kind):
-        ids = v.get("ids", [])
-        return lambda c: ids.index(c["id"]) if c.get("kind") == "item" and c.get("id") in ids else None
+        ids, outer = v.get("ids", []), v.get("part_of", {})
+        return lambda c: (ids.index(outer.get(c["id"], c["id"])) if c.get("kind") == "item" and outer.get(c.get("id"), c.get("id")) in ids
+                          else None)
     if s.kind == "diagram":
         order = v.get("order", [])
         return lambda c: order.index(c["id"]) if c.get("kind") == "node" and c.get("id") in order else None

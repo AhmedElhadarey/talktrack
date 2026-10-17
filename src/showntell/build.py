@@ -20,10 +20,11 @@ from .mermaid import parse_mermaid
 from .model import Say, Slide, Walkthrough
 
 # Comfortable sizes, measured on the player at each frame (scripts/measure_limits.py).
+# "drawing" is a viewBox the shape of the slide body, so a drawing made to it fills the slide.
 LIMITS = {
-    "landscape": {"lines": 18, "width": 90, "diff_lines": 18, "diff_width": 46, "nodes": 12},
-    "square": {"lines": 26, "width": 68, "diff_lines": 22, "diff_width": 32, "nodes": 10},
-    "portrait": {"lines": 34, "width": 48, "diff_lines": 18, "diff_width": 52, "nodes": 8},
+    "landscape": {"lines": 18, "width": 90, "diff_lines": 18, "diff_width": 46, "nodes": 12, "drawing": "0 0 1150 560"},
+    "square": {"lines": 26, "width": 68, "diff_lines": 22, "diff_width": 32, "nodes": 10, "drawing": "0 0 860 800"},
+    "portrait": {"lines": 34, "width": 48, "diff_lines": 18, "diff_width": 52, "nodes": 8, "drawing": "0 0 640 1080"},
 }
 IMAGE_FRAMES = ("browser", "window", "phone")
 SPEED_RANGE = (0.8, 1.3)
@@ -256,7 +257,17 @@ class Builder(CueResolver, Checks):
             return self._image(b)
 
     def _add_kind(self, k: kinds.Kind, b: Block) -> None:
-        vis, problems = k.parse(b.text, b.attrs)
+        body = b.text
+        if k.reads_file and b.attrs.get("file"):
+            try:
+                body = sources.read_text(sources.resolve(self.root, b.attrs["file"]))
+            except sources.SourceError as e:
+                self._issue("source_error", f"Line {b.line}: {e}", line=b.line)
+                return
+            if b.text.strip():
+                self._issue("code_body_ignored", f"The {k.name} block for {b.attrs['file']} had a body; showed the file instead.",
+                            "Leave the body empty with file=.", line=b.line)
+        vis, problems = k.parse(body, b.attrs)
         for i, p in enumerate(problems):  # the format once per block
             self._issue(k.error_code, f"Line {b.line}: {p}.", k.fix() if i == 0 else k.hint, line=b.line)
         if k.lines:

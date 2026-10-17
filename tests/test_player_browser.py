@@ -160,10 +160,26 @@ The [cache](#lru.py) has its own folder, next to [the entry point](#app.py).
 ![A settings page](tests/js/golden/files/screen.png){frame=browser url="example.com/settings"}
 
 The [search box](#@4,16,55,9) sits above [the first result](#@4,31,92,14){.circle}.
+
+## Drawing {#svg .build}
+
+```svg
+<svg viewBox="0 0 1150 560">
+  <g id="sun"><title>Sun</title><circle cx="130" cy="130" r="64" fill="#ffd166"/>
+    <text x="130" y="235" text-anchor="middle" font-size="28" fill="var(--fg)">Sun</text></g>
+  <path id="beam" d="M200 150 L560 260" stroke="var(--fg)" stroke-width="6" fill="none"/>
+  <g id="blue"><path d="M575 250 L680 90" stroke="#4f8cff" stroke-width="5" fill="none"/>
+    <path d="M560 280 L430 430" stroke="#4f8cff" stroke-width="5" fill="none"/></g>
+  <path id="red" d="M590 265 L1060 400" stroke="#ff5a4e" stroke-width="5" fill="none"/>
+  <text id="eye" x="400" y="490" font-size="28" fill="var(--fg)">your eye</text>
+</svg>
+```
+
+[Sunlight](#beam) meets the air. [Blue](#blue) scatters toward [your eye](#eye) and [red](#red) passes on.
 """
 
 KINDS = ["title", "code", "diff", "diagram", "list", "list", "table", "math", "text",
-         "chapter", "chart", "stat", "chat", "terminal", "tree", "image"]
+         "chapter", "chart", "stat", "chat", "terminal", "tree", "image", "svg"]
 
 
 BASELINES = Path(__file__).parent / "baselines" / "linux"
@@ -375,7 +391,7 @@ def test_embedded_player_sends_events_and_takes_commands(daemon, browser):
     page.goto(f"http://127.0.0.1:{srv.server_port}/")
     page.wait_for_function("window.got.some(([t]) => t === 'ready')", timeout=15000)
     page.evaluate("document.getElementById('p').seek(document.getElementById('p').duration - 0.5)")
-    page.wait_for_function("window.got.some(([t, d]) => t === 'slidechange' && d.id === 'image')", timeout=10000)
+    page.wait_for_function("window.got.some(([t, d]) => t === 'slidechange' && d.id === 'svg')", timeout=10000)
     ready = page.evaluate("window.got.find(([t]) => t === 'ready')[1]")
     assert ready["slides"] == len(KINDS) and ready["duration"] > 0
     page.close()
@@ -620,3 +636,59 @@ def test_reduced_motion_holds_still_and_moving_cues_are_announced(daemon, browse
     page.wait_for_function("document.querySelector('#announce').textContent.startsWith('Path:')", timeout=8000)
     assert page.text_content("#announce") == "Path: Client to Gateway to Service"
     ctx.close()
+
+
+DRAWING_MD = """# Drawing
+
+Opening words.
+
+## Sky {#sky .build}
+
+```svg
+<svg viewBox="0 0 1150 560" onload="window.pwned = 1">
+  <script>window.pwned = 2</script>
+  <style>.ray { stroke-width: 6 }</style>
+  <g id="sun"><title>Sun</title><circle cx="120" cy="140" r="60" fill="#ffd166"/><circle id="core" cx="120" cy="140" r="14" fill="#fff"/></g>
+  <path id="beam" class="ray" d="M190 160 L560 270" stroke="#f4f4f4" fill="none"/>
+  <text id="eye" x="420" y="480" font-size="30" fill="var(--fg)">your eye</text>
+</svg>
+```
+
+First [the sun](#sun), bright and far away.
+
+Then [its light](#beam) crosses the sky.
+
+Some of it reaches [you](#eye).
+"""
+
+
+def test_drawings_reveal_point_and_never_run_script(daemon, browser):
+    call = _rpc(daemon)
+    r = call("start", title="Drawing", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    a = call("add", handle=r["handle"], markdown=DRAWING_MD)
+    assert "svg_removed" in [i["code"] for i in a["issues"]]
+    call("playable", handle=r["handle"], timeout=10)
+    url = r["url"].replace("localhost", "127.0.0.1") + "/"
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    page.goto(url)
+    page.wait_for_function("window.__showntell !== undefined")
+    t = _at(page, "sky", 0, 0.3)
+    page.goto(f"{url}?t={t:.2f}")
+    page.wait_for_selector(".drawing")
+    page.wait_for_timeout(600)
+    state = page.evaluate("""() => {
+      const root = document.querySelector('.drawing').shadowRoot, box = (id) => root.getElementById(id).getBoundingClientRect().toJSON();
+      const p = document.querySelector('#pointer');
+      return { veiled: ['sun', 'beam', 'eye'].filter((id) => root.getElementById(id).classList.contains('veiled')),
+               sun: box('sun'), pointer: p.hidden ? null : p.getBoundingClientRect().toJSON(), pwned: window.pwned ?? null }; }""")
+    assert state["veiled"] == ["beam", "eye"] and state["pwned"] is None
+    p, s = state["pointer"], state["sun"]
+    assert p and p["left"] <= s["left"] + 2 and p["right"] >= s["right"] - 2 and p["top"] <= s["top"] + 2
+    # Seeking forward in capture mode shows every part once the narration has ended.
+    page.goto(url + "?capture=1")
+    page.wait_for_function("window.__showntell?.duration?.() > 0")
+    page.evaluate("(t) => window.__showntell.seek(t)", t)
+    end = page.evaluate("window.__showntell.duration()") - 0.1
+    page.evaluate("(t) => window.__showntell.seek(t)", end)
+    assert page.evaluate("document.querySelector('.drawing').shadowRoot.querySelectorAll('.veiled').length") == 0
+    page.close()

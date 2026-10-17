@@ -767,6 +767,244 @@
      ]
     }
    ]
+  },
+  {
+   "id": "drawing",
+   "rev": 1,
+   "kind": "svg",
+   "title": "Drawing",
+   "classes": [
+    "build"
+   ],
+   "shown": "",
+   "visual": {
+    "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 400 200\" preserveAspectRatio=\"xMidYMid meet\">\n  <g id=\"sun\"><title>Sun</title><circle cx=\"40\" cy=\"40\" r=\"30\"></circle><circle id=\"core\" cx=\"40\" cy=\"40\" r=\"8\"></circle></g>\n  <path id=\"beam\" d=\"M70 40 L300 150\" stroke=\"#4f8cff\" fill=\"none\"></path>\n  <text id=\"eye\" x=\"10\" y=\"190\">Your eye</text>\n</svg>",
+    "ids": [
+     "sun",
+     "beam",
+     "eye"
+    ],
+    "items": [
+     {
+      "id": "sun",
+      "label": "Sun"
+     },
+     {
+      "id": "core",
+      "label": ""
+     },
+     {
+      "id": "beam",
+      "label": ""
+     },
+     {
+      "id": "eye",
+      "label": "Your eye"
+     }
+    ],
+    "part_of": {
+     "core": "sun"
+    },
+    "box": [
+     0.0,
+     0.0,
+     400.0,
+     200.0
+    ],
+    "title": ""
+   },
+   "says": [
+    {
+     "id": "drawing.1.1",
+     "status": "ready",
+     "text": "The core of the sun shows first, with the sun around it.",
+     "cues": [
+      {
+       "at": 4,
+       "end": 8,
+       "label": "core",
+       "target": "core",
+       "text": "",
+       "kind": "item",
+       "id": "core",
+       "part": "sun",
+       "t": 0.3
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/e52ab7771379af09c4404e4b.wav",
+     "duration": 3.15,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 3
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 4,
+       "c1": 8
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 9,
+       "c1": 11
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 12,
+       "c1": 15
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 16,
+       "c1": 19
+      },
+      {
+       "s": 1.3,
+       "e": 1.512,
+       "c0": 20,
+       "c1": 25
+      },
+      {
+       "s": 1.55,
+       "e": 1.762,
+       "c0": 26,
+       "c1": 32
+      },
+      {
+       "s": 1.8,
+       "e": 2.013,
+       "c0": 33,
+       "c1": 37
+      },
+      {
+       "s": 2.05,
+       "e": 2.262,
+       "c0": 38,
+       "c1": 41
+      },
+      {
+       "s": 2.3,
+       "e": 2.512,
+       "c0": 42,
+       "c1": 45
+      },
+      {
+       "s": 2.55,
+       "e": 2.762,
+       "c0": 46,
+       "c1": 52
+      },
+      {
+       "s": 2.8,
+       "e": 3.012,
+       "c0": 53,
+       "c1": 56
+      }
+     ]
+    },
+    {
+     "id": "drawing.2.1",
+     "status": "ready",
+     "text": "Then the beam leaves it.",
+     "cues": [
+      {
+       "at": 5,
+       "end": 13,
+       "label": "the beam",
+       "target": "beam",
+       "text": "",
+       "kind": "item",
+       "id": "beam",
+       "t": 0.3
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/b6222470d621f442d252df3e.wav",
+     "duration": 1.4,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 4
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 5,
+       "c1": 8
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 9,
+       "c1": 13
+      },
+      {
+       "s": 0.8,
+       "e": 1.012,
+       "c0": 14,
+       "c1": 20
+      },
+      {
+       "s": 1.05,
+       "e": 1.262,
+       "c0": 21,
+       "c1": 24
+      }
+     ]
+    },
+    {
+     "id": "drawing.3.1",
+     "status": "ready",
+     "text": "And reaches you.",
+     "cues": [
+      {
+       "at": 12,
+       "end": 15,
+       "label": "you",
+       "target": "eye",
+       "text": "",
+       "kind": "item",
+       "id": "eye",
+       "t": 0.55
+      }
+     ],
+     "notes": [],
+     "code": [],
+     "audio": "audio/ff375acd829036f9c0ad9fb9.wav",
+     "duration": 0.9,
+     "words": [
+      {
+       "s": 0.05,
+       "e": 0.263,
+       "c0": 0,
+       "c1": 3
+      },
+      {
+       "s": 0.3,
+       "e": 0.512,
+       "c0": 4,
+       "c1": 11
+      },
+      {
+       "s": 0.55,
+       "e": 0.763,
+       "c0": 12,
+       "c1": 16
+      }
+     ]
+    }
+   ]
   }
  ]
 }

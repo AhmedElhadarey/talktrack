@@ -68,7 +68,7 @@ def guide(frame: str) -> str:
     lim = LIMITS.get(frame, LIMITS["landscape"])
     g = texts()["guide"]
     for k, v in {"FRAME": frame, "LINES": lim["lines"], "WIDTH": lim["width"], "DIFF_LINES": lim["diff_lines"],
-                 "DIFF_WIDTH": lim["diff_width"], "NODES": lim["nodes"]}.items():
+                 "DIFF_WIDTH": lim["diff_width"], "NODES": lim["nodes"], "DRAWING": lim["drawing"]}.items():
         g = g.replace("{{" + k + "}}", str(v))
     return g
 

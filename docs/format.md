@@ -234,6 +234,24 @@ tests/
 
 One entry per line, nested by indentation (any consistent step) or pasted from the `tree` command. A trailing `/`, or deeper lines below, mark a folder; `# note` after an entry shows a short note. Cues point at an entry by its path (`#src/cache/lru.py`) or by a file or folder name that is unique in the tree (`#lru.py`).
 
+### Drawing
+
+````markdown
+```svg
+<svg viewBox="0 0 1150 560">
+  <g id="sun"><title>Sun</title><circle cx="130" cy="130" r="64" fill="#ffd166"/></g>
+  <path id="beam" d="M200 150 L560 260" stroke="var(--fg)" stroke-width="6" fill="none"/>
+  <text id="eye" x="400" y="490" font-size="28" fill="var(--fg)">your eye</text>
+</svg>
+```
+````
+
+One `<svg>` with a `viewBox` (or a width and height), written inline, or read from the project with ```` ```svg file=docs/flow.svg ```` and an empty body, which also shows SVG exported from draw.io, Excalidraw or Inkscape. The drawing fills the slide body, scaled to fit; a viewBox of the body's shape fills it best: `0 0 1150 560` landscape, `0 0 860 800` square, `0 0 640 1080` portrait.
+
+The builder rebuilds the drawing from an allowlist of SVG elements and attributes: shapes, paths, text, groups, `use`, gradients, patterns, markers, clip paths, masks, filters, `<style>` rules and embedded fonts and images (`data:` only). Scripts, event handlers, links and references outside the drawing, `foreignObject` and SMIL animation are removed and reported as `svg_removed`. The player draws it in a shadow root, so its `<style>` rules apply only inside it. Theme colours are available as `var(--fg)`, `var(--muted)`, `var(--accent)` and the other tokens in `static/themes.css`.
+
+Cues point at any element by its `id`, by its `<title>` or own text, or by that text's slug; at a region with `#@left,top,width,height` in percent of the drawing; or at drawn text with `[label](# "text")`. With `.build`, the outermost elements with ids are the parts that appear in source order; a cue at an element inside one reveals that part, and unfilled strokes in a part draw themselves in.
+
 ## Narration
 
 Narration is plain prose written to be heard. Markdown inside it is used like this:
@@ -292,6 +310,7 @@ With `.build` on the heading, the slide starts mostly empty and fills in as the 
 | **Flowchart** | nodes appear in source order up to the latest node pointed at (an edge path counts its nodes); an edge draws itself in once both its ends are visible |
 | **Chart, file tree, numbers, exchange** | bars, series, entries, numbers or messages appear in source order up to the latest one pointed at |
 | **Terminal** | lines appear up to the end of the latest line range pointed at, as for code |
+| **Drawing** | the outermost elements with ids appear in source order up to the latest one pointed at (or holding the element pointed at); unfilled strokes draw themselves in |
 
 Everything is visible once the slide's narration ends.
 

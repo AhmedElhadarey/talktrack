@@ -61,3 +61,19 @@ README.md
 ```
 
 The [builder](#build.py) turns Markdown into slides, and [render.js](#render.js) draws them.
+
+## Drawing {#drawing .build}
+
+```svg
+<svg viewBox="0 0 400 200">
+  <g id="sun"><title>Sun</title><circle cx="40" cy="40" r="30"/><circle id="core" cx="40" cy="40" r="8"/></g>
+  <path id="beam" d="M70 40 L300 150" stroke="#4f8cff" fill="none"/>
+  <text id="eye" x="10" y="190">Your eye</text>
+</svg>
+```
+
+The [core](#core) of the sun shows first, with the sun around it.
+
+Then [the beam](#beam) leaves it.
+
+And reaches [you](#eye).
