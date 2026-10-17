@@ -4,15 +4,17 @@
 import { el } from "../draw.js";
 import { esc } from "../util.js";
 
+// Drawing size per frame, in SVG units: close to the slide body's shape, so text keeps its size.
+const SIZES = { landscape: [1100, 600], square: [900, 820], portrait: [660, 940] };
 const PALETTE = ["var(--accent)", "var(--node-line)", "var(--add-fg)", "var(--hl-title)", "var(--hl-built-in)", "var(--del-fg)"];
 
 export default {
-  render(slide, body, parts) {
+  render(slide, body, parts, ctx) {
     const v = slide.visual || {};
     const c = el("div", "chart");
     c.setAttribute("role", "img");
     c.setAttribute("aria-label", chartLabel(v));
-    c.innerHTML = drawChart(v);
+    c.innerHTML = drawChart(v, SIZES[ctx?.frame] || SIZES.landscape);
     c.querySelectorAll("g.entry").forEach((g) => parts.items.set(g.dataset.id, g));
     parts.visual = c;
     parts.svg = null;
@@ -41,8 +43,7 @@ function fmt(n, unit) {
   return unit ? `${s} ${unit}` : s;
 }
 
-function drawChart(v) {
-  const W = 1100, H = 600;
+function drawChart(v, [W, H]) {
   const t = (x, y, text, cls, anchor = "middle") => `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${esc(text)}</text>`;
   const all = v.type === "line" ? v.series.flatMap((s) => s.values) : v.categories.flatMap((c) => c.values);
   const lo = Math.min(0, ...all);
@@ -98,7 +99,7 @@ function drawChart(v) {
       const ci = v.categories.findIndex((c) => c.id === note.bar);
       if (ci < 0) return;
       const c = v.categories[ci];
-      marks += noteMark(note, m.l + ci * band + band / 2, y(Math.max(...c.values, 0)) - 34, m, W, t);
+      marks += noteMark(note, m.l + ci * band + band / 2, y(Math.max(...c.values, 0)) - 50, m, W, t);
     });
   }
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${head}${grid}${axes}<line x1="${m.l}" x2="${W - m.r}" y1="${y(Math.max(lo, 0))}" y2="${y(Math.max(lo, 0))}" class="axis"/>${marks}</svg>`;

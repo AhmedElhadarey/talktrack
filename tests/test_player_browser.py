@@ -31,7 +31,7 @@ This opening sentence is narrated while the title shows.
 
 ## Code from disk {#code .build}
 
-```python file=src/showntell/format.py lines=1-14
+```python file=tests/js/golden/files/short.py lines=1-14
 ```
 
 The file opens with [a docstring](#L1) and then [imports](#L8 "import re").
@@ -98,9 +98,72 @@ Each output is [an exponential](#) divided by the sum of all of them.
 > Shown text, not spoken.
 
 A slide with only words on it.
+
+## Newer kinds {#part .chapter}
+> Charts, numbers, exchanges and more
+
+## Latency {#chart}
+
+```chart bar title="p95 latency" unit="ms"
+series: before, after
+read: 420, 180
+write: 610, 390
+note write: the slow path
+```
+
+[Reads](#read) improved most, and [the note](#note-1) marks the slow path.
+
+## Headline {#stat}
+
+```stat
+p95 latency: 420 ms -> 180 ms
+error rate: 2.1% -> 0.3%
+```
+
+[Latency](#p95-latency) fell by more than half, and so did [errors](#error-rate).
+
+## Exchange {#chat}
+
+```chat
+user: How do I undo my last commit?
+assistant: Run `git reset --soft HEAD~1`. Your changes stay staged.
+```
+
+The [question](#m1) gets [a short answer](#m2).
+
+## Session {#terminal}
+
+```terminal
+$ uv run pytest -q
+783 passed in 82.9s
+$ git status --short
+ M README.md
+```
+
+[The tests](#L2) pass, and [one file](#L4) changed.
+
+## Layout {#tree}
+
+```tree
+src/
+  app.py   # entry point
+  cache/
+    lru.py
+tests/
+  test_cache.py
+```
+
+The [cache](#lru.py) has its own folder, next to [the entry point](#app.py).
+
+## Screen {#image}
+
+![A settings page](tests/js/golden/files/screen.png){frame=browser url="example.com/settings"}
+
+The [search box](#@4,16,55,9) sits above [the first result](#@4,31,92,14){.circle}.
 """
 
-KINDS = ["title", "code", "diff", "diagram", "list", "list", "table", "math", "text"]
+KINDS = ["title", "code", "diff", "diagram", "list", "list", "table", "math", "text",
+         "chapter", "chart", "stat", "chat", "terminal", "tree", "image"]
 
 
 BASELINES = Path(__file__).parent / "baselines" / "linux"
@@ -312,7 +375,7 @@ def test_embedded_player_sends_events_and_takes_commands(daemon, browser):
     page.goto(f"http://127.0.0.1:{srv.server_port}/")
     page.wait_for_function("window.got.some(([t]) => t === 'ready')", timeout=15000)
     page.evaluate("document.getElementById('p').seek(document.getElementById('p').duration - 0.5)")
-    page.wait_for_function("window.got.some(([t, d]) => t === 'slidechange' && d.id === 'text')", timeout=10000)
+    page.wait_for_function("window.got.some(([t, d]) => t === 'slidechange' && d.id === 'image')", timeout=10000)
     ready = page.evaluate("window.got.find(([t]) => t === 'ready')[1]")
     assert ready["slides"] == len(KINDS) and ready["duration"] > 0
     page.close()
