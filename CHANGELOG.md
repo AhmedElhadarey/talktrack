@@ -5,6 +5,8 @@
 - **Drawings that move:** consecutive ```` ```svg step ```` blocks are versions of one drawing; at `#step-2`, elements that keep their id glide to their new place, size, angle and colour on the narration's clock, so seeking and video show the motion exactly.
 - **Hand-drawn drawings:** ```` ```svg sketch ```` redraws shapes with Rough.js and text in the Virgil face, as on a whiteboard.
 - **Overlap check:** the player reports labels a line runs through, or that sit on each other (`drawing_overlap`).
+- **Drawings past their edge:** a drawing with parts outside its viewBox, which spill past the slide, is reported (`overflow`).
+- **Row ids:** a table row's `{#id}` is taken from any cell, not only the last.
 - **Video keeps the motion:** MP4 export and posters now capture the travelling dot, counting numbers and checklist ticks frame by frame; before, a frame was reused while the slide's cue stayed the same.
 - **One-file export:** `showntell export ID talk.html` writes a single page that plays offline from a double-click, with the player, slides, MP3 narration and only the libraries its slides use (a four-minute walkthrough with code comes to about 3 MB, mostly narration; diagrams add about 1 MB and formulas 0.7 MB). It makes no network requests.
 - **draw.io diagrams:** ```` ```drawio file=docs/arch.drawio ```` shows a page of a `.drawio` file (plain or compressed) or a `.drawio.svg` export, drawn by the official draw.io viewer, bundled and loaded only when needed, with no network access. Cues point at cells by id or label, shapes reveal in order with edges following their ends, and links, outside images, web fonts and maths are removed first.

@@ -230,10 +230,14 @@ class Builder(CueResolver, Checks):
             t = parse_table(b.text)
             ids = []
             for i, row in enumerate(t["rows"]):
-                m = re.search(r"\{#([\w-]+)\}\s*$", row[-1]) if row else None
-                if m:
-                    row[-1] = row[-1][: m.start()].rstrip()
-                ids.append(m.group(1) if m else f"row-{i + 1}")
+                # A row's {#id} belongs at the end of its last cell, but is taken from any cell.
+                rid = None
+                for k, cell in enumerate(row):
+                    m = re.search(r"\s*\{#([\w-]+)\}\s*$", cell)
+                    if m:
+                        row[k] = cell[: m.start()]
+                        rid = rid or m.group(1)
+                ids.append(rid or f"row-{i + 1}")
             t["ids"] = ids
             return self._set(self._slide_for_visual("table"), "table", t)
         if b.kind == "list":

@@ -802,3 +802,15 @@ def test_moving_dots_and_counting_numbers_change_the_capture_key(daemon, browser
         keys = [page.evaluate("(t) => window.__showntell.seek(t)", at + d) for d in (0.2, 0.5, 0.8)]
         assert len(set(keys)) == 3, keys
     page.close()
+
+
+def test_a_drawing_past_its_viewbox_is_reported(daemon):
+    call = _rpc(daemon)
+    r = call("start", title="Spill", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    md = ("# Spill\n\nOpening words.\n\n## Off the edge {#edge}\n\n```svg\n<svg viewBox=\"0 0 1150 560\">"
+          "<circle id=\"a\" cx=\"575\" cy=\"280\" r=\"100\" fill=\"#2f7de1\"/>"
+          "<text id=\"b\" x=\"575\" y=\"700\" font-size=\"30\" fill=\"var(--fg)\">below the slide</text></svg>\n```\n\nA [circle](#a).\n")
+    call("add", handle=r["handle"], markdown=md)
+    call("playable", handle=r["handle"], timeout=10)
+    f = call("finish", handle=r["handle"], questions=None)
+    assert any(i["code"] == "overflow" and "viewBox" in i["message"] for i in f["player_issues"]), f["player_issues"]

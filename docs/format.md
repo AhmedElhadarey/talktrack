@@ -141,7 +141,7 @@ A `$$ ... $$` block works too. The content is LaTeX rendered with KaTeX.
 
 ### Table
 
-A GitHub-style pipe table. Cells may hold inline code and emphasis. Rows are `#row-1`, `#row-2` and so on for cues; a row whose last cell ends with `{#id}` also answers to that id.
+A GitHub-style pipe table. Cells may hold inline code and emphasis. Rows are `#row-1`, `#row-2` and so on for cues; a row with a cell ending in `{#id}` (normally the last) also answers to that id.
 
 ### List
 

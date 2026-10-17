@@ -255,3 +255,9 @@ def test_edge_path_on_a_sequence_diagram_names_the_message_form(cues):
 def test_row_number_works_when_rows_have_ids(cues):
     (c,), issues = cues(TABLE, "The [first row](#row-1) is memory.")
     assert (c["kind"], c["id"]) == ("row", "m") and not issues
+
+
+def test_a_row_id_in_any_cell_names_the_row(cues):
+    table = "## T {#t}\n\n| Month | North | South |\n|---|---|---|\n| June | Summer {#june} | Winter |\n| December | Winter | Summer |\n\n"
+    (c,), issues = cues(table, "In [June](#june) the north has summer.")
+    assert (c["kind"], c["id"]) == ("row", "june") and not issues

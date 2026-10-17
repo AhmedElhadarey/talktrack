@@ -125,6 +125,15 @@ export default {
         + " Use larger text, or a viewBox closer to the slide's size.", "text_too_small", slide.id);
     }
     for (const msg of overlaps(parts.shadow).slice(0, 2)) report(`Slide ${slide.id}: ${msg}`, "drawing_overlap", slide.id);
+    // Drawn past the viewBox: on the slide it spills over the title or off the edge.
+    let all = null;
+    try { all = svg.getBBox(); } catch { /* nothing drawn */ }
+    const slack = Math.max(vb.width, vb.height) * 0.03;
+    if (all && (all.x < vb.x - slack || all.y < vb.y - slack || all.x + all.width > vb.x + vb.width + slack
+      || all.y + all.height > vb.y + vb.height + slack)) {
+      report(`Slide ${slide.id}: part of the drawing lies outside its viewBox (${[vb.x, vb.y, vb.width, vb.height].map(Math.round).join(" ")}), `
+        + "so it spills past the slide. Keep everything inside the viewBox.", "overflow", slide.id);
+    }
     return true;
   },
 };
