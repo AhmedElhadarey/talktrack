@@ -36,7 +36,23 @@ graph TB
 
 ## Player
 
-`static/js/timeline.js` turns the walkthrough into segments (one per paragraph, with gaps) on a single clock and answers "what should be on screen at time *t*": slide, fired cues, step-reveal level and current word. `main.js` advances the clock from the audio element while a paragraph plays and from wall time during gaps, then applies that state to the DOM through `render.js`. Seeking, live updates and export all go through the same function.
+`static/js/timeline.js` turns the walkthrough into segments (one per paragraph, with gaps) on a single clock and answers "what should be on screen at time *t*": slide, fired cues, step-reveal level and current word. `playback.js` advances the clock from the audio element while a paragraph plays and from wall time during gaps; `view.js` applies that state to the DOM. Seeking, live updates and export all go through the same function. The player is plain ES modules with no build step:
+
+| Module | Role |
+|---|---|
+| **`timeline.js`** | the pure core: segments, `stateAt(t)`, step reveals, presenter steps; no DOM, tested with `node --test` |
+| **`state.js`** | shared flags, DOM handles, mutable playback state (one object), finding reports and embed events; imports no other player module |
+| **`playback.js`** | the clock: play, pause, seek, stalls while the writer or voice catches up, the wait for a slide to draw, ranges |
+| **`view.js`** | the slide on screen: draws it, sizes it, reveals parts, switches code versions, runs per-frame animation, measures layout findings |
+| **`pointer.js`** | where a cue points, the pointer marks, scrolling long code and zooming the camera |
+| **`chrome.js`** | captions, transcript, chapters, progress bar, overlay and end card |
+| **`present.js`** | presenter and audience windows, and commands from a page that embeds the player |
+| **`main.js`** | loads the walkthrough, follows live updates, wires the controls, capture mode |
+| **`render.js`** | the slide skeleton and the registry of slide kinds |
+| **`kinds/*.js`** | one module per slide kind (`code`, `diff`, `list`, `table`, `diagram`, `math`, `image`, `chart`, `stat`, `chat`, `terminal`, `tree`, `title` with chapter cards) |
+| **`draw.js`, `diff.js`, `util.js`** | DOM helpers shared by kinds (`fit`, highlighting, text ranges), the line and word diff, escaping and inline Markdown |
+
+A kind module's default export has `render(slide, body, parts, ctx)`, which draws the visual and registers the parts cues point at (`lines`, `items`, `rows`, `svg`), and optional hooks: `layout` (size once drawn; default `fit`), `reveal` (step reveals other than items, rows and lines), `target` (where a cue of its own kind points), `frame` (per-frame animation such as counting numbers or a travelling dot) and `measure` (its own layout findings). Items with ids reveal, point and highlight without a hook, so a new kind is usually one module plus its CSS.
 
 ## Findings
 

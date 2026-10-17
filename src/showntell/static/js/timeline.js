@@ -98,43 +98,30 @@ export function stateAt(w, tl, t) {
   };
 }
 
-// For `.build` slides: how much is revealed. {items: n} for lists, {line: n} for code,
-// {nodes: n} for flowcharts (count in source order); null when everything shows.
+// For `.build` slides: how much is revealed, by the kind of part the slide's cues point at.
+// {items: n} for parts with ids (list items, chart bars, tree entries, numbers, messages),
+// {rows: n} for table rows, {line: n} for one pane of numbered lines (code, terminal),
+// {nodes: n} for flowcharts; counted in source order. null when everything shows.
 export function revealLevel(slide, cues, all) {
   if (!slide || !(slide.classes || []).includes("build") || all) return null;
   const v = slide.visual || {};
   const every = slide.says.flatMap((x) => x.cues || []);
-  if (slide.kind === "list") {
-    if (!every.some((c) => c.kind === "item")) return null;
-    const ids = v.items.map((it) => it.id);
+  const upTo = (kind, ids) => {
     let n = 0;
-    for (const c of cues) if (c.kind === "item") n = Math.max(n, ids.indexOf(c.id) + 1);
-    return { items: n };
-  }
-  if (slide.kind === "table") {
-    if (!every.some((c) => c.kind === "row")) return null;
-    let n = 0;
-    for (const c of cues) if (c.kind === "row") n = Math.max(n, (v.ids || []).indexOf(c.id) + 1);
-    return { rows: n };
-  }
-  if (["chart", "tree", "stat", "chat"].includes(slide.kind)) {
-    if (!every.some((c) => c.kind === "item")) return null;
-    const ids = v.ids || [];
-    let n = 0;
-    for (const c of cues) if (c.kind === "item") n = Math.max(n, ids.indexOf(c.id) + 1);
-    return { items: n };
-  }
-  if (slide.kind === "code" || slide.kind === "terminal") {
-    const lineCues = every.filter((c) => c.kind === "lines");
-    if (!lineCues.length) return null;
+    for (const c of cues) if (c.kind === kind) n = Math.max(n, ids.indexOf(c.id) + 1);
+    return n;
+  };
+  if (every.some((c) => c.kind === "item")) return { items: upTo("item", v.ids || (v.items || []).map((it) => it.id)) };
+  if (every.some((c) => c.kind === "row")) return { rows: upTo("row", v.ids || []) };
+  const lineCues = every.filter((c) => c.kind === "lines");
+  if (lineCues.length && !v.old) { // a diff's two panes always show whole
     // Show the lines leading up to the first one the narration points at.
     let line = Math.min(...lineCues.map((c) => c.l0)) - 1;
     for (const c of cues) if (c.kind === "lines") line = Math.max(line, c.l1);
     return { line };
   }
-  if (slide.kind === "diagram" && (v.type === "flowchart" || v.type === "graph")) {
+  if ((v.type === "flowchart" || v.type === "graph") && every.some((c) => c.kind === "node" || c.kind === "edge")) {
     const order = v.order || [];
-    if (!every.some((c) => c.kind === "node" || c.kind === "edge")) return null;
     let n = 0;
     for (const c of cues) {
       if (c.kind === "node") n = Math.max(n, order.indexOf(c.id) + 1);
