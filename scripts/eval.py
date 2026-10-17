@@ -265,7 +265,7 @@ def summarize(w: Walkthrough | None) -> dict:
         used |= {k for k, on in {"steps": bool(v.get("steps")), "scroll": bool(v.get("scroll")), "frame": bool(v.get("frame")),
                                  "notes": bool(v.get("notes")), "stack": v.get("style") == "stack",
                                  "checklist": v.get("style") == "checklist"}.items() if on}
-        if s.kind in ("stat", "chat", "chapter", "chart", "terminal", "tree", "svg"):
+        if s.kind in ("stat", "chat", "chapter", "chart", "terminal", "tree", "svg", "drawio"):
             used.add(s.kind)
     for c in cues:
         if c.get("kind") in ("edge", "region", "step"):

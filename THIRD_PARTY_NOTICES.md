@@ -7,6 +7,7 @@ showntell bundles these libraries in `src/showntell/static/vendor/`, unmodified:
 | **Mermaid** | 11.4.1 | MIT | https://github.com/mermaid-js/mermaid |
 | **KaTeX** | 0.16.11 | MIT | https://github.com/KaTeX/KaTeX |
 | **highlight.js** | 11.10.0 | BSD-3-Clause | https://github.com/highlightjs/highlight.js |
+| **draw.io viewer** (`viewer-static.min.js`) | 31.7.0 | Apache-2.0 | https://github.com/jgraph/drawio |
 
 showntell downloads these models on first run; they are not part of the package:
 

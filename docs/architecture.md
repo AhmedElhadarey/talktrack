@@ -44,7 +44,7 @@ graph TB
 | `cues.py` | `CueResolver`: each cue target to a resolved cue (lines, item, row, node, edge path, image region, code step, whole visual), and cues inferred from names when narration has none |
 | `checks.py` | `Checks`: size findings on code and diffs, findings on each finished slide (narration, cues, reading the screen, reveal order) and on the whole walkthrough (code runs, openings) |
 | `mermaid.py` | node ids, labels and edges read from Mermaid source, for cues and edge paths |
-| `kinds/` | one module per bundled kind (chart, stat, chat, terminal, tree, svg) and a registry by fence language and slide kind |
+| `kinds/` | one module per bundled kind (chart, stat, chat, terminal, tree, svg, drawio) and a registry by fence language and slide kind |
 
 Each bundled kind is a `kinds.base.Kind`: its fence languages, a parser that returns the visual and problems, a size check, and how a cue names its parts. The builder, cue resolver and checks ask the registry instead of naming kinds, so a new kind is one Python module plus its player module, styles and catalogue entry (CONTRIBUTING.md lists them). A problem with a block goes back with the kind's `format` text from `text/kinds.json` as the fix.
 
