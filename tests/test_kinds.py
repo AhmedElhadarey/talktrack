@@ -124,6 +124,8 @@ def test_every_catalogue_example_builds_cleanly(build, project, k):
     md = k["example"].replace("src/cache.py", "src/cache.py").replace("docs/timeline.png", "docs/timeline.png")
     if k["kind"] == "diff":
         pytest.skip("needs a git repository")
+    if k["kind"] == "drawio":  # its example reads a file, as draw.io slides do
+        (project / "docs" / "architecture.drawio").write_text((Path(__file__).parent / "fixtures" / "drawio" / "architecture.drawio").read_text())
     w, b = build(f"# T\n\nOpening.\n\n## Example {{#ex}}\n\n{md}\n\nA sentence about it.\n", root=project)
     kind = w.slides[-1].kind
     assert kind == k["kind"], (kind, k["kind"])
