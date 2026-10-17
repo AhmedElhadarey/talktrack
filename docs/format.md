@@ -141,7 +141,7 @@ A `$$ ... $$` block works too. The content is LaTeX rendered with KaTeX.
 
 ### Table
 
-A GitHub-style pipe table. Cells may hold inline code and emphasis. Rows are `#row-1`, `#row-2` and so on for cues, unless the last cell of a row ends with `{#id}`.
+A GitHub-style pipe table. Cells may hold inline code and emphasis. Rows are `#row-1`, `#row-2` and so on for cues; a row whose last cell ends with `{#id}` also answers to that id.
 
 ### List
 
@@ -259,6 +259,7 @@ A cue is a Markdown link inside narration. The label is spoken normally. The poi
 | **`#+L7`**, **`#L7`** | line 7 of the new side of a diff |
 | **`#id`** | a list item, card, diagram node, table row, chart bar or series, or file-tree entry with that id |
 | **`#a->b->c`** | a flowchart path: a dot travels along those edges, one hop at a time |
+| **`#A->>B`** | a message in a sequence diagram, from participant `A` to `B`: the pointer goes to its text (the first such message; quoted text picks another) |
 | **`#@10,20,30,15`** | part of an image: left, top, width and height in percent |
 | **`#step-2`** | the second version of code written as `step` blocks |
 | **`#`** | the slide's whole visual |
