@@ -263,6 +263,13 @@ body.portrait .diff { grid-template-columns: 1fr; }
 .ln { transition: transform 0.55s var(--ease); }
 .ln.enter { animation: line-in 0.45s var(--ease) both; }
 @keyframes line-in { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
+.codebox { position: relative; }
+.codebox .ghosts { position: absolute; inset: 0; pointer-events: none; }
+.codebox .ghost { position: absolute; white-space: pre; transition: transform 0.45s var(--ease), opacity 0.3s; }
+.codebox .ghost.gone { opacity: 0; }
+.ln.morphing .tx { opacity: 0; }
+.ln.settle .tx { animation: fade-in 0.2s both; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* diagrams: a packet travelling along edges, edges drawing in */
 .diagram circle.packet { fill: var(--accent); stroke: var(--stage); stroke-width: 3; filter: drop-shadow(0 0 8px var(--accent-glow)); }

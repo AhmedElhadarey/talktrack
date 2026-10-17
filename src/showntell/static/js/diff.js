@@ -16,7 +16,7 @@ export function lcs(a, b, eq) {
   return pairs;
 }
 
-const tokenize = (s) => s.match(/\w+|\s+|[^\w\s]/g) || [];
+export const tokenize = (s) => s.match(/\w+|\s+|[^\w\s]/g) || [];
 
 // Which lines were removed (old) and added (new), and character ranges of changed words
 // inside lines that were edited rather than replaced.
