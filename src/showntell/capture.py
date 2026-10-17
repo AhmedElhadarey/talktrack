@@ -153,9 +153,10 @@ class Capturer:
             with contextlib.suppress(Exception):
                 await close()
 
-    async def seek(self, t: float) -> str:
-        """Bring the player to time t; returns a key that repeats while the picture stays the same."""
-        return await self.page.evaluate("(t) => window.__showntell.seek(t)", t)
+    async def seek(self, t: float, measure: bool = False) -> str:
+        """Bring the player to time t; returns a key that repeats while the picture stays the same.
+        `measure` also waits for the player's layout checks on the slide at t."""
+        return await self.page.evaluate("([t, m]) => window.__showntell.seek(t, { measure: m })", [t, measure])
 
     async def shot(self) -> bytes:
         if self.image == "jpeg":
@@ -193,13 +194,14 @@ async def _frame_of(url: str) -> str:
 
 
 async def capture_frames_async(source: str | Path, times: Sequence[float], *, short: int = 1080,
-                               captions: bool = False) -> list[bytes]:
-    """PNG bytes of the player at each time (seconds), for a player link or an exported folder."""
+                               captions: bool = False, measure: bool = False) -> list[bytes]:
+    """PNG bytes of the player at each time (seconds), for a player link or an exported folder.
+    `measure` waits for the player's layout checks on each slide, which report to a live link."""
     with player_url(source) as url:
         async with Capturer(url, short=short, captions=captions) as c:
             out, last_key, last_png = [], None, b""
             for t in times:
-                key = await c.seek(t)
+                key = await c.seek(t, measure)
                 if key != last_key:
                     last_key, last_png = key, await c.shot()
                 out.append(last_png)

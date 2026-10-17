@@ -37,7 +37,7 @@ graph TB
 | **start_walkthrough** | `title`, `frame` (landscape, square, portrait), `theme` (dark, light, paper, contrast), `voice`, `speed`, `project_dir`, `opening` | `handle`, `url`; with `opening`, the playable link and the guide |
 | **add_slides** | `handle`, `markdown` | `status`, `url` once playable, `issues`, progress, the guide on the first playable reply |
 | **revise_slide** | `handle`, `slide` (id), `markdown` (one slide) | `issues`; only changed narration is voiced again |
-| **finish_walkthrough** | `handle`, `questions` (optional list) | summary, `issues` |
+| **finish_walkthrough** | `handle`, `questions` (optional list) | summary, `issues`; with Playwright, findings from drawing every slide headless |
 | **list_walkthroughs** | none | recent walkthroughs with handles, titles and links |
 | **preview_slides** | `handle`, `slides` (optional ids) | a 640×360 picture of each slide fully revealed (up to twelve), plus layout findings from drawing them. Needs Playwright where showntell runs. |
 
@@ -158,7 +158,7 @@ Findings from the open player, measured after a slide has settled. Their message
 | `slow_render` | info | a slide took longer to draw than the player waits |
 | `viewer_waited` | info | the viewer caught up with the writer and waited |
 
-`finish_walkthrough` adds `not_checked` findings for checks that could not run: no player has opened the walkthrough, or some narration has no audio yet.
+`finish_walkthrough` draws every slide fully revealed in headless Chromium when Playwright is installed (up to 60 slides, 25 s at most; `SHOWNTELL_FINISH_CHECK=0` turns it off), so render and layout findings reach the agent before it stops, not only when someone opens the link. It adds `not_checked` findings for checks that could not run: Playwright is missing and no player has opened the walkthrough, or some narration has no audio yet.
 
 ## Install and daemon
 

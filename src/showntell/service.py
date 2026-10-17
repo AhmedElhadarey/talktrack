@@ -20,8 +20,9 @@ def _dicts(items) -> list[dict]:
 
 
 class LocalService:
-    def __init__(self, store: Store) -> None:
+    def __init__(self, store: Store, layout_check: bool = False) -> None:
         self.store = store
+        self.layout_check = layout_check  # draw every slide headless at finish (the daemon turns this on)
 
     def speech_status(self) -> dict:
         n = self.store.narrator
@@ -86,7 +87,8 @@ class LocalService:
 
     async def finish(self, handle: str, questions: list[str] | None) -> dict:
         s = self.store.by_handle(handle)
-        issues = s.finish(questions) + s.take_late_issues()
+        unchecked = await self._check_layout(s) if self.layout_check else ""
+        issues = s.finish(questions, unchecked=unchecked if self.layout_check else None) + s.take_late_issues()
         says = [x for sl in s.w.slides for x in sl.says if x.text]
         outline, t = [], 0.0
         for sl in s.w.slides:
@@ -109,30 +111,50 @@ class LocalService:
     async def list(self) -> list[dict]:
         return self.store.list(20)
 
+    async def _check_layout(self, s) -> str:
+        """Draw every slide fully revealed in headless Chromium, so the player's render and layout
+        checks report before the agent stops. Returns why it could not run, or ''."""
+        import asyncio
+
+        from .capture import CaptureUnavailable, Capturer
+
+        ends = _end_times(s.w)
+        if not ends:
+            return ""
+
+        async def run() -> None:
+            async with Capturer(s.url, short=360) as c:
+                for t in list(ends.values())[:LAYOUT_CHECK_MAX]:
+                    await c.seek(t, measure=True)
+                for f in await c.page.evaluate("window.__showntell.findings || []"):
+                    s.report(f)
+
+        try:
+            await asyncio.wait_for(run(), LAYOUT_CHECK_S)
+        except CaptureUnavailable as e:
+            return str(e)
+        except TimeoutError:
+            return f"drawing the slides took over {LAYOUT_CHECK_S} s"
+        except Exception as e:  # a broken page or browser must not fail finish
+            return f"the headless player failed: {str(e).splitlines()[0][:200]}"
+        return ""
+
     async def preview(self, handle: str, slides: list[str] | None = None, short: int = 360) -> dict:
         """Pictures of slides as the viewer sees them once fully revealed, for the agent to check."""
         import base64
 
         from .capture import CaptureUnavailable, capture_frames_async
-        from .export import timeline, timeline_total
 
         s = self.store.by_handle(handle)
-        starts: dict[str, float] = {}
-        for t, slide, _ in timeline(s.w):
-            starts.setdefault(slide.id, t)
-        order = [sl.id for sl in s.w.slides if sl.id in starts]
-        want = [x for x in (slides or order) if x in starts]
-        unknown = [x for x in (slides or []) if x not in starts]
+        ends = _end_times(s.w)
+        order = list(ends)
+        want = [x for x in (slides or order) if x in ends]
+        unknown = [x for x in (slides or []) if x not in ends]
         if len(want) > PREVIEW_MAX:
             want = want[-PREVIEW_MAX:] if not slides else want[:PREVIEW_MAX]
-        total = timeline_total(s.w)
-        times = []
-        for sid in want:
-            i = order.index(sid)
-            end = starts[order[i + 1]] if i + 1 < len(order) else total
-            times.append(max(starts[sid], end - 0.35))
+        times = [ends[sid] for sid in want]
         try:
-            pngs = await capture_frames_async(s.url, times, short=short) if times else []
+            pngs = await capture_frames_async(s.url, times, short=short, measure=True) if times else []
         except CaptureUnavailable as e:
             raise ValueError(str(e)) from e
         return {
@@ -194,6 +216,24 @@ class RemoteService:
 
 RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list", "source", "preview"}
 PREVIEW_MAX = 12
+LAYOUT_CHECK_MAX = 60  # slides drawn by the finish-time layout check
+LAYOUT_CHECK_S = 25.0
+
+
+def _end_times(w) -> dict[str, float]:
+    """Slide id -> a moment just before the slide ends, when everything on it is revealed."""
+    from .export import timeline, timeline_total
+
+    starts: dict[str, float] = {}
+    for t, slide, _ in timeline(w):
+        starts.setdefault(slide.id, t)
+    order = [sl.id for sl in w.slides if sl.id in starts]
+    total = timeline_total(w)
+    out = {}
+    for i, sid in enumerate(order):
+        end = starts[order[i + 1]] if i + 1 < len(order) else total
+        out[sid] = max(starts[sid], end - 0.35)
+    return out
 
 
 def mmss(seconds: float | None) -> str:

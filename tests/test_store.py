@@ -231,6 +231,62 @@ async def test_finish_reports_and_drops_an_unclosed_fence(service, store):
     assert store.by_handle(r["handle"]).builder.parser.pending == ""
 
 
+async def test_finish_layout_check_reports_why_it_could_not_run(store, monkeypatch):
+    from showntell import capture
+
+    class Missing:
+        def __init__(self, *a, **kw):
+            pass
+
+        async def __aenter__(self):
+            raise capture.CaptureUnavailable("Playwright is not installed")
+
+        async def __aexit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(capture, "Capturer", Missing)
+    service = LocalService(store, layout_check=True)
+    r = await started(service)
+    await service.add(r["handle"], OPENING)
+    f = await service.finish(r["handle"], None)
+    unchecked = [i["message"] for i in f["issues"] if i["code"] == "not_checked"]
+    assert any("Playwright is not installed" in m for m in unchecked)
+    assert not any("No player has opened" in m for m in unchecked)
+
+
+async def test_finish_layout_check_passes_player_findings_on(store, monkeypatch):
+    from showntell import capture
+
+    seen = []
+
+    class Page:
+        async def evaluate(self, js, *a):
+            return [{"code": "overflow", "slide": "how-caching-works", "message": "Slide how-caching-works does not fit."}]
+
+    class Fake:
+        def __init__(self, url, **kw):
+            self.page = Page()
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def seek(self, t, measure=False):
+            seen.append((t, measure))
+            return ""
+
+    monkeypatch.setattr(capture, "Capturer", Fake)
+    service = LocalService(store, layout_check=True)
+    r = await started(service)
+    await service.add(r["handle"], OPENING)
+    f = await service.finish(r["handle"], None)
+    assert seen and all(m for _, m in seen)
+    assert [i["code"] for i in f["player_issues"]] == ["overflow"]
+    assert not any(i["code"] == "not_checked" and "player" in i["message"] for i in f["issues"])
+
+
 async def test_adding_after_finish_reopens(service, store):
     r = await started(service)
     await service.add(r["handle"], OPENING)

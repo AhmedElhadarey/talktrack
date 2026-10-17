@@ -335,6 +335,17 @@ def test_the_player_reports_text_shrunk_too_far(daemon, browser):
     page.close()
 
 
+def test_finish_draws_every_slide_and_reports_layout(daemon):
+    call = _rpc(daemon)
+    r = call("start", title="Unopened", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    long = "\n".join(f"value_{i} = compute_something_long(alpha, beta, gamma, delta, epsilon_{i})" for i in range(70))
+    call("add", handle=r["handle"], markdown=f"# Unopened\n\nOpening words.\n\n## Wall {{#wall}}\n\n```python\n{long}\n```\n\nA wall of code.\n")
+    call("playable", handle=r["handle"], timeout=10)
+    f = call("finish", handle=r["handle"], questions=None)
+    assert any(i["code"] == "text_too_small" and i["slide"] == "wall" for i in f["player_issues"])
+    assert not any(i["code"] == "not_checked" and "player" in i["message"] for i in f["issues"])
+
+
 def test_preview_returns_pictures_of_slides(daemon, browser):
     import base64
 

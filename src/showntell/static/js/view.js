@@ -58,7 +58,7 @@ function showSlide(i) {
     S.lastCueKey = S.lastReveal = "";
     render(true);
     const idle = window.requestIdleCallback || ((f) => setTimeout(f, 50));
-    idle(() => { if (S.view?.root === v.root) measure(slide, bodyEl, view.parts); });
+    idle(() => { if (S.view?.root === v.root) { measure(slide, bodyEl, view.parts); view.measured = true; } });
   });
   announce(`Slide ${i + 1} of ${W.slides.length}: ${slide.title}`);
   markChapter(i);

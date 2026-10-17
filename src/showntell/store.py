@@ -132,14 +132,20 @@ class Session:
             self.w.slides[idx] = new
             self._changed({slide_id})
 
-    def finish(self, questions: list[str] | None) -> list[str]:
+    def finish(self, questions: list[str] | None, unchecked: str | None = None) -> list[str]:
+        """Close the walkthrough. `unchecked` is None when no layout check ran at finish, '' when
+        it ran, or why it could not run."""
         b = self.builder
         b.issues = []
         b.check_all()
         if b.parser.pending.strip():
             b._issue("block_dropped", "A code block was never closed; it was dropped.", "Close it and send the slide with revise_slide.")
             b.parser.pending = ""
-        if not self.viewed:
+        if unchecked:
+            b._issue("not_checked", f"Render and layout checks could not run: {unchecked}.",
+                     "Open the link to run them in your browser; what it finds arrives with your next call to this walkthrough.",
+                     slide="")
+        elif unchecked is None and not self.viewed:
             b._issue("not_checked", "No player has opened this walkthrough yet, so render and layout checks have not run.",
                      "Open the link; problems the player finds arrive with your next call to this walkthrough.", slide="")
         waiting = sum(1 for sl in self.w.slides for x in sl.says if x.text and x.status == "pending")

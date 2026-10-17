@@ -266,6 +266,7 @@ Environment variables, also listed in [.env.example](.env.example). Command-line
 | **`SHOWNTELL_PUBLIC_URL`** | | base URL for links when viewing from another device, such as a Tailscale name; links then carry an access token |
 | **`SHOWNTELL_ONNX_MODEL`** | `model_quantized` | ONNX variant; `model` (fp32) can be faster on CPUs without AVX2 |
 | **`SHOWNTELL_THREADS`** | up to 6 | CPU threads for ONNX speech |
+| **`SHOWNTELL_FINISH_CHECK`** | 1 | `0` skips drawing every slide headless at `finish_walkthrough` (needs Playwright) |
 
 Pronunciations: put `word = spoken form` lines in `~/.local/share/showntell/lexicon.txt`. A lowercase word matches any capitalisation, and the spoken form may be misaki phonemes between slashes (`kubectl = /kjˈubkˌʌtəl/`). showntell already knows several hundred technical terms.
 

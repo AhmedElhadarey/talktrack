@@ -162,7 +162,8 @@ load().catch((e) => {
 // seeking, never by playing: no audio, no wall-clock animation (player.css turns transitions off
 // under body.capture), only the stage on screen. ?captions=1 burns the caption into the frame.
 // seek(t) resolves once the frame for t is painted, with a key that changes whenever the picture
-// can change, so the caller can reuse the previous frame while the key repeats.
+// can change, so the caller can reuse the previous frame while the key repeats. With
+// { measure: true } it also waits for the slide's layout checks (preview, finish-time check).
 if (params.get("capture") === "1") {
   body.classList.add("capture");
   const burn = params.get("captions") === "1";
@@ -173,14 +174,15 @@ if (params.get("capture") === "1") {
   window.__showntell = Object.assign(window.__showntell || {}, {
     duration: () => (S.W && S.TL.segs.length ? S.TL.total : 0),
     frame: () => (S.W ? S.W.frame : ""),
-    async seek(t) {
+    async seek(t, { measure = false } = {}) {
       seek(t);
       // Nothing changed since the last painted frame: skip the wait (most frames of a video).
-      if (S.view?.done && stateKey() === paintedKey) return paintedKey;
+      if (S.view?.done && stateKey() === paintedKey && (!measure || S.view.measured)) return paintedKey;
       // Mermaid, KaTeX, images and fonts settle in view.ready; showSlide sets view.done after them.
       for (let i = 0; i < 600 && !S.view?.done; i++) await painted();
       await document.fonts?.ready;
       await painted();
+      for (let i = 0; measure && i < 60 && !S.view?.measured; i++) await painted();
       return (paintedKey = stateKey());
     },
   });

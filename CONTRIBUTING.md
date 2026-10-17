@@ -49,7 +49,7 @@ A kind made from a fenced block (```` ```name ````) touches these files:
 | File | What goes there |
 |---|---|
 | `src/showntell/kinds/<name>.py` | `parse(body, attrs)` returning the visual and problems, a size `check`, the noun for a missing cue target, and `KIND`; add it to the registry in `kinds/__init__.py` |
-| `src/showntell/static/js/kinds/<name>.js` | drawing, step reveal and any per-frame animation |
+| `src/showntell/static/js/kinds/<name>.js` | drawing, step reveal and any per-frame animation; add it to `KINDS` in `static/js/render.js` (the interface is at the top of that file) |
 | `src/showntell/static/player.css` | its styles, with colours only from the theme tokens |
 | `src/showntell/text/kinds.json` | the catalogue entry; its `format` is also the fix sent with the kind's `block_error` findings |
 | `docs/format.md` | the syntax |
