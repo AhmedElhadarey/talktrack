@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 (2026-10-17)
 
 - **MLX speech:** uses only mlx-audio's model loader and forward pass. Phonemes, chunking, voices and word timings are shared with the ONNX engine, so an mlx-audio release can no longer break them, and both engines time words the same way.
 - **Word timings:** after a word misaki cannot pronounce, MLX no longer shifts the later words in that stretch of speech or drops its last word.

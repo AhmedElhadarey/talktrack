@@ -1,6 +1,6 @@
 [project]
 name = "showntell"
-version = "0.1.0"
+version = "0.1.1"
 description = "Narrated slide walkthroughs for coding agents, voiced on your machine"
 readme = "README.md"
 license = "MIT"

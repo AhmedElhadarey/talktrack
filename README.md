@@ -23,10 +23,10 @@ You need [uv](https://docs.astral.sh/uv/). It installs Python 3.12 or newer for 
 Every agent runs the same command, which starts showntell as a stdio MCP server:
 
 ```zsh
-uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp
+uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.1 showntell mcp
 ```
 
-`@v0.1.0` installs that release; leave it off for the latest commit. Once showntell is on PyPI this shortens to `uvx showntell mcp`. Pick your agent below, then ask it something like *"walk me through how a request gets retried in this codebase"*. The agent replies with a link; open it and press play.
+The tag after `@` installs that release; leave it off for the latest commit. Once showntell is on PyPI this shortens to `uvx showntell mcp`. Pick your agent below, then ask it something like *"walk me through how a request gets retried in this codebase"*. The agent replies with a link; open it and press play.
 
 The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model. The first walkthrough takes a few seconds longer while they load. After that, everything works offline.
 
@@ -35,7 +35,7 @@ The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB el
 1. Add the server for all your projects:
 
    ```zsh
-   claude mcp add --scope user showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp
+   claude mcp add --scope user showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.1 showntell mcp
    ```
 
 2. Start a new `claude` session and run `/mcp`; `showntell` should be listed as connected.
@@ -55,7 +55,7 @@ Claude Code 2.1.275 or later does both in one step: `claude plugin install shown
 1. Add the server (this writes `~/.codex/config.toml`):
 
    ```zsh
-   codex mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp
+   codex mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.1 showntell mcp
    ```
 
 2. Check it with `codex mcp list`, or run `/mcp` inside a `codex` session.
@@ -66,7 +66,7 @@ If you prefer to edit the config file yourself, add:
 ```toml
 [mcp_servers.showntell]
 command = "uvx"
-args = ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.0", "showntell", "mcp"]
+args = ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.1", "showntell", "mcp"]
 ```
 
 ### Antigravity CLI (agy)
@@ -74,7 +74,7 @@ args = ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.0", "show
 1. Add the server (this writes `~/.gemini/config/mcp_config.json`, which the Antigravity IDE shares). Flags go before the name, and the `--` keeps `--from` from being read as an agy flag:
 
    ```zsh
-   agy mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp
+   agy mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.1 showntell mcp
    ```
 
 2. Check it with `agy mcp list`.
@@ -98,7 +98,7 @@ Recent Pi (checked with 1.3.0) has MCP built in.
 1. Add the server (this writes `~/.pi/agent/mcp.json`; add `-l` to write `.pi/mcp.json` in the current project instead):
 
    ```zsh
-   pi mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp
+   pi mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.1 showntell mcp
    ```
 
 2. Check it with `pi mcp list`. It should say `showntell: connected, 5 tools`.
@@ -111,7 +111,7 @@ Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobail
   "mcpServers": {
     "showntell": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.0", "showntell", "mcp"]
+      "args": ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.1", "showntell", "mcp"]
     }
   }
 }
@@ -122,19 +122,19 @@ Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobail
 - **VS Code:** add the server to your user profile from a terminal, then pick `showntell` under **MCP: List Servers**:
 
   ```zsh
-  code --add-mcp '{"name":"showntell","command":"uvx","args":["--from","git+https://github.com/rahimnathwani/showntell@v0.1.0","showntell","mcp"]}'
+  code --add-mcp '{"name":"showntell","command":"uvx","args":["--from","git+https://github.com/rahimnathwani/showntell@v0.1.1","showntell","mcp"]}'
   ```
 
 - **GitHub Copilot CLI:** its plugin system reads the same marketplace file as Claude Code: `copilot plugin marketplace add rahimnathwani/showntell`, then `copilot plugin install showntell@showntell`.
-- **Cursor, Claude Desktop and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp`. Most use the same `mcpServers` JSON as the older-Pi example.
-- **Over HTTP:** run `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell serve` and connect the client to `http://localhost:4747/mcp`.
+- **Cursor, Claude Desktop and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell@v0.1.1 showntell mcp`. Most use the same `mcpServers` JSON as the older-Pi example.
+- **Over HTTP:** run `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.1 showntell serve` and connect the client to `http://localhost:4747/mcp`.
 
 ### Good to know
 
 - **One shared daemon:** the first `showntell mcp` starts a background daemon, and later ones reuse it. The voice model stays loaded and every agent shares one port. A newer copy of showntell replaces an idle daemon running older code; an older copy uses the newer daemon as it is. `showntell stop` stops it, and the next client starts its own.
-- **Checking the setup:** `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell doctor` checks the models, speech speed, port and daemon.
+- **Checking the setup:** `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.1 showntell doctor` checks the models, speech speed, port and daemon.
 - **Your walkthroughs:** http://localhost:4747/ lists them. They and their audio stay until you delete them, or run `showntell prune --older-than 60d`. The daemon log is `~/.local/share/showntell/daemon.log`, kept under 5 MB with the part before in `daemon.log.1`.
-- **Faster mornings on a Mac:** `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell autostart on` starts the daemon at login, so even the first walkthrough of the day comes back as fast as the rest.
+- **Faster mornings on a Mac:** `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.1 showntell autostart on` starts the daemon at login, so even the first walkthrough of the day comes back as fast as the rest.
 
 ## How it works
 
@@ -223,8 +223,8 @@ After [the final attempt](#L55) the error goes back to the caller.
 An output path ending in `.mp4` renders a video. Each frame is captured by seeking the player in headless Chromium, so rendering runs faster than real time and never drops a frame: a 4.4-minute walkthrough renders in 16 to 20 s on an M-series Mac.
 
 ```zsh
-uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.0' playwright install chromium   # once
-uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.0' showntell export <id> talk.mp4
+uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.1' playwright install chromium   # once
+uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.1' showntell export <id> talk.mp4
 ```
 
 | Part | What you get |
