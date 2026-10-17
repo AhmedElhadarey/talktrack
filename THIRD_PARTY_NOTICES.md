@@ -9,6 +9,7 @@ showntell bundles these libraries in `src/showntell/static/vendor/`, unmodified:
 | **highlight.js** | 11.10.0 | BSD-3-Clause | https://github.com/highlightjs/highlight.js |
 | **Rough.js** | 4.6.6 | MIT | https://github.com/rough-stuff/rough |
 | **Virgil** (font) | 3d4c829 | OFL-1.1 | https://github.com/excalidraw/virgil |
+| **draw.io viewer** (`viewer-static.min.js`) | 31.7.0 | Apache-2.0 | https://github.com/jgraph/drawio |
 
 showntell downloads these models on first run; they are not part of the package:
 

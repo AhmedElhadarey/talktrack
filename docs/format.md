@@ -258,6 +258,19 @@ Cues point at any element by its `id`, by its `<title>` or own text, or by that 
 
 **Checked.** The player reports text too small to read on the slide and labels that a line runs through or that sit on another label (`drawing_overlap`).
 
+### draw.io diagram
+
+````markdown
+```drawio file=docs/architecture.drawio page="Overview"
+```
+````
+
+A page of a draw.io file (`.drawio`, plain or compressed, or a `.drawio.svg` export, which carries its diagram), drawn by the official draw.io viewer. The viewer (`static/vendor/drawio`, Apache-2.0, about 4.3 MB) loads only when a slide needs it and never reaches the network. `page=` picks a page by name or number (from 1); the first page is the default. The diagram sits on a white page, as drawn in draw.io, scaled to fit the slide.
+
+The builder rebuilds the page from cells, styles, geometry and labels. Labels keep simple formatting (bold, italics, line breaks, lists, tables, colours); links, tooltips, placeholders, web fonts, images that are not embedded, and maths are dropped. Shapes from icon libraries the viewer loads on demand (AWS, Azure, GCP, Cisco and similar stencils) are not bundled and show as their plain fallback.
+
+Cues point at a cell by its id, or by its label or the label's slug when that is unique (`#api`, `#Postgres`, `#api-server`); at a region with `#@left,top,width,height` in percent of the diagram; or at label text with `[label](# "text")`. With `.build`, the shapes directly on a layer appear in source order; a cue at a shape inside a container reveals the container, and an edge appears once both its ends are shown. More than 400 shapes and connectors is reported as `block_too_big`.
+
 ## Narration
 
 Narration is plain prose written to be heard. Markdown inside it is used like this:
@@ -317,6 +330,7 @@ With `.build` on the heading, the slide starts mostly empty and fills in as the 
 | **Chart, file tree, numbers, exchange** | bars, series, entries, numbers or messages appear in source order up to the latest one pointed at |
 | **Terminal** | lines appear up to the end of the latest line range pointed at, as for code |
 | **Drawing** | the outermost elements with ids appear in source order up to the latest one pointed at (or holding the element pointed at); unfilled strokes draw themselves in |
+| **draw.io diagram** | shapes on a layer appear in source order up to the latest one pointed at (or holding the cell pointed at); an edge appears once both its ends are shown |
 
 Everything is visible once the slide's narration ends.
 

@@ -207,3 +207,32 @@ def test_a_hand_drawn_drawing_carries_its_library_and_font(tmp_path):
         font = page.evaluate("document.fonts.check('24px Virgil')")
         b.close()
     assert rough >= 1 and font and not other, (rough, font, other)
+
+
+@pytest.mark.browser
+def test_a_drawio_diagram_plays_offline_from_one_page(tmp_path):
+    pw = pytest.importorskip("playwright.sync_api")
+    from test_player_browser import ROOT
+
+    from showntell.export import export_html
+
+    md = ("# Diagram\n\nOpening words.\n\n## Architecture {#arch}\n\n```drawio file=tests/fixtures/drawio/architecture.drawio\n```\n\n"
+          "The diagram as drawn.\n")
+    data = tmp_path / "data"
+    wid = _voiced(data, md, str(ROOT))
+    url = export_html(data, wid, tmp_path / "drawio.html").as_uri()
+    with pw.sync_playwright() as p:
+        try:
+            b = p.chromium.launch()
+        except Exception as e:  # browsers not installed
+            pytest.skip(f"Chromium unavailable: {e}")
+        page = b.new_page()
+        other, errors = [], []
+        page.route("**/*", lambda route: route.continue_() if route.request.url.split("?")[0] == url else (other.append(route.request.url), route.abort()))
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.goto(url + "?capture=1")
+        page.wait_for_function("window.__showntell?.duration?.() > 0")
+        page.evaluate("(t) => window.__showntell.seek(t)", page.evaluate("window.__showntell.duration()") - 0.2)
+        shapes = page.evaluate("document.querySelectorAll('.drawio svg g').length")
+        b.close()
+    assert shapes > 3 and not other and not errors, (shapes, other, errors)

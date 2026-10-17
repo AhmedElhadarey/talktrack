@@ -13,8 +13,12 @@ fetch() { # name version sha256
   echo "$sum  $TMP/$base.tgz" | shasum -a 256 -c --quiet
   tar -xzf "$TMP/$base.tgz" -C "$TMP/$name"
 }
-rm -rf "$V/hljs" "$V/katex" "$V/mermaid.min.js" "$V/rough" "$V/fonts"
-mkdir -p "$V/katex/fonts" "$V/hljs" "$V/LICENSES" "$V/rough" "$V/fonts"
+fetch_url() { # url sha256 destination
+  curl -fsSL "$1" -o "$3"
+  echo "$2  $3" | shasum -a 256 -c --quiet
+}
+rm -rf "$V/hljs" "$V/katex" "$V/mermaid.min.js" "$V/drawio" "$V/rough" "$V/fonts"
+mkdir -p "$V/katex/fonts" "$V/hljs" "$V/drawio" "$V/LICENSES" "$V/rough" "$V/fonts"
 fetch mermaid 11.4.1 ec7b61b391aaa24bf666fd20e48d0a626eeb4a95b95bc6b3016a122d7f0bc2af
 cp "$TMP/mermaid/package/dist/mermaid.min.js" "$V/"
 cp "$TMP/mermaid/package/LICENSE" "$V/LICENSES/mermaid.txt" 2>/dev/null || true
@@ -33,4 +37,8 @@ VIRGIL=https://raw.githubusercontent.com/excalidraw/virgil/3d4c829dc85b455d46466
 curl -fsSL "$VIRGIL/Virgil.woff2" -o "$V/fonts/Virgil.woff2"
 echo "9976295bfe709bdea64839a4d4e9a1d436dd6eb67538399a5a0e8b8fadbcf1cf  $V/fonts/Virgil.woff2" | shasum -a 256 -c --quiet
 curl -fsSL "$VIRGIL/LICENSE.md" -o "$V/LICENSES/virgil.txt"
+# The draw.io viewer (Apache-2.0) is not on npm; it is pinned to a release tag of jgraph/drawio.
+DRAWIO=https://raw.githubusercontent.com/jgraph/drawio/v31.7.0
+fetch_url "$DRAWIO/src/main/webapp/js/viewer-static.min.js" 53a25e8f766e759835a3a6a35d7e88742cb41762ed631ddd6944e38723dade33 "$V/drawio/viewer-static.min.js"
+curl -fsSL "$DRAWIO/LICENSE" -o "$V/LICENSES/drawio.txt"
 du -sh "$V"

@@ -188,6 +188,7 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **Diff** | `old` and `new` blocks, a unified `diff` block, or `diff file=path rev=HEAD~1` |
 | **Diagram** | a `mermaid` block, any diagram type |
 | **Drawing** | an `svg` block, or `svg file=path` for an SVG from draw.io, Excalidraw or Inkscape; cues point at elements by id |
+| **draw.io diagram** | `drawio file=docs/arch.drawio`, drawn by the bundled draw.io viewer offline; cues point at cells by id or label |
 | **Formula** | a `math` block or `$$ … $$`, rendered with KaTeX |
 | **Table** | a pipe table |
 | **List, steps, cards** | `-` or `1.` items; `.cards` on the heading for cards |

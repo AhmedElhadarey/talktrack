@@ -183,6 +183,7 @@ LIBRARIES = {
     "code": ["vendor/hljs/highlight.min.js"],
     "diff": ["vendor/hljs/highlight.min.js"],
     "terminal": ["vendor/hljs/highlight.min.js"],
+    "drawio": ["vendor/drawio/viewer-static.min.js"],
 }
 MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp",
         ".svg": "image/svg+xml", ".avif": "image/avif", ".mp3": "audio/mpeg", ".wav": "audio/wav", ".woff2": "font/woff2"}
