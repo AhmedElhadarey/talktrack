@@ -421,6 +421,29 @@ def test_long_code_steps_that_scroll_fit_the_slide(daemon):
     assert not [i for i in f["player_issues"] if i["code"] == "overflow"], f["player_issues"]
 
 
+def test_a_new_code_version_clears_the_scroll_focus(daemon, browser):
+    call = _rpc(daemon)
+    r = call("start", title="Focus", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    one = "\n".join(f"step_{i} = compute(step_{i - 1})" for i in range(1, 45))
+    md = (f"# Focus\n\nOpening words.\n\n## Faster {{#faster}}\n\n```python step scroll\n{one}\n```\n```python step scroll\n{one.replace('compute(', 'fast(')}\n```\n\n"
+          "First [this line](#L30). Then it [gets faster](#step-2), all of it at once, everywhere. And [this one](#L40).\n")
+    call("add", handle=r["handle"], markdown=md)
+    call("playable", handle=r["handle"], timeout=10)
+    url = r["url"].replace("localhost", "127.0.0.1") + "/"
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    focusing = []
+    for cue in (0, 1, 2):
+        page.goto(url)
+        page.wait_for_function("window.__showntell !== undefined")
+        t = _at(page, "faster", cue, 0.3)
+        page.goto(f"{url}?t={t:.2f}")
+        page.wait_for_selector(".codebox.scroll")
+        page.wait_for_timeout(500)
+        focusing.append(page.evaluate("document.querySelector('.codebox.scroll').classList.contains('focusing')"))
+    assert focusing == [True, False, True]
+    page.close()
+
+
 def test_preview_returns_pictures_of_slides(daemon, browser):
     import base64
 

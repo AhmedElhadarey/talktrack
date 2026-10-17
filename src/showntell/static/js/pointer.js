@@ -15,7 +15,9 @@ export function scrollCode(st, cueKey) {
   const box = view.parts.visual;
   if (!box?.classList?.contains("scroll")) return false;
   const code = box.querySelector(".code");
-  const last = [...st.cues].reverse().find((c) => c.kind === "lines");
+  // The latest line cue since the code last changed version: a step cue clears the focus.
+  const latest = [...st.cues].reverse().find((c) => c.kind === "lines" || c.kind === "step");
+  const last = latest?.kind === "lines" ? latest : null;
   box.classList.toggle("focusing", !!last);
   let y = 0;
   if (last) {
