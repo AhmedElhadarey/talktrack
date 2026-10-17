@@ -116,7 +116,7 @@ class LocalService:
         checks report before the agent stops. Returns why it could not run, or ''."""
         import asyncio
 
-        from .capture import CaptureUnavailable, Capturer
+        from .capture import Capturer, CaptureUnavailable
 
         ends = _end_times(s.w)
         if not ends:
