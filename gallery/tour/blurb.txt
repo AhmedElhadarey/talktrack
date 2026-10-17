@@ -1,0 +1,1 @@
+Asked to give a newcomer a tour of this repository: what showntell does, how a walkthrough travels from the agent's Markdown to the browser, and where the speech comes from.

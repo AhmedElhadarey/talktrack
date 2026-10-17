@@ -2,11 +2,13 @@
 
     uv run python scripts/build_gallery.py gallery.json
     uv run python scripts/build_gallery.py --from-results eval/results/<run>.json --data <eval data folder>
+    uv run python scripts/build_gallery.py --add --from-results ... --only refactor,request
 
 gallery.json lists entries: [{"slug": "...", "id": "<walkthrough id>", "blurb": "..."}], read
 from the data folder in SHOWNTELL_DATA (default ~/.local/share/showntell). With
 --from-results, the entries come from an eval run made with --keep, using each prompt as
-the blurb.
+the blurb. --add keeps the walkthroughs already in gallery/ (their data folders may be gone),
+refreshes the shared player, and lists every exported folder on the index page.
 """
 
 from __future__ import annotations
@@ -34,7 +36,12 @@ def _entries() -> tuple[list[dict], Config]:
     ap.add_argument("entries", nargs="?")
     ap.add_argument("--from-results")
     ap.add_argument("--data")
+    ap.add_argument("--add", action="store_true")
+    ap.add_argument("--only", help="comma-separated slugs to take from the entries")
     args = ap.parse_args()
+    global ADD
+    ADD = args.add
+    only = set(args.only.split(",")) if args.only else None
     cfg = Config()
     if args.data:
         cfg.data_dir = Path(args.data)
@@ -50,28 +57,51 @@ def _entries() -> tuple[list[dict], Config]:
             blurb = prompts.get(r["id"], "").removeprefix("Use showntell to ").split(". ")[0]
             entries.append({"slug": r["id"], "id": r["url"].rstrip("/").rsplit("/", 1)[-1],
                             "blurb": f"Asked to {blurb}." if blurb else ""})
-        return entries, cfg
-    return json.loads(Path(args.entries).read_text()), cfg
+    else:
+        entries = json.loads(Path(args.entries).read_text()) if args.entries else []
+    return [e for e in entries if only is None or e["slug"] in only], cfg
+
+
+ADD = False
+
+
+def _exported(folder: Path) -> Walkthrough:
+    """A walkthrough read back from an exported folder's data.json (the player's format)."""
+    data = json.loads((folder / "data.json").read_text())
+    for sl in data["slides"]:
+        for x in sl["says"]:
+            x.pop("audio", None)
+    return Walkthrough.from_state({**data, "key": "", "report_key": ""})
 
 
 def main() -> None:
     entries, cfg = _entries()
-    if OUT.exists():
+    if OUT.exists() and not ADD:
         shutil.rmtree(OUT)
-    OUT.mkdir()
+    OUT.mkdir(exist_ok=True)
+    if (OUT / "static").exists():
+        shutil.rmtree(OUT / "static")
     copy_player(OUT / "static")
-    cards = []
     for e in entries:
+        if (OUT / e["slug"]).exists():
+            shutil.rmtree(OUT / e["slug"])
         out = export(cfg.data_dir, e["id"], OUT / e["slug"], mp3=True, static_href="../static", copy_static=False)
-        w = Walkthrough.from_state(json.loads((cfg.data_dir / "walkthroughs" / e["id"] / "state.json").read_text()))
+        (out / "blurb.txt").write_text(e.get("blurb", ""))
+        print(f"exported {e['slug']}: {out}")
+    order = [e["slug"] for e in entries]
+    folders = sorted((d for d in OUT.iterdir() if (d / "data.json").is_file()),
+                     key=lambda d: (order.index(d.name) if d.name in order else -1, d.name))
+    cards = []
+    for d in folders:
+        w = _exported(d)
         tl = timeline(w)
         end = tl[-1][0] + (tl[-1][2].duration or tl[-1][2].pause) if tl else 0
+        blurb = (d / "blurb.txt").read_text() if (d / "blurb.txt").is_file() else ""
         cards.append(
-            f'<li><a href="{e["slug"]}/"><span class="frame {w.frame}"></span><span class="t">{html.escape(w.title)}</span>'
-            f'<span class="b">{html.escape(e.get("blurb", ""))}</span>'
+            f'<li><a href="{d.name}/"><span class="frame {w.frame}"></span><span class="t">{html.escape(w.title)}</span>'
+            f'<span class="b">{html.escape(blurb)}</span>'
             f'<span class="m">{len(w.slides)} slides · {int(end // 60)}:{int(end % 60):02d}</span></a></li>'
         )
-        print(f"exported {e['slug']}: {out}")
     (OUT / "index.html").write_text(PAGE.replace("{{CARDS}}", "\n".join(cards)))
     (OUT / ".nojekyll").write_text("")
     size = sum(f.stat().st_size for f in OUT.rglob("*") if f.is_file())

@@ -1,0 +1,1 @@
+Asked to explain scaled dot-product attention in transformers, including why the scores are divided by the square root of the key dimension.

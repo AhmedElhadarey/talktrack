@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Layout checked at finish:** with Playwright installed, `finish_walkthrough` draws every slide fully revealed in headless Chromium, so findings such as `text_too_small` and `overflow` reach the agent before it stops, without anyone opening the link (`SHOWNTELL_FINISH_CHECK=0` turns it off).
+- **Shorter guide:** the authoring guide went from about 2,470 to 1,830 words, checked against the old one by A/B evaluation; a chart, stat, chat or tree block that fails to parse now returns its format in the finding.
+- **More cue forms:** `#Sender->>Receiver` points at a message in a sequence diagram, and `#row-N` works on tables whose rows have ids.
+- **Clearer codes:** problems in chart, stat and chat blocks are `block_error` and `block_too_big` (were `chart_error` and `chart_too_big`).
+- **Smoother code steps:** words that stay glide within edited lines, and the scale holds still between versions.
+- **Reduced motion and screen readers:** with reduced motion, numbers show their value at once and the travelling dot rests at the end of its route; the route of an edge path and the target of a zoom are announced.
+- **Charts in every frame:** charts are drawn to the frame's shape, so portrait and square charts fill the slide.
+- **Daemon updates:** a daemon running other code is replaced once idle, even when the version number is the same.
+- **Internals:** the builder is split into cue resolution, checks and Mermaid reading, and the player into modules; each bundled slide kind is one Python module and one JS module (see CONTRIBUTING, "Adding a slide kind").
+
 - **Code that evolves:** consecutive `step` code blocks are versions of one piece of code; `#step-2` morphs to the next, with unchanged lines gliding into place.
 - **Long code:** `scroll` keeps up to 400 lines at reading size, scrolls to each cued range and dims the rest.
 - **Packets on diagrams:** `#a->b->c` sends a dot along flowchart edges, one hop at a time; edges on step-reveal diagrams draw themselves in.
