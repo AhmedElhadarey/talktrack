@@ -47,7 +47,8 @@ function drawChart(v, [W, H]) {
   const t = (x, y, text, cls, anchor = "middle") => `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${esc(text)}</text>`;
   const all = v.type === "line" ? v.series.flatMap((s) => s.values) : v.categories.flatMap((c) => c.values);
   const lo = Math.min(0, ...all);
-  const { top, step } = niceScale(Math.max(...all, 0) - lo);
+  // Callouts sit above their point: leave headroom over the tallest value when there are any.
+  const { top, step } = niceScale((Math.max(...all, 0) - lo) * ((v.notes || []).length ? 1.4 : 1));
   const head = v.title ? t(W / 2, 34, v.title, "ctitle") : "";
   const m = { l: 96, r: 40, t: v.title ? 70 : 30, b: 86 };
   if (v.type === "hbar") return drawHbar(v, W, H, m, top, step, head, t);
