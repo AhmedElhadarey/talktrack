@@ -70,7 +70,7 @@ Audio files are named by a hash of model, voice, speed and spoken text and kept 
 
 State is saved as JSON next to the source after each change (debounced) and reloaded on demand. Narration still waiting for audio after a restart is queued again.
 
-While a player is connected, a revised slide replaces the old one only once all its narration has audio, so a revision never makes a viewer wait.
+While a player is connected, a revised slide replaces the old one only once all its narration has audio, so a revision never makes a viewer wait. The revised Markdown takes the old slide's place in the stored source, so the source (the `showntell://walkthroughs/{id}` resource and an export's `source.md`) always reads as the walkthrough now is.
 
 ## Speech
 
@@ -164,8 +164,8 @@ Findings from the open player, measured after a slide has settled. Their message
 
 ## Install and daemon
 
-- **Commands:** `showntell mcp` (stdio server for MCP clients), `showntell serve` (the daemon), `showntell play FILE.md`, `showntell export`, `showntell doctor`, `showntell list`.
-- **Shared daemon:** `showntell mcp` reads the lockfile in the data folder (pid, port, version, token). If the daemon is not running, it starts one in the background and waits for `/health`. If the versions differ and the daemon is idle, it is replaced.
+- **Commands:** `showntell mcp` (stdio server for MCP clients), `showntell serve` (the daemon), `showntell play FILE.md`, `showntell export`, `showntell doctor`, `showntell list`, `showntell stop`.
+- **Shared daemon:** `showntell mcp` reads the lockfile in the data folder (pid, port, version, build id, build time, token). If the daemon is not running, it starts one in the background and waits for `/health`. If the daemon runs other code, it is replaced once idle when this copy is newer (a later version, or the same version with files written later); otherwise the newer daemon is used as it is, so two installs never replace each other in turn. `showntell stop` stops it.
 - **Port:** 4747 by default; the next free port if that one is taken.
 - **Direct HTTP:** MCP clients can also connect straight to `http://localhost:4747/mcp`.
 - **First run:** downloads the Kokoro weights and the spaCy English model, with progress on stderr. `showntell doctor` checks models, port, voices and speech speed.

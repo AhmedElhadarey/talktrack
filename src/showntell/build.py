@@ -46,6 +46,7 @@ class Builder(CueResolver, Checks):
         self.issues: list[Issue] = []
         self.new_says: list[tuple[Slide, Say]] = []
         self.changed: set[str] = set()
+        self.visual_line = 0  # where the visual being added starts, for a slide it spills onto
 
     @property
     def root(self) -> Path | None:
@@ -62,13 +63,17 @@ class Builder(CueResolver, Checks):
 
     # -- appending ----------------------------------------------------------------------
 
-    def add(self, markdown: str) -> None:
+    def add(self, markdown: str, check_last: bool = True) -> None:
         for block in self.parser.feed(markdown):
             self._apply(block)
         if self.parser.pending.strip():
             first = self.parser.pending.strip().split("\n", 1)[0][:40]
             self._issue("block_open", f"`{first}` is still open at the end of this call; your next add_slides call completes it.",
                         "Close every code block within one call.")
+        elif check_last and self.w.slides and not self.pending_old:
+            # Slides arrive whole, so the last one is done: check it now, not a call later when
+            # the next heading arrives. Checking it again then reports only what is new.
+            self._check_finished_slide(self.w.slides[-1])
 
     def _current(self) -> Slide:
         if not self.w.slides:
@@ -163,7 +168,18 @@ class Builder(CueResolver, Checks):
             s.shown = (s.shown + "\n" + b.text).strip() if s.shown else b.text
             self.changed.add(s.id)
             return
+        if b.kind == "list" and self._spoken_item(b):
+            self._flush_old()
+            self._add_say(self._current(), b.items[0])
+            return
+        self.visual_line = b.line
         self._add_visual(b)
+
+    def _spoken_item(self, b: Block) -> bool:
+        """A paragraph that happens to start with `1. ` or `- ` after the slide's visual: as a
+        list it would be a second visual, so it is narration."""
+        s = self.w.slides[-1] if self.w.slides else None
+        return bool(s and s.visual and s.kind != "list" and len(b.items) == 1 and len(b.items[0].split()) >= 4)
 
     # -- visuals ------------------------------------------------------------------------
 
@@ -172,7 +188,7 @@ class Builder(CueResolver, Checks):
         if s.visual and not (kind == "list" and s.kind == "list"):
             self._issue("extra_visual", f"Slide `{s.id}` already shows a {s.kind}; the next visual got its own slide.",
                         "Give each visual its own heading.", slide=s.id)
-            s = self._new_slide(Block("heading", 0, s.title, attrs={"classes": list(s.classes)}))
+            s = self._new_slide(Block("heading", self.visual_line, s.title, attrs={"classes": list(s.classes)}))
         return s
 
     def _add_visual(self, b: Block) -> None:

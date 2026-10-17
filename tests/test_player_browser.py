@@ -287,7 +287,7 @@ def test_every_kind_renders(daemon, browser, frame):
                })""",
             i,
         )
-        page.goto(f"{url}?t={t:.2f}")
+        page.goto(f"{url}?at={t:.2f}")
         page.wait_for_timeout(900 if slide["kind"] in ("diagram", "math") else 400)
         page.evaluate("document.querySelector('#overlay').hidden = true")
         state = page.evaluate(
@@ -347,6 +347,23 @@ def test_a_range_plays_its_slides_and_stops(daemon, browser):
     page.wait_for_selector("#range-note:not([hidden])", timeout=20000)
     shown = page.evaluate("document.querySelector('.slide').className")
     assert "k-diagram" in shown and not page.evaluate("window.__showntell.ended")
+    page.close()
+
+
+def test_a_token_in_the_link_is_not_a_start_time(daemon, browser):
+    # On links served beyond this machine `t` carries the access token; one that started with
+    # digits used to send the player part-way in. The start time is `at`.
+    url = _make(daemon, "landscape")
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    kind = "[...document.querySelector('.slide').classList].find((c) => c.startsWith('k-'))"
+    page.goto(url + "?t=9e3Xk2")
+    page.wait_for_selector(".slide")
+    page.wait_for_timeout(400)
+    assert page.evaluate(kind) == "k-title"
+    page.goto(url + "?at=9000")
+    page.wait_for_selector(".slide")
+    page.wait_for_timeout(400)
+    assert page.evaluate(kind) != "k-title"
     page.close()
 
 
@@ -452,7 +469,7 @@ def test_a_new_code_version_clears_the_scroll_focus(daemon, browser):
         page.goto(url)
         page.wait_for_function("window.__showntell !== undefined")
         t = _at(page, "faster", cue, 0.3)
-        page.goto(f"{url}?t={t:.2f}")
+        page.goto(f"{url}?at={t:.2f}")
         page.wait_for_selector(".codebox.scroll")
         page.wait_for_timeout(500)
         focusing.append(page.evaluate("document.querySelector('.codebox.scroll').classList.contains('focusing')"))
@@ -570,7 +587,7 @@ def test_newer_visuals_follow_the_narration(daemon, browser):
         page.goto(url)
         page.wait_for_function("window.__showntell !== undefined")
         t = _at(page, slide_id, cue, after)
-        page.goto(f"{url}?t={t:.2f}")
+        page.goto(f"{url}?at={t:.2f}")
         page.wait_for_timeout(700)
         return page.evaluate(js)
 
@@ -616,7 +633,7 @@ def test_reduced_motion_holds_still_and_moving_cues_are_announced(daemon, browse
         page.goto(url)
         page.wait_for_function("window.__showntell !== undefined")
         t = _at(page, slide_id, cue, after)
-        page.goto(f"{url}?t={t:.2f}")
+        page.goto(f"{url}?at={t:.2f}")
         page.wait_for_selector(ready, state="attached")
         page.wait_for_timeout(700)
         return page.evaluate(js)
@@ -630,7 +647,7 @@ def test_reduced_motion_holds_still_and_moving_cues_are_announced(daemon, browse
     page.goto(url)
     page.wait_for_function("window.__showntell !== undefined")
     t = _at(page, "path", 0, -0.8)
-    page.goto(f"{url}?t={t:.2f}")
+    page.goto(f"{url}?at={t:.2f}")
     page.wait_for_function("!document.querySelector('#big-play').disabled")
     page.click("#big-play")
     page.wait_for_function("document.querySelector('#announce').textContent.startsWith('Path:')", timeout=8000)
@@ -673,7 +690,7 @@ def test_drawings_reveal_point_and_never_run_script(daemon, browser):
     page.goto(url)
     page.wait_for_function("window.__showntell !== undefined")
     t = _at(page, "sky", 0, 0.3)
-    page.goto(f"{url}?t={t:.2f}")
+    page.goto(f"{url}?at={t:.2f}")
     page.wait_for_selector(".drawing")
     page.wait_for_timeout(600)
     state = page.evaluate("""() => {

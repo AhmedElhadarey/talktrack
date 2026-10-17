@@ -6,6 +6,7 @@ import functools
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -72,7 +73,7 @@ def write_lock(cfg: Config, token: str) -> None:
     tmp = cfg.lockfile.with_suffix(".part")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:
-        json.dump({"pid": os.getpid(), "port": cfg.port, "host": cfg.host, "version": _version(), "build": build_id(), "token": token,
+        json.dump({"pid": os.getpid(), "port": cfg.port, "host": cfg.host, "version": _version(), "build": build_id(), "built": built_at(), "token": token,
                    "url": cfg.base_url, "started": time.time()}, f)
     os.replace(tmp, cfg.lockfile)
 
@@ -146,6 +147,12 @@ def _ensure(cfg: Config, log) -> dict:
     lock = running(cfg)
     if lock and not same_build(lock):
         old = f"{lock.get('version')} ({str(lock.get('build') or 'no build id')[:8]})"
+        if not newer_than(lock):
+            # Two installs (a plugin and a checkout, say) would otherwise replace each other's
+            # daemon on every start, reloading the voice model and cutting off open players.
+            log(f"showntell: using the running daemon, version {old}, which is newer than this copy "
+                f"({_version()}); `showntell stop` replaces it")
+            return lock
         if lock["health"].get("busy"):
             log(f"showntell: a daemon of version {old} is busy; using it for now")
             return lock
@@ -181,18 +188,54 @@ def same_build(lock: dict) -> bool:
     return lock.get("version") == _version() and lock.get("build") == build_id()
 
 
+def newer_than(lock: dict) -> bool:
+    """Whether this code is newer than a running daemon's: a later version, or the same version
+    with files written later. A daemon from before build times counts as older."""
+    ours, theirs = _version_key(_version()), _version_key(str(lock.get("version") or ""))
+    if ours != theirs:
+        return ours > theirs
+    return built_at() > float(lock.get("built") or 0)
+
+
+def _version_key(v: str) -> tuple[int, ...]:
+    return tuple(int(n) for n in re.findall(r"\d+", v)[:3])
+
+
+def _own_files() -> list[Path]:
+    """The package's own files: code, player, text; not vendored libraries or bytecode."""
+    root = Path(__file__).parent
+    return [p for p in sorted(root.rglob("*")) if p.is_file() and "__pycache__" not in p.parts
+            and "vendor" not in p.parts and p.suffix not in (".pyc", ".pyo")]
+
+
 @functools.lru_cache(maxsize=1)
 def build_id() -> str:
-    """A hash of the package's own files (code, player, text; not vendored libraries), so an
-    update installed under the same version number still replaces an idle daemon."""
+    """A hash of the package's own files, so an update installed under the same version number
+    still replaces an idle daemon."""
     root = Path(__file__).parent
     h = hashlib.sha256()
-    for p in sorted(root.rglob("*")):
-        if not p.is_file() or "__pycache__" in p.parts or "vendor" in p.parts or p.suffix in (".pyc", ".pyo"):
-            continue
+    for p in _own_files():
         h.update(str(p.relative_to(root)).encode())
         h.update(p.read_bytes())
     return h.hexdigest()[:16]
+
+
+@functools.lru_cache(maxsize=1)
+def built_at() -> float:
+    """When this copy's newest file was written: when it was installed, or last edited."""
+    return max((p.stat().st_mtime for p in _own_files()), default=0.0)
+
+
+def stop(cfg: Config) -> dict | None:
+    """Stop the running daemon, if any, and wait for it to exit. Returns its lock."""
+    lock = running(cfg)
+    if lock:
+        _shutdown(lock)
+        for _ in range(50):
+            if not _alive(int(lock["pid"])):
+                break
+            time.sleep(0.1)
+    return lock
 
 
 def _version() -> str:

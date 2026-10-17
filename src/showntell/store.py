@@ -86,13 +86,14 @@ class Session:
         scratch = Walkthrough(id=self.w.id, key="", report_key="", title=self.w.title, frame=self.w.frame,
                               voice=self.w.voice, speed=self.w.speed, root=self.w.root, sha=self.w.sha)
         b = Builder(scratch, self.store.walk_dir(self.w.id) / "assets")
-        b.add(text + "\n")
+        b.add(text + "\n", check_last=False)
         issues = list(b.issues)
         if not scratch.slides:
             raise ValueError("the Markdown has no slide in it")
         if len(scratch.slides) > 1:
             issues.append(Issue("revise_kept_first", f"revise_slide replaces one slide; kept the first of {len(scratch.slides)}.",
                                 "Send one heading per call.", slide=slide_id))
+            text = "\n".join(text.split("\n")[: max(1, scratch.slides[1].line) - 1]).rstrip()
         new = scratch.slides[0]
         new.id, new.rev, new.line = old.id, old.rev + 1, old.line
         if new.kind == "title" and idx > 0:
@@ -114,12 +115,31 @@ class Session:
         for i, say in enumerate(new.says):
             if not say.pause:
                 voiced += self._voice(new, say, order=order + i)
-        self.source += f"\n<!-- revised {slide_id} -->\n{text}\n"
+        new.line = self._rewrite_source(old, text)
         if not stage:
             self._changed({new.id})
         self._promote(new.id)
         return {"slide": new.id, "rev": new.rev, "says": len(new.says), "revoiced": voiced, "issues": issues,
                 "staged": stage and new.id in self.staged}
+
+    def _rewrite_source(self, old: Slide, text: str) -> int:
+        """Put a revised slide's Markdown where the old slide's was, so the source reads as the
+        walkthrough now is. Returns the line the slide starts on."""
+        lines = self.source.split("\n")
+        blocks = Parser().feed(self.source)
+        start = old.line if old.line > 0 else next((x.line for x in blocks if x.kind != "front"), len(lines))
+        after = [x.line for x in blocks if x.kind == "heading" and x.line > start]
+        after += [sl.line for sl in self.w.slides if sl.line > start]
+        end = min(after, default=len(lines))  # the next slide or section, or the end
+        new = text.rstrip("\n").split("\n") + [""]
+        lines[start - 1 : end - 1] = new
+        delta = len(new) - (end - start)
+        for sl in [*self.w.slides, *self.staged.values()]:
+            if sl.line > start:
+                sl.line += delta
+        self.builder.parser.lines_seen += delta
+        self.source = "\n".join(lines)
+        return start
 
     def _promote(self, slide_id: str) -> None:
         """Swap a staged revision in once all its narration has audio (or failed)."""
@@ -397,6 +417,7 @@ class Store:
         # Rebuild the parser position so later appends continue cleanly.
         s.builder.parser = Parser()
         s.builder.parser.started = True
+        s.builder.parser.lines_seen = s.source.count("\n")
         self.sessions[wid] = s
         for slide in w.slides:
             for say in slide.says:
@@ -416,6 +437,8 @@ class Store:
         return s
 
     def list(self, limit: int = 50) -> list[dict]:
+        from .export import timeline_total
+
         out = []
         for d in self.walk_dir("x").parent.iterdir():
             st = d / "state.json"
@@ -425,7 +448,6 @@ class Store:
                 data = json.loads(st.read_text())
             except json.JSONDecodeError:
                 continue
-            says = [x for s in data.get("slides", []) for x in s.get("says", [])]
             out.append({
                 "id": data["id"],
                 "title": data.get("title", ""),
@@ -435,7 +457,7 @@ class Store:
                 "status": data.get("status", ""),
                 "frame": data.get("frame", "landscape"),
                 "slides": len(data.get("slides", [])),
-                "duration": sum(x.get("duration", 0) or x.get("pause", 0) for x in says),
+                "duration": timeline_total(Walkthrough.from_state(data)),
                 "url": f"{self.base_url}/w/{data['id']}{self.link_suffix}",
             })
         out.sort(key=lambda r: r["updated"], reverse=True)

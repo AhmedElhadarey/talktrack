@@ -131,7 +131,7 @@ Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobail
 
 ### Good to know
 
-- **One shared daemon:** the first `showntell mcp` starts a background daemon, and later ones reuse it. The voice model stays loaded and every agent shares one port.
+- **One shared daemon:** the first `showntell mcp` starts a background daemon, and later ones reuse it. The voice model stays loaded and every agent shares one port. A newer copy of showntell replaces an idle daemon running older code; an older copy uses the newer daemon as it is. `showntell stop` stops it, and the next client starts its own.
 - **Checking the setup:** `uvx --from git+https://github.com/rahimnathwani/showntell showntell doctor` checks the models, speech speed, port and daemon.
 - **Your walkthroughs:** http://localhost:4747/ lists them; the daemon log is `~/.local/share/showntell/daemon.log`.
 - **Faster mornings on a Mac:** `uvx --from git+https://github.com/rahimnathwani/showntell showntell autostart on` starts the daemon at login, so even the first walkthrough of the day comes back as fast as the rest.
@@ -214,6 +214,7 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **`showntell export ID\|LINK\|FILE.md OUT.mp4`** | an MP4 video; `--fps`, `--workers`, `--burn-captions` |
 | **`showntell list`** | recent walkthroughs |
 | **`showntell doctor`** | check models, speech speed, port and daemon |
+| **`showntell stop`** | stop the daemon; the next client starts one from its own copy |
 | **`showntell autostart on\|off\|status`** | macOS: keep the daemon running from login |
 
 ### Video export
@@ -239,6 +240,7 @@ Needs [FFmpeg](https://ffmpeg.org/) on PATH and the `video` extra (Playwright). 
 
 | Feature | How |
 |---|---|
+| **Start part-way** | `?at=90` starts 90 s in |
 | **Play a range** | `?from=slide-id&to=slide-id` plays those slides and stops; `revise_slide` replies with such a link for the changed slide |
 | **Present it yourself** | the menu's "Present with notes", or `?present=1`: no voice, Space or → for the next step, narration as notes, and an audience window that follows |
 | **Pause at each step** | the menu: stops after each paragraph that revealed a part |

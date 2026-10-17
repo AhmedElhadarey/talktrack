@@ -193,6 +193,41 @@ async def test_revise_with_two_slides_keeps_the_first(service, store):
     assert [s.id for s in store.by_handle(r["handle"]).w.slides] == ["how-caching-works", "lookup"]
 
 
+async def test_revise_replaces_the_slide_in_the_source(service, store):
+    """The resource agents read before revising is the walkthrough as it now is, with each
+    slide once, and it still builds the same slides."""
+    r = await started(service)
+    tail = "## Last {#last}\n\nThe end.\n\n## Questions {.questions}\n\n- What next?\n"
+    await service.add(r["handle"], OPENING + "\n" + BODY + "\n" + tail)
+    await service.revise(r["handle"], "lookup", "Only new words here.")
+    await service.revise(r["handle"], "last", "## Last {#last}\n\nA new ending.\n")
+    s = store.by_handle(r["handle"])
+    src = await service.source(r["handle"].split(".")[0])
+    assert src.count("## The lookup") == 1 and "Only new words here." in src and "never touches" not in src
+    assert "The end." not in src and "A new ending." in src and src.index("A new ending.") < src.index("## Questions")
+    assert "revised" not in src
+    from showntell.build import Builder
+    from showntell.model import Walkthrough
+
+    w = Walkthrough(id="w" * 22, key="k", report_key="r", title="T")
+    Builder(w, store.walk_dir("x")).add(src)
+    assert [x.id for x in w.slides] == [x.id for x in s.w.slides] and w.questions == ["What next?"]
+    # Later slides start where the source now has them, and appending continues from there.
+    lines = src.split("\n")
+    assert all(lines[x.line - 1].startswith("#") for x in s.w.slides[1:])
+    a = await service.add(r["handle"], "## More {#more}\n\n```python\nx = 1\n```\n")
+    more = next(i for i in a["issues"] if i["slide"] == "more")
+    assert (await service.source(r["handle"].split(".")[0])).split("\n")[more["line"] - 1] == "## More {#more}"
+
+
+async def test_revise_with_two_slides_keeps_only_the_first_in_the_source(service, store):
+    r = await started(service)
+    await service.add(r["handle"], OPENING + "\n" + BODY)
+    await service.revise(r["handle"], "lookup", "## A {#lookup}\n\nOne.\n\n## B\n\nTwo.\n")
+    src = await service.source(r["handle"].split(".")[0])
+    assert "One." in src and "Two." not in src
+
+
 # -- finishing ---------------------------------------------------------------------------------------
 
 
@@ -216,11 +251,52 @@ async def test_finish_caps_questions_at_four(service):
     assert len((await service.finish(r["handle"], [f"Q{i}?" for i in range(6)]))["questions"]) == 4
 
 
-async def test_finish_reports_last_slide_problems(service):
+async def test_the_last_slides_problems_arrive_with_its_call_and_only_once(service):
     r = await started(service)
-    await service.add(r["handle"], OPENING + "\n## Silent {#silent}\n\n```python\nx = 1\n```\n")
+    a = await service.add(r["handle"], OPENING + "\n## Silent {#silent}\n\n```python\nx = 1\n```\n")
+    assert any("`silent`" in i["message"] and "no narration" in i["message"] for i in a["issues"])
     f = await service.finish(r["handle"], None)
-    assert any("`silent`" in i["message"] and "no narration" in i["message"] for i in f["issues"])
+    assert not any("`silent`" in i["message"] for i in f["issues"])
+
+
+async def test_finish_times_match_the_players_clock(service, store, voiced):
+    from showntell.export import slide_starts, timeline_total
+
+    r = await started(service)
+    await service.add(r["handle"], OPENING + "\n## Part two {.chapter}\n\n" + BODY)
+    s = store.by_handle(r["handle"])
+    await voiced(s)
+    f = await service.finish(r["handle"], None)
+    starts = slide_starts(s.w)
+    assert [o["start_s"] for o in f["outline"]] == [round(starts[x.id], 1) for x in s.w.slides]
+    assert f["outline"][2]["start_s"] > f["outline"][1]["start_s"] + 2  # a chapter card holds the screen
+    assert f["duration_s"] == round(timeline_total(s.w), 1)
+    assert store.list()[0]["duration"] == pytest.approx(timeline_total(s.w), abs=0.01)
+
+
+async def test_finish_without_check_skips_drawing_the_slides(store, monkeypatch):
+    service = LocalService(store, layout_check=True)
+
+    async def must_not_draw(s):
+        raise AssertionError("drew the slides")
+
+    monkeypatch.setattr(service, "_check_layout", must_not_draw)
+    r = await started(service)
+    await service.add(r["handle"], OPENING)
+    f = await service.finish(r["handle"], None, check=False)
+    assert f["slides"] == 1
+
+
+async def test_line_numbers_continue_after_a_reload(service, store, tmp_path):
+    r = await started(service)
+    await service.add(r["handle"], OPENING + "\n" + BODY)
+    s = store.by_handle(r["handle"])
+    s.save_now()
+    fresh = Store(tmp_path / "data", "http://localhost:4799", store.narrator)
+    fresh.loop = asyncio.get_running_loop()
+    a = await LocalService(fresh).add(r["handle"], "## Silent {#silent}\n\n```python\nx = 1\n```\n")
+    silent = next(i for i in a["issues"] if i["slide"] == "silent")
+    assert silent["line"] == s.source.count("\n") + 1
 
 
 async def test_finish_reports_and_drops_an_unclosed_fence(service, store):

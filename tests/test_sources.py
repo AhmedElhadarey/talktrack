@@ -192,6 +192,23 @@ def test_git_diff_range_with_head_default(repo):
     assert "line 11" in d.new.code and d.new_title.endswith("@ HEAD")
 
 
+def test_git_diff_three_dots_compares_with_where_the_branch_left(repo):
+    """A...B, as a pull request shows it: changes made on main after the branch left are not
+    part of the diff."""
+    repo.write("a.py", TEN)
+    repo.commit("one")
+    repo.git("checkout", "-q", "-b", "feature")
+    repo.write("a.py", TEN.replace("line 2\n", "line two\n"))
+    repo.commit("on the branch")
+    repo.git("checkout", "-q", "main")
+    repo.write("a.py", TEN.replace("line 9\n", "line nine\n"))
+    repo.commit("on main")
+    d = sources.git_diff(repo.root, "a.py", "main...feature", None)
+    assert "line 2" in d.old.code and "line two" in d.new.code
+    assert "line nine" not in d.old.code + d.new.code
+    assert d.old_title.endswith("@ main") and d.new_title.endswith("@ feature")
+
+
 def test_git_diff_file_added_after_rev(repo):
     repo.write("a.py", TEN)
     repo.commit("one")

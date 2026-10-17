@@ -11,6 +11,9 @@ import time
 from . import __version__, daemon
 from .config import Config
 
+# Until showntell is on PyPI, where this becomes `uvx showntell mcp`.
+INSTALL = "uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp"
+
 OK, WARN, FAIL = "ok", "warn", "fail"
 
 
@@ -74,7 +77,8 @@ def doctor(cfg: Config, args) -> None:
         h = lock["health"]
         same = daemon.same_build(lock)
         _row(OK if same else WARN, "daemon", f"running at {lock['url']} (pid {lock['pid']}, version {lock.get('version')}, "
-             f"speech {h['speech']['state']})" + ("" if same else "; it runs other code and will be replaced when idle"))
+             f"speech {h['speech']['state']})" + ("" if same else "; it runs older code and will be replaced when idle"
+                                                  if daemon.newer_than(lock) else "; it runs newer code than this copy"))
     else:
         with socket.socket() as s:
             free = s.connect_ex(("127.0.0.1", cfg.port)) != 0
@@ -83,7 +87,7 @@ def doctor(cfg: Config, args) -> None:
 
     print()
     print("Connect an MCP client:")
-    print("  Claude Code   claude mcp add showntell -- uvx showntell mcp")
-    print("  any client    command: uvx showntell mcp   (stdio)")
+    print(f"  Claude Code   claude mcp add --scope user showntell -- {INSTALL}")
+    print(f"  any client    command: {INSTALL}   (stdio)")
     print(f"  over HTTP     {cfg.base_url}/mcp   (after `showntell serve`)")
     sys.exit(1 if problems else 0)

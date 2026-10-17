@@ -35,7 +35,7 @@ def code(lines, width):
     return "\n".join(row for _ in range(lines))
 
 async def zoom_for(page, url):
-    await page.goto(url + "?t=4")
+    await page.goto(url + "?at=4")
     await page.wait_for_timeout(700)
     return await page.evaluate("(() => { const c = document.querySelector('.slide-body > *'); return c ? parseFloat(c.dataset.scale || 1) : null })()")
 

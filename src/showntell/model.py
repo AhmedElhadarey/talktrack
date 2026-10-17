@@ -37,8 +37,7 @@ class Slide:
     says: list = field(default_factory=list)
     attrs: dict = field(default_factory=dict)
     rev: int = 1
-    line: int = 0
-    src: str = ""  # this slide's Markdown
+    line: int = 0  # where the slide starts in the walkthrough's Markdown
 
 
 @dataclass

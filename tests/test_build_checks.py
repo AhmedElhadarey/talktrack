@@ -23,11 +23,28 @@ def test_slide_without_narration_is_reported_when_the_next_slide_starts(build):
     assert has(b.issues, "`silent`", "no narration")
 
 
-def test_last_slide_without_narration_is_reported_by_check_all(build):
+def test_the_last_slide_of_a_call_is_checked_in_that_call_and_reported_once(build):
     _, b = build("# T\n\nA.\n\n## Silent {#silent}\n\n```python\nx = 1\n```\n")
-    assert not has(b.issues, "no narration")
-    b.check_all()
     assert has(b.issues, "`silent`", "no narration")
+    b.issues = []
+    b.add("## Next\n\nB.\n")  # the next heading checks `silent` again
+    b.check_all()
+    assert not has(b.issues, "`silent`")
+
+
+def test_a_slide_still_open_at_the_end_of_a_call_waits_for_its_block(build):
+    _, b = build("# T\n\nA.\n\n## Open {#open}\n\n```python\nx = 1\n")
+    assert not has(b.issues, "no narration")
+    b.add("```\n\nNow the narration.\n")
+    assert not has(b.issues, "`open`", "no narration")
+
+
+def test_a_paragraph_that_starts_like_a_list_item_after_the_visual_is_spoken(build):
+    w, b = build("# T\n\nA.\n\n## Steps {#steps}\n\n```python\nx = 1\n```\n\n"
+                 "1. First the loader reads the file.\n\n- Then it parses every line in turn.\n")
+    s = w.slides[-1]
+    assert len(w.slides) == 2 and s.kind == "code" and not has(b.issues, "already shows")
+    assert [x.text for x in s.says] == ["First the loader reads the file.", "Then it parses every line in turn."]
 
 
 def test_shown_quote_alone_is_not_narration(build):

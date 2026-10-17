@@ -85,23 +85,22 @@ class LocalService:
         r["issues"] = _dicts(r["issues"] + s.take_late_issues())
         return {**r, "url": s.url, "player_issues": _dicts(s.take_player_issues())}
 
-    async def finish(self, handle: str, questions: list[str] | None) -> dict:
+    async def finish(self, handle: str, questions: list[str] | None, check: bool = True) -> dict:
+        """Close the walkthrough. `check=False` skips drawing the slides headless, for callers
+        that only wait for the audio (exporting a Markdown file)."""
+        from .export import slide_starts, timeline_total
+
         s = self.store.by_handle(handle)
-        unchecked = await self._check_layout(s) if self.layout_check else ""
-        issues = s.finish(questions, unchecked=unchecked if self.layout_check else None) + s.take_late_issues()
+        layout = self.layout_check and check
+        unchecked = await self._check_layout(s) if layout else ""
+        issues = s.finish(questions, unchecked=unchecked if layout else None) + s.take_late_issues()
         says = [x for sl in s.w.slides for x in sl.says if x.text]
-        outline, t = [], 0.0
-        for sl in s.w.slides:
-            outline.append({"id": sl.id, "title": sl.title, "start_s": round(t, 1)})
-            for x in sl.says:
-                t += x.pause or (x.duration or len(x.text.split()) / 2.7) + 0.3
-            t += 0.3
+        starts = slide_starts(s.w)
         return {
-            "outline": outline,
+            "outline": [{"id": sl.id, "title": sl.title, "start_s": round(starts[sl.id], 1)} for sl in s.w.slides],
             "url": s.url,
             "slides": len(s.w.slides),
-            "duration_s": round(sum(x.duration or len(x.text.split()) / 2.7 for x in says)
-                                + sum(x.pause for sl in s.w.slides for x in sl.says), 1),
+            "duration_s": round(timeline_total(s.w), 1),
             "pending": sum(1 for x in says if x.status == "pending"),
             "issues": _dicts(issues),
             "player_issues": _dicts(s.take_player_issues()),
@@ -184,7 +183,10 @@ class RemoteService:
 
     async def _call(self, method: str, **kw) -> Any:
         r = await self.client.post(f"{self.base}/api/rpc/{method}", json=kw)
-        data = r.json()
+        try:
+            data = r.json()
+        except ValueError:  # a plain-text refusal, or not the daemon at all
+            data = {"error": f"daemon error {r.status_code}: {r.text.strip()[:200]}"}
         if r.status_code != 200:
             raise ValueError(data.get("error", f"daemon error {r.status_code}"))
         return data["result"]
@@ -201,8 +203,10 @@ class RemoteService:
     async def revise(self, handle, slide, markdown):
         return await self._call("revise", handle=handle, slide=slide, markdown=markdown)
 
-    async def finish(self, handle, questions):
-        return await self._call("finish", handle=handle, questions=questions)
+    async def finish(self, handle, questions, check=True):
+        if check:  # a daemon from before `check` still takes the call
+            return await self._call("finish", handle=handle, questions=questions)
+        return await self._call("finish", handle=handle, questions=questions, check=False)
 
     async def list(self):
         return await self._call("list")

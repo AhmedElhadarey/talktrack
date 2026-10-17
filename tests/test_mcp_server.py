@@ -77,6 +77,14 @@ async def test_start_returns_handle_and_url(mcp):
         assert data["handle"] in text(r) and data["url"] in text(r)
 
 
+async def test_start_says_which_project_folder_files_are_read_from(mcp, tmp_path):
+    async with mcp as client:
+        r = await client.call_tool("start_walkthrough", {"title": "Caching", "project_dir": str(tmp_path)})
+        assert str(tmp_path.resolve()) in text(r)
+        r = await client.call_tool("start_walkthrough", {"title": "Caching", "project_dir": str(tmp_path), "opening": OPENING})
+        assert str(tmp_path.resolve()) in text(r)
+
+
 async def test_start_with_opening_returns_the_playable_link(mcp):
     """The opening can ride along with the start call, saving a model round trip."""
     async with mcp as client:

@@ -40,7 +40,7 @@ def test_drawio_renders_offline_points_at_cells_and_reveals(daemon, browser):  #
     page.goto(url)
     page.wait_for_function("window.__showntell !== undefined")
     t = _at(page, "arch", 0, 0.3)
-    page.goto(f"{url}?t={t:.2f}")
+    page.goto(f"{url}?at={t:.2f}")
     page.wait_for_selector(".drawio svg")
     page.wait_for_timeout(800)
     state = page.evaluate("""() => {

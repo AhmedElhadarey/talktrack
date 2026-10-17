@@ -66,6 +66,8 @@ def main(argv: list[str] | None = None) -> None:
     d = sub.add_parser("doctor", help="check models, speech speed, port and daemon")
     _common(d)
     d.add_argument("--speech", choices=["auto", "mlx", "onnx", "fake"])
+    st = sub.add_parser("stop", help="stop the background daemon; the next client starts this copy's")
+    _common(st)
     au = sub.add_parser("autostart", help="macOS: start the daemon at login and keep it running")
     _common(au)
     au.add_argument("action", choices=["on", "off", "status"])
@@ -103,6 +105,11 @@ def main(argv: list[str] | None = None) -> None:
         from .doctor import doctor
 
         doctor(cfg, args)
+    elif args.cmd == "stop":
+        from . import daemon
+
+        lock = daemon.stop(cfg)
+        print(f"Stopped the daemon (pid {lock['pid']}, version {lock.get('version')})." if lock else "No daemon is running.")
     elif args.cmd == "autostart":
         autostart(cfg, args.action)
     elif args.cmd == "version":
@@ -197,12 +204,15 @@ def list_cmd(cfg: Config) -> None:
         return
     import json
 
+    from .export import timeline_total
+    from .model import Walkthrough
+
     rows = []
     for d in walk.iterdir():
         st = d / "state.json"
         if st.is_file():
             data = json.loads(st.read_text())
-            dur = sum(x.get("duration", 0) or x.get("pause", 0) for s in data.get("slides", []) for x in s.get("says", []))
+            dur = timeline_total(Walkthrough.from_state(data))
             rows.append((data.get("updated", 0), data["id"], data.get("title", ""), len(data.get("slides", [])), dur))
     for _, wid, title, n, dur in sorted(rows, reverse=True)[:30]:
         print(f"{wid}  {mmss(dur):>5}  {n:>2} slides  {title}")

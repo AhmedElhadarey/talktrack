@@ -146,7 +146,16 @@ def git_diff(root: Path | None, rel: str, rev: str, spec: str | None, context: i
     path = (p if p.is_absolute() else base / p).resolve()
     if not path.is_relative_to(base):
         raise SourceError(f"{rel} is outside the project folder {base}")
-    if ".." in rev:
+    if "..." in rev:  # A...B, as a pull request shows it: B against where it left A
+        a, b = rev.split("...", 1)
+        a, b = a or "HEAD", b or "HEAD"
+        verify_rev(root, a)
+        verify_rev(root, b)
+        base_sha = _git(root, "merge-base", a, b).strip()
+        old_text = file_at(root, base_sha, path)
+        new_text = file_at(root, b, path)
+        old_title, new_title = f"{path.name} @ {a}", f"{path.name} @ {b}"
+    elif ".." in rev:
         a, b = rev.split("..", 1)
         old_text = file_at(root, a or "HEAD", path)
         new_text = file_at(root, b or "HEAD", path)

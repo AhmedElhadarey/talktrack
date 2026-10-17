@@ -62,8 +62,9 @@ async function load() {
   setData(window.__showntellData || await (await fetch("data.json", { cache: "no-store" })).json());
   if (LIVE) connect();
   if (params.get("from") || params.get("to")) setRange(params.get("from"), params.get("to"));
-  const t = parseFloat(params.get("t"));
-  if (t > 0) seek(t);
+  // `at` is where to start, in seconds. (`t` is the access token on links served beyond this machine.)
+  const at = parseFloat(params.get("at"));
+  if (at > 0) seek(at);
   if (PRESENT) startPresenting();
   if (AUDIENCE) followPresenter();
   emit("ready", { duration: S.TL.total, slides: S.W.slides.length, title: S.W.title, frame: S.W.frame });
@@ -95,7 +96,13 @@ $("#speed").onchange = (e) => { S.rate = parseFloat(e.target.value) || 1; audio.
 $("#pause-after").checked = S.pauseAfterSlide;
 $("#pause-after").onchange = (e) => { S.pauseAfterSlide = e.target.checked; store.set("pauseAfterSlide", S.pauseAfterSlide); };
 $("#theme").value = store.get("theme", "") || "";
-$("#theme").onchange = (e) => { store.set("theme", e.target.value || null); location.reload(); };
+$("#theme").onchange = (e) => {
+  // Diagrams and charts take their colours when drawn, so reload, at the same moment.
+  store.set("theme", e.target.value || null);
+  const u = new URL(location.href);
+  u.searchParams.set("at", now().toFixed(2));
+  location.replace(u.toString());
+};
 $("#pause-steps").checked = S.pauseSteps;
 $("#pause-steps").onchange = (e) => { S.pauseSteps = e.target.checked; store.set("pauseSteps", S.pauseSteps); };
 $("#present").onclick = () => { const u = new URL(location.href); u.searchParams.set("present", "1"); location.href = u.toString(); };

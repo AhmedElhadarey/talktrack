@@ -60,6 +60,16 @@ class Checks:
     # -- slide-level checks -------------------------------------------------------------
 
     def _check_finished_slide(self, s: Slide) -> None:
+        """Checks on a whole slide. It is checked at the end of the call that sent it and again
+        when the next heading arrives or at finish; each finding is reported once."""
+        start = len(self.issues)
+        self._check_slide(s)
+        seen = self.__dict__.setdefault("_slide_findings", set())
+        fresh = [i for i in self.issues[start:] if (i.code, i.slide, i.message) not in seen]
+        seen.update((i.code, i.slide, i.message) for i in fresh)
+        self.issues[start:] = fresh
+
+    def _check_slide(self, s: Slide) -> None:
         if not s.visual and s.kind not in ("title",):
             for x in s.says:
                 for c in getattr(x, "_cues", None) or []:

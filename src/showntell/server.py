@@ -207,13 +207,16 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
             return _error(str(e))
         head = reply("started", "Handle: {handle}\nLink (not playable yet): {url}\nNext: call add_slides now with only the title slide and one or two spoken sentences.",
                      handle=r["handle"], url=r["url"])
+        # Which folder file= and rev= read from, so a wrong guess shows before the first source_error.
+        project = (reply("project", "Project folder: {root}", root=r["root"]) if r.get("root")
+                   else reply("no_project", "No project folder: pass project_dir to show files from disk."))
         if opening.strip():
             # The opening came with the call: voice it now and return the link, saving a round trip.
             res = await _append(r["handle"], opening, ctx)
-            text = f"Handle: {r['handle']}\n" + res.content[0].text
+            text = f"Handle: {r['handle']}\n{project}\n" + res.content[0].text
             data = {**(res.structured_content or {}), "message": text, "handle": r["handle"]}
             return CallToolResult(content=[TextContent(type="text", text=text)], structured_content=data, is_error=res.is_error)
-        text = head
+        text = head + "\n" + project
         if not r["speech"]["ready"]:
             text += "\n" + reply("loading", "The voice model is {status}; the first add_slides call may take longer.",
                                  status=r["speech"]["describe"])

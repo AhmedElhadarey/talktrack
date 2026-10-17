@@ -13,10 +13,11 @@ DIAGRAM = "## G {#g}\n\n```mermaid\nflowchart LR\n  req[Request] --> hit{In cach
 
 @pytest.fixture
 def cues(build, project):
-    """`cues(visual_md, narration)` -> (resolved cues of that narration, builder issues)."""
+    """`cues(visual_md, narration)` -> (resolved cues of that narration, builder issues), without
+    the checks on the whole slide."""
 
     def _cues(visual: str, narration: str, frame: str = "landscape"):
-        w, b = build("# T\n\nOpening.\n\n" + visual + narration + "\n", root=project, frame=frame)
+        w, b = build("# T\n\nOpening.\n\n" + visual + narration + "\n", root=project, frame=frame, check_last=False)
         return w.slides[-1].says[-1].cues, b.issues
 
     return _cues
@@ -175,7 +176,7 @@ def test_unknown_flowchart_node_lists_the_nodes(cues):
 
 def test_cues_written_before_the_visual_are_resolved_when_it_arrives(build, project):
     w, b = build("# T\n\nA.\n\n## C\n\nThe [guard](#L12) first.\n\n```python file=src/cache.py lines=10-24\n```\n",
-                 root=project)
+                 root=project, check_last=False)
     (c,) = w.slides[1].says[0].cues
     assert (c["kind"], c["l0"]) == ("lines", 12) and not b.issues
 

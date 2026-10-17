@@ -130,6 +130,26 @@ def test_ensure_replaces_an_idle_daemon_of_the_same_version_but_other_code(cfg, 
     assert stopped == [old] and "replacing" in messages[0]
 
 
+@pytest.mark.parametrize("theirs", [{"version": "99.0.0"}, {"version": __version__, "built": 4e9}])
+def test_ensure_keeps_a_daemon_newer_than_this_copy(cfg, monkeypatch, theirs):
+    """Two installs (a plugin and a checkout) must not replace each other's daemon on every start."""
+    lock = {"pid": os.getpid(), "port": cfg.port, "token": "t", "build": "0000000000000000", "health": {"busy": False}, **theirs}
+    monkeypatch.setattr(daemon, "running", lambda c: lock)
+    monkeypatch.setattr(daemon, "_shutdown", lambda lock: pytest.fail("must not stop a newer daemon"))
+    messages = []
+    assert daemon.ensure(cfg, log=messages.append) is lock
+    assert "newer" in messages[0] and "showntell stop" in messages[0]
+
+
+def test_newer_than_compares_versions_then_build_times():
+    ours = daemon._version_key(__version__)
+    older = ".".join(str(n) for n in (ours[0], ours[1], ours[2] - 1)) if ours[2] else "0.0.0"
+    assert daemon.newer_than({"version": older, "built": 4e9})
+    assert daemon.newer_than({"version": __version__, "built": 1.0})
+    assert daemon.newer_than({"version": __version__})  # from before build times
+    assert not daemon.newer_than({"version": __version__, "built": 4e9})
+
+
 def test_build_id_changes_with_the_code(monkeypatch, tmp_path):
     import shutil
 
@@ -152,6 +172,53 @@ def test_ensure_keeps_a_busy_daemon_of_another_version(cfg, monkeypatch):
     messages = []
     assert daemon.ensure(cfg, log=messages.append) is lock
     assert "busy" in messages[0]
+
+
+async def test_the_shim_reports_a_plain_text_refusal_readably():
+    import httpx
+
+    svc = RemoteService("http://127.0.0.1:1", "t")
+    svc.client = httpx.AsyncClient(transport=httpx.MockTransport(
+        lambda req: httpx.Response(403, text="local clients only", headers={"content-type": "text/plain"})))
+    with pytest.raises(ValueError, match="403: local clients only"):
+        await svc.list()
+
+
+def test_exporting_a_markdown_file_draws_no_slides_while_it_waits(cfg, monkeypatch, tmp_path):
+    """Waiting for the audio polls finish; each poll must not launch a browser to check layout."""
+    from showntell import export, service
+
+    calls = []
+
+    class Fake:
+        def __init__(self, *a):
+            self.n = 0
+
+        async def start(self, *a, **k):
+            return {"handle": "w.k"}
+
+        async def add(self, *a):
+            return {}
+
+        async def playable(self, *a):
+            return {}
+
+        async def finish(self, handle, questions, check=True):
+            calls.append(check)
+            self.n += 1
+            return {"pending": 3 - self.n}
+
+    monkeypatch.setattr(service, "RemoteService", Fake)
+    monkeypatch.setattr(daemon, "ensure", lambda c, log: {"port": 1, "token": "t"})
+    monkeypatch.setattr("asyncio.sleep", _no_sleep)
+    md = tmp_path / "talk.md"
+    md.write_text("# Talk\n\nWords.\n")
+    assert export._play_and_wait(cfg, md) == "w"
+    assert calls == [False, False, False]
+
+
+async def _no_sleep(s):
+    return None
 
 
 # -- the real thing -------------------------------------------------------------------------------------

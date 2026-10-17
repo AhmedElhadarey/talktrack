@@ -51,4 +51,4 @@ Four ways to walk someone through a change, a module or a concept to someone who
 - **Explaining a concept with project code:** formulas and diagrams next to the lines that implement them.
 - **Private code:** nothing is uploaded to a speech or video service.
 
-For a file anyone can play inline, record a walkthrough to MP4 with `uv run scripts/record_video.py` (needs ffmpeg), or pair the walkthrough link with a short written summary.
+For a file anyone can play, write one page that plays offline with `showntell export ID talk.html`, render an MP4 with `showntell export ID talk.mp4` (needs FFmpeg and the `video` extra), or pair the walkthrough link with a short written summary.

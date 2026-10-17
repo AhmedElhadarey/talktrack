@@ -24,9 +24,9 @@ On a miss it [calls the loader](#L18) and stores the result.
 | **Front matter** | optional, only at the very start, between `---` lines. Keys: `title`, `frame`, `theme`, `voice`, `speed`. Tools pass these as arguments instead. |
 | **Slide** | every heading (`#`, `##` or `###`) starts a slide. The level does not matter. |
 | **Title slide** | the first slide renders as a title slide when it has no visual. A `>` quote under it is the subtitle. |
-| **Visual** | at most one per slide: a code block, a diff, a diagram, a formula, a table, a list, an image, a chart, a terminal session or a file tree |
+| **Visual** | at most one per slide: a code block, a diff, a diagram, a formula, a table, a list, an image, a chart, headline numbers (`stat`), an exchange (`chat`), a terminal session, a file tree, a drawing (`svg`) or a draw.io diagram |
 | **Shown text** | `>` quote lines are shown on the slide, never spoken |
-| **Narration** | every other paragraph is spoken. Each paragraph is voiced separately, with a short pause after it. |
+| **Narration** | every other paragraph is spoken. Each paragraph is voiced separately, with a short pause after it. A paragraph that starts with `1. ` or `- ` right after the slide's visual is spoken too, since a list there would be a second visual. |
 | **Questions** | a slide whose heading has the `.questions` class is not shown; its list items become the questions offered at the end. Questions passed to `finish_walkthrough` replace them. |
 
 Text before the first heading belongs to an automatic title slide that uses the walkthrough's title.
@@ -114,7 +114,7 @@ total = sum(xs)
 ```
 ````
 
-With `file=` and `rev=`, the server reads both versions from git: `rev=A` compares commit `A` with the working tree, and `rev=A..B` compares two commits. It shows the changed region with a few lines of context; `lines=` narrows the new side to that range instead. A pasted `diff` block is numbered from its first `@@` header, so send one hunk per slide.
+With `file=` and `rev=`, the server reads both versions from git: `rev=A` compares commit `A` with the working tree, `rev=A..B` compares two commits, and `rev=A...B` compares `B` with the commit where it branched from `A`, as a pull request does. It shows the changed region with a few lines of context; `lines=` narrows the new side to that range instead. A pasted `diff` block is numbered from its first `@@` header, so send one hunk per slide.
 
 ### Diagram
 

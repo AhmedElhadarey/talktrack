@@ -261,7 +261,7 @@ def test_git_diff_block(build, repo):
     repo.write("src/stats.py", "".join(f"line {i}\n" for i in range(1, 11)))
     repo.commit("one")
     repo.write("src/stats.py", "".join(f"line {i}\n" for i in range(1, 11)).replace("line 6", "line six"))
-    w, b = build("# T\n\nA.\n\n## D\n\n```diff file=src/stats.py rev=HEAD\n```\n\nB.\n", root=repo.root)
+    w, b = build("# T\n\nA.\n\n## D\n\n```diff file=src/stats.py rev=HEAD\n```\n\nB.\n", root=repo.root, check_last=False)
     v = w.slides[1].visual
     assert w.slides[1].kind == "diff" and v["lang"] == "python" and v["rev"] == "HEAD"
     assert "line six" in v["new"]["code"] and "line 6" in v["old"]["code"]

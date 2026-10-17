@@ -1,6 +1,29 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 (unreleased)
+
+First public release.
+
+- **Format:** Markdown walkthroughs with code, diffs, Mermaid diagrams, KaTeX formulas, tables, lists, cards, steps and images; pointer cues as links; step reveals with `.build`; pauses, footnotes and pronunciation overrides.
+- **Agents:** MCP tools to start, add slides, revise a slide, finish and list; prompts for diffs, files and topics; resources holding each walkthrough's Markdown; problems reported back on every call; cues inferred when narration has none.
+- **Code from disk:** `file=` and `lines=`, and diffs from git revisions, with real line numbers. Git runs only plumbing commands.
+- **Speech:** Kokoro-82M on MLX (Apple silicon) or ONNX Runtime (int8, any CPU), 27 English voices, no GPL dependencies by default. Code, units, versions and several hundred technical terms are pronounced properly; unknown words are never skipped.
+- **Player:** live per-slide updates, a pointer timed to the word, captions, transcript, chapters, seeking, keyboard control, pause after each slide, step reveals, screen-reader announcements, reduced motion, phone layout. Missing audio plays silently instead of stopping.
+- **Daemon:** shared across MCP clients through `showntell mcp`; lockfile, health route, replacement when idle on upgrade; `doctor`, `play`, `export`, `list` and macOS `autostart` commands.
+- **Export:** static folders with WebVTT captions and optional MP3 audio; a gallery builder; a recorder for MP4 and GIF demos.
+- **Install paths:** a Claude Code plugin marketplace in this repository, a Gemini CLI extension, and one version stamped into every manifest by `scripts/sync_version.py`.
+- **Security:** Host and Origin checks on every route, JSON-only POSTs, 128-bit ids with separate write and report keys, access tokens beyond localhost.
+
+- **Start time and access token:** `?at=90` starts the player 90 s in. `?t=` is only the access token on links served beyond this machine; a token that began with digits used to start the walkthrough part-way through.
+- **Revising rewrites the source:** a revised slide's Markdown takes the old slide's place, so the walkthrough's resource and `source.md` show each slide once and build the same slides again.
+- **Findings without delay:** problems with the last slide of an `add_slides` call come back in that call's reply, not the next one.
+- **Durations on the player's clock:** slide start times and lengths in `finish_walkthrough`, `list_walkthroughs` and `showntell list` match the player, chapter cards and pauses between paragraphs included.
+- **Pull request ranges:** `rev=A...B` compares `B` with the commit where it branched from `A`.
+- **Stray list markers:** a narration paragraph that starts with `1. ` or `- ` after the slide's visual is spoken, not made into a second visual.
+- **Project folder in the reply:** `start_walkthrough` says which folder `file=` and `rev=` read from.
+- **Exporting a Markdown file** waits for its audio without drawing every slide in a browser on each check.
+- **Theme switch keeps your place** in the walkthrough.
+- **Clearer daemon errors:** a plain-text refusal from the daemon reaches the agent as a message, not a JSON error.
 
 - **Drawings that move:** consecutive ```` ```svg step ```` blocks are versions of one drawing; at `#step-2`, elements that keep their id glide to their new place, size, angle and colour on the narration's clock, so seeking and video show the motion exactly.
 - **Hand-drawn drawings:** ```` ```svg sketch ```` redraws shapes with Rough.js and text in the Virgil face, as on a whiteboard.
@@ -20,7 +43,7 @@
 - **Smoother code steps:** words that stay glide within edited lines, and the scale holds still between versions.
 - **Reduced motion and screen readers:** with reduced motion, numbers show their value at once and the travelling dot rests at the end of its route; the route of an edge path and the target of a zoom are announced.
 - **Charts in every frame:** charts are drawn to the frame's shape, so portrait and square charts fill the slide.
-- **Daemon updates:** a daemon running other code is replaced once idle, even when the version number is the same.
+- **Daemon updates:** a daemon running older code is replaced once idle, even when the version number is the same; a newer one is used as it is, so two installs never replace each other in turn. `showntell stop` stops it.
 - **Internals:** the builder is split into cue resolution, checks and Mermaid reading, and the player into modules; each bundled slide kind is one Python module and one JS module (see CONTRIBUTING, "Adding a slide kind").
 
 - **Code that evolves:** consecutive `step` code blocks are versions of one piece of code; `#step-2` morphs to the next, with unchanged lines gliding into place.
@@ -50,17 +73,3 @@
 - **Capture mode:** `?capture=1` on the player hides everything but the stage, plays no audio, turns animation off and exposes `window.__showntell.duration()` and `seek(t)`. `showntell.capture.capture_frames` returns PNG frames at given times.
 - **Posters:** folder exports write `poster.png`, the title slide, and reference it in `og:image` and `twitter:image` tags, when Playwright is installed.
 - **Timeline:** the exporter's paragraph lengths now match the player's exactly for paragraphs without audio.
-
-## 0.1.0 (unreleased)
-
-First public release.
-
-- **Format:** Markdown walkthroughs with code, diffs, Mermaid diagrams, KaTeX formulas, tables, lists, cards, steps and images; pointer cues as links; step reveals with `.build`; pauses, footnotes and pronunciation overrides.
-- **Agents:** MCP tools to start, add slides, revise a slide, finish and list; prompts for diffs, files and topics; resources holding each walkthrough's Markdown; problems reported back on every call; cues inferred when narration has none.
-- **Code from disk:** `file=` and `lines=`, and diffs from git revisions, with real line numbers. Git runs only plumbing commands.
-- **Speech:** Kokoro-82M on MLX (Apple silicon) or ONNX Runtime (int8, any CPU), 27 English voices, no GPL dependencies by default. Code, units, versions and several hundred technical terms are pronounced properly; unknown words are never skipped.
-- **Player:** live per-slide updates, a pointer timed to the word, captions, transcript, chapters, seeking, keyboard control, pause after each slide, step reveals, screen-reader announcements, reduced motion, phone layout. Missing audio plays silently instead of stopping.
-- **Daemon:** shared across MCP clients through `showntell mcp`; lockfile, health route, replacement when idle on upgrade; `doctor`, `play`, `export`, `list` and macOS `autostart` commands.
-- **Export:** static folders with WebVTT captions and optional MP3 audio; a gallery builder; a recorder for MP4 and GIF demos.
-- **Install paths:** a Claude Code plugin marketplace in this repository, a Gemini CLI extension, and one version stamped into every manifest by `scripts/sync_version.py`.
-- **Security:** Host and Origin checks on every route, JSON-only POSTs, 128-bit ids with separate write and report keys, access tokens beyond localhost.

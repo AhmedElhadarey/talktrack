@@ -37,9 +37,10 @@ def _estimate(x) -> float:
     return max(1.0, len(x.text.split()) / 2.7)
 
 
-def _walk(w: Walkthrough) -> tuple[list[tuple[float, object, object]], float]:
-    out, t = [], 0.0
+def _walk(w: Walkthrough) -> tuple[list[tuple[float, object, object]], dict[str, float], float]:
+    out, starts, t = [], {}, 0.0
     for slide in w.slides:
+        starts[slide.id] = t
         says = [x for x in slide.says if x.pause or x.text]
         if not says:
             t += EMPTY + SLIDE_GAP
@@ -47,7 +48,7 @@ def _walk(w: Walkthrough) -> tuple[list[tuple[float, object, object]], float]:
         for k, x in enumerate(says):
             out.append((t, slide, x))
             t += _estimate(x) + (0 if x.pause else SLIDE_GAP if k == len(says) - 1 else GAP)
-    return out, t
+    return out, starts, t
 
 
 def timeline(w: Walkthrough) -> list[tuple[float, object, object]]:
@@ -55,9 +56,14 @@ def timeline(w: Walkthrough) -> list[tuple[float, object, object]]:
     return _walk(w)[0]
 
 
+def slide_starts(w: Walkthrough) -> dict[str, float]:
+    """Where each slide starts on the player's clock, by slide id."""
+    return _walk(w)[1]
+
+
 def timeline_total(w: Walkthrough) -> float:
     """The walkthrough's length in seconds on the player's clock, trailing gap included."""
-    return _walk(w)[1]
+    return _walk(w)[2]
 
 
 def _ts(t: float) -> str:
@@ -405,7 +411,7 @@ def _play_and_wait(cfg: Config, path: Path) -> str:
         await svc.add(r["handle"], text)
         await svc.playable(r["handle"], 60)
         for _ in range(600):
-            f = await svc.finish(r["handle"], None)
+            f = await svc.finish(r["handle"], None, check=False)
             if not f["pending"]:
                 break
             await asyncio.sleep(0.5)
