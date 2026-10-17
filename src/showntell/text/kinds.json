@@ -21,7 +21,7 @@
       "kind": "diagram",
       "fence": "```mermaid",
       "use": "flow, structure, states, sequences",
-      "point": "#node-id, [label](# \"node label\"), or #a->b->c to send a dot along those edges (flowcharts)",
+      "point": "#node-id (a flowchart node, sequence participant or state), [label](# \"node label\"), #a->b->c to send a dot along those edges (flowcharts), or #Sender->>Receiver for a message in a sequence diagram (the first between them; add quoted text to pick another)",
       "reveal": "flowchart nodes in source order, edges once both ends show",
       "example": "```mermaid\nflowchart LR\n  req[Request] --> cache{Cached?}\n  cache -->|no| db[Database]\n```"
     },
