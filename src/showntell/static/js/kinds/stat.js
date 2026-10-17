@@ -1,6 +1,6 @@
 // Headline numbers that count up, from `before` when given, when the narration reaches them.
 
-import { el } from "../draw.js";
+import { el, reducedMotion } from "../draw.js";
 import { esc, inline } from "../util.js";
 
 const STAT_COUNT_S = 1.2;
@@ -44,7 +44,7 @@ export default {
       const el = parts.items.get(it.id)?.querySelector(".num");
       if (!el) continue;
       const at = cued.has(it.id) ? cued.get(it.id) : any && !st.revealAll ? null : t - st.sinceSlide;
-      const text = at === null ? statText(it, 0) : statText(it, (t - at) / STAT_COUNT_S);
+      const text = at === null ? statText(it, 0) : statText(it, reducedMotion() ? 1 : (t - at) / STAT_COUNT_S);
       if (el.textContent !== text) el.textContent = text;
     }
   },

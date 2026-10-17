@@ -4,6 +4,7 @@ import { esc } from "./util.js";
 
 export const STATIC = document.body.dataset.static || "static";
 export const READABLE_PX = 15; // smallest comfortable text on the 1280-wide stage
+export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const loaded = {};
 
 export function loadScript(src) {

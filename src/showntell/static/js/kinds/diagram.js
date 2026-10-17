@@ -1,7 +1,7 @@
 // Mermaid diagrams: nodes are the parts cues point at, flowcharts reveal node by node, and edge
 // paths send a dot along the edges.
 
-import { el, loadScript, READABLE_PX, STATIC } from "../draw.js";
+import { el, loadScript, READABLE_PX, reducedMotion, STATIC } from "../draw.js";
 import { norm } from "../util.js";
 
 const HOP_S = 0.9; // seconds per edge for the travelling dot
@@ -226,7 +226,8 @@ function travel(st, svg, t, order) {
     svg.append(dot);
   }
   // Position along the joined legs: one hop per HOP_S seconds after the cue fires, then rest at the end.
-  const f = Math.max(0, Math.min(1, (t - cue._at) / (HOP_S * legs.length)));
+  // With reduced motion the dot waits at the end of the route; the lit edges show the way.
+  const f = reducedMotion() ? 1 : Math.max(0, Math.min(1, (t - cue._at) / (HOP_S * legs.length)));
   const lens = legs.map((e) => e.getTotalLength());
   let d = f * lens.reduce((a, b) => a + b, 0), i = 0;
   while (i < legs.length - 1 && d > lens[i]) { d -= lens[i]; i++; }

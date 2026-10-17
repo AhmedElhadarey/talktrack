@@ -36,7 +36,7 @@ export const S = {
   playing: false, started: false, waitingSince: 0, lastFrame: 0, ended: false,
   shown: { slide: -1, rev: -1, id: "" }, // what is on screen
   view: null, // {root, ready, parts, body, done}
-  lastCueKey: "", lastReveal: "", lastSay: "", lastWord: -2,
+  lastCueKey: "", lastReveal: "", lastSay: "", lastWord: -2, lastAnnounced: "",
   rate: store.get("rate", 1),
   captionsOn: store.get("cc", true),
   pauseAfterSlide: store.get("pauseAfterSlide", false),

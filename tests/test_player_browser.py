@@ -387,7 +387,7 @@ The loop [adds each value](#L4). Then it [becomes one call](#step-2) and [sum do
 
 ## Long {#long}
 
-```python file=src/showntell/build.py lines=1-150 scroll
+```python file=tests/js/golden/files/long.py lines=1-150 scroll
 ```
 
 First [the imports](#L9). Much later, [this line](#L140).
@@ -483,3 +483,42 @@ def test_newer_visuals_follow_the_narration(daemon, browser):
     assert ticked == ["tests"]
     assert not errors, errors
     page.close()
+
+
+def test_reduced_motion_holds_still_and_moving_cues_are_announced(daemon, browser):
+    call = _rpc(daemon)
+    r = call("start", title="Calm", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    call("add", handle=r["handle"], markdown=MORE)
+    call("playable", handle=r["handle"], timeout=10)
+    for _ in range(50):
+        if not call("finish", handle=r["handle"], questions=None)["pending"]:
+            break
+        time.sleep(0.2)
+    url = r["url"].replace("localhost", "127.0.0.1") + "/"
+    ctx = browser.new_context(viewport={"width": 1440, "height": 900}, reduced_motion="reduce")
+    page = ctx.new_page()
+
+    def at(slide_id, cue, after, js, ready="body"):
+        page.goto(url)
+        page.wait_for_function("window.__showntell !== undefined")
+        t = _at(page, slide_id, cue, after)
+        page.goto(f"{url}?t={t:.2f}")
+        page.wait_for_selector(ready, state="attached")
+        page.wait_for_timeout(700)
+        return page.evaluate(js)
+
+    # Numbers show their value at once, and the dot waits at the end of its route.
+    assert at("numbers", 0, 0.2, "document.querySelector('.stat .num').textContent") == "100 ms"
+    x1 = at("path", 0, 0.2, "+document.querySelector('circle.packet').getAttribute('cx')", "circle.packet")
+    x2 = at("path", 0, 1.0, "+document.querySelector('circle.packet').getAttribute('cx')", "circle.packet")
+    assert x1 == x2 > 0
+    # While playing, the route of a travelling dot is announced to screen readers.
+    page.goto(url)
+    page.wait_for_function("window.__showntell !== undefined")
+    t = _at(page, "path", 0, -0.8)
+    page.goto(f"{url}?t={t:.2f}")
+    page.wait_for_function("!document.querySelector('#big-play').disabled")
+    page.click("#big-play")
+    page.wait_for_function("document.querySelector('#announce').textContent.startsWith('Path:')", timeout=8000)
+    assert page.text_content("#announce") == "Path: Client to Gateway to Service"
+    ctx.close()

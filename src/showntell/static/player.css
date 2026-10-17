@@ -420,6 +420,7 @@ body.audience #app { grid-template-rows: minmax(0, 1fr); }
   .slide { animation: none; }
   #pointer, .entry, .ln, #caption .w, .diagram g.node, .diagram path, .slide-body, .codebox .code { transition: none !important; }
   #pointer svg path, .ln.enter { animation: none !important; }
+  .list.checklist .tick .mark { transition: none; }
   #overlay.loading #big-play, .spinner { animation: none; }
 }
 

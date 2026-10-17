@@ -107,6 +107,7 @@ function applyVisual(st, slide, force) {
   const cueKey = st.cue ? `${st.cue._say}:${st.cue.at}:${st.cue.kind}:${st.cue.id ?? ""}:${st.cue.l0 ?? ""}` : "none";
   if (!force && cueKey === S.lastCueKey) return;
   S.lastCueKey = cueKey;
+  if (S.playing && st.cue && cueKey !== S.lastAnnounced) describeCue(st.cue, slide, cueKey);
   host.querySelectorAll(".active").forEach((e) => e.classList.remove("active"));
   host.querySelectorAll(".has-active").forEach((e) => e.classList.remove("has-active"));
   host.querySelectorAll(".ln.hl").forEach((e) => e.classList.remove("hl"));
@@ -119,6 +120,17 @@ function applyVisual(st, slide, force) {
   // The camera may have just jumped: measure the target where it is now.
   const here = cueTarget(st.cue, slide) || target;
   placePointer(here.rects, here.wide, st.cue.style);
+}
+
+// Tell screen readers what only moves on screen: the route a travelling dot takes, and what the
+// camera zooms onto. Other cues name their target in the narration itself.
+function describeCue(cue, slide, cueKey) {
+  const nodes = slide.visual?.nodes || {};
+  const text = cue.kind === "edge" ? `Path: ${cue.path.map((id) => nodes[id] || id).join(" to ")}`
+    : (cue.style || "").includes("zoom") ? `Zoomed in on ${cue.label}` : "";
+  if (!text) return;
+  S.lastAnnounced = cueKey;
+  announce(text);
 }
 
 // Step reveals: items, rows and lines here; anything else (flowchart nodes) by the slide's kind.
