@@ -99,8 +99,8 @@
     "lang": "python",
     "code": "\"\"\"Incremental, lenient parser for the showntell Markdown format (docs/format.md).\n\n`Parser.feed(chunk)` returns the blocks completed by that chunk. The end of a chunk closes\nevery open block except a fenced block, a `$$` formula or front matter, which wait for\nthe next chunk. Inline narration markup is handled by `parse_narration`.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport re\nfrom dataclasses import dataclass, field\n\nFENCE_RE = re.compile(r\"^ {0,3}(`{3,}|~{3,})\\s*(.*)$\")\nHEADING_RE = re.compile(r\"^ {0,3}(#{1,6})\\s+(.*?)\\s*$\")",
     "start": 1,
-    "title": "format.py",
-    "file": "src/showntell/format.py"
+    "title": "short.py",
+    "file": "tests/js/golden/files/short.py"
    },
    "says": [
     {

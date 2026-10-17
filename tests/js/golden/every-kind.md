@@ -5,7 +5,7 @@ This opening sentence is narrated while the title shows.
 
 ## Code from disk {#code .build}
 
-```python file=src/showntell/format.py lines=1-14
+```python file=tests/js/golden/files/short.py lines=1-14
 ```
 
 The file opens with [a docstring](#L1) and then [imports](#L8 "import re").

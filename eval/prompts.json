@@ -52,7 +52,7 @@
  {
   "id": "refactor",
   "kind": "refactor",
-  "prompt": "Use showntell to show how the parse_tree function in src/showntell/kinds.py could be made simpler, walking through the code as it changes step by step."
+  "prompt": "Use showntell to show how the parse_tree function in src/showntell/kinds/tree.py could be made simpler, walking through the code as it changes step by step."
  },
  {
   "id": "request",

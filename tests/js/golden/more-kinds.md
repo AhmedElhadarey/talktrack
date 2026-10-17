@@ -23,7 +23,7 @@ The loop [adds each value](#L4). Then it [becomes one call](#step-2) and [sum do
 
 ## Long {#long}
 
-```python file=src/showntell/build.py lines=1-150 scroll
+```python file=tests/js/golden/files/long.py lines=1-150 scroll
 ```
 
 First [the imports](#L9). Much later, [this line](#L140).
