@@ -56,8 +56,11 @@ def narration_track(url: str, starts: list[dict], t_page: float) -> np.ndarray:
 async def record(url: str, size: tuple[int, int], workdir: Path) -> tuple[Path, float, list[dict], float]:
     async with async_playwright() as p:
         b = await p.chromium.launch(args=["--autoplay-policy=no-user-gesture-required", "--mute-audio"])
-        ctx = await b.new_context(viewport={"width": size[0], "height": size[1]}, record_video_dir=str(workdir),
-                                  record_video_size={"width": size[0], "height": size[1]})
+        ctx = await b.new_context(
+            viewport={"width": size[0], "height": size[1]},
+            record_video_dir=str(workdir),
+            record_video_size={"width": size[0], "height": size[1]},
+        )
         t_start = time.monotonic()
         t_page = time.time()
         page = await ctx.new_page()
@@ -97,16 +100,60 @@ def main() -> None:
         video, offset, starts, t_page = asyncio.run(record(url, size, work))
         wav = work / "narration.wav"
         sf.write(wav, narration_track(url, starts, t_page), SR)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(video), "-i", str(wav),
-                        "-map", "0:v", "-map", "1:a",
-                        "-c:v", "libx264", "-preset", "slow", "-crf", "22", "-pix_fmt", "yuv420p",
-                        "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", args.out], check=True)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-loglevel",
+                "error",
+                "-i",
+                str(video),
+                "-i",
+                str(wav),
+                "-map",
+                "0:v",
+                "-map",
+                "1:a",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "slow",
+                "-crf",
+                "22",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "96k",
+                "-movflags",
+                "+faststart",
+                args.out,
+            ],
+            check=True,
+        )
         print(f"video: {args.out}")
         if args.gif:
             start = offset + args.gif_start
             vf = f"fps=10,scale={args.gif_width}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96[p];[b][p]paletteuse=dither=bayer:bayer_scale=4"
-            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{start:.2f}", "-t", str(args.gif_seconds),
-                            "-i", str(video), "-vf", vf, args.gif], check=True)
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-loglevel",
+                    "error",
+                    "-ss",
+                    f"{start:.2f}",
+                    "-t",
+                    str(args.gif_seconds),
+                    "-i",
+                    str(video),
+                    "-vf",
+                    vf,
+                    args.gif,
+                ],
+                check=True,
+            )
             print(f"gif: {args.gif}")
 
 

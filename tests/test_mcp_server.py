@@ -38,7 +38,14 @@ def text(result) -> str:
 async def test_tools_are_listed_with_titles(mcp):
     async with mcp as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        assert set(tools) == {"start_walkthrough", "add_slides", "revise_slide", "finish_walkthrough", "list_walkthroughs", "preview_slides"}
+        assert set(tools) == {
+            "start_walkthrough",
+            "add_slides",
+            "revise_slide",
+            "finish_walkthrough",
+            "list_walkthroughs",
+            "preview_slides",
+        }
         assert all(t.title and t.description for t in tools.values())
 
 
@@ -178,11 +185,14 @@ async def test_list_walkthroughs(mcp):
 # -- errors --------------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("tool,args", [
-    ("add_slides", {"markdown": "x"}),
-    ("revise_slide", {"slide": "s", "markdown": "x"}),
-    ("finish_walkthrough", {}),
-])
+@pytest.mark.parametrize(
+    "tool,args",
+    [
+        ("add_slides", {"markdown": "x"}),
+        ("revise_slide", {"slide": "s", "markdown": "x"}),
+        ("finish_walkthrough", {}),
+    ],
+)
 async def test_bad_handles_are_tool_errors(mcp, tool, args):
     async with mcp as client:
         r = await client.call_tool(tool, {"handle": "nope.nope", **args})
@@ -220,11 +230,14 @@ async def test_prompts_exist_with_one_required_argument(mcp):
         assert all(p.title and p.arguments[0].required for p in prompts.values())
 
 
-@pytest.mark.parametrize("name,arg,value", [
-    ("diff", "target", "main..HEAD"),
-    ("file", "path", "src/showntell/store.py"),
-    ("topic", "topic", "consistent hashing"),
-])
+@pytest.mark.parametrize(
+    "name,arg,value",
+    [
+        ("diff", "target", "main..HEAD"),
+        ("file", "path", "src/showntell/store.py"),
+        ("topic", "topic", "consistent hashing"),
+    ],
+)
 async def test_prompts_render_their_argument(mcp, name, arg, value):
     async with mcp as client:
         r = await client.get_prompt(name, {arg: value})

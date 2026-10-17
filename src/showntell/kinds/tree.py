@@ -45,8 +45,9 @@ def parse_tree(body: str, attrs: dict) -> tuple[dict, list[str]]:
             depth = len(stack)
         del stack[depth:]
         clean = name.rstrip("/")
-        items.append({"id": "/".join([*stack, clean]), "name": clean + ("/" if folder else ""), "depth": depth,
-                      "folder": folder, "note": note})
+        items.append(
+            {"id": "/".join([*stack, clean]), "name": clean + ("/" if folder else ""), "depth": depth, "folder": folder, "note": note}
+        )
         if folder:
             stack.append(clean)
     seen: set[str] = set()
@@ -60,9 +61,21 @@ def parse_tree(body: str, attrs: dict) -> tuple[dict, list[str]]:
 def _check(vis: dict, line: int, limits: dict) -> list[Finding]:
     if len(vis["items"]) <= limits["lines"]:
         return []
-    return [("code_too_tall", f"The file tree on line {line} has {len(vis['items'])} entries; this frame reads well up to {limits['lines']}.",
-             "Show only the folders that matter, with `...` for the rest.")]
+    return [
+        (
+            "code_too_tall",
+            f"The file tree on line {line} has {len(vis['items'])} entries; this frame reads well up to {limits['lines']}.",
+            "Show only the folders that matter, with `...` for the rest.",
+        )
+    ]
 
 
-KIND = Kind("tree", ("tree",), parse_tree, check=_check, part=lambda vis: "entry", error_code="tree_error",
-            hint="Indent each level by the same amount.")
+KIND = Kind(
+    "tree",
+    ("tree",),
+    parse_tree,
+    check=_check,
+    part=lambda vis: "entry",
+    error_code="tree_error",
+    hint="Indent each level by the same amount.",
+)

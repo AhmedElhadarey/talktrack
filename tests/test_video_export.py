@@ -70,8 +70,12 @@ def walkthrough(tmp_path_factory):
     pytest.importorskip("playwright.async_api")
     data = tmp_path_factory.mktemp("video-data")
     env = {**os.environ, "SHOWNTELL_DATA": str(data), "SHOWNTELL_SPEECH": "fake"}
-    proc = subprocess.Popen([sys.executable, "-m", "showntell", "serve", "--port", str(_free_port()), "--speech", "fake"],
-                            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "showntell", "serve", "--port", str(_free_port()), "--speech", "fake"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     try:
         lock = None
         deadline = time.time() + 20
@@ -112,8 +116,28 @@ def walkthrough(tmp_path_factory):
 
 
 def _frame(video: Path, t: float) -> bytes:
-    return subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t:.2f}", "-i", str(video), "-frames:v", "1", "-s", "320x180",
-                           "-f", "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True, check=True).stdout
+    return subprocess.run(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-ss",
+            f"{t:.2f}",
+            "-i",
+            str(video),
+            "-frames:v",
+            "1",
+            "-s",
+            "320x180",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "gray",
+            "-",
+        ],
+        capture_output=True,
+        check=True,
+    ).stdout
 
 
 @pytest.mark.browser
@@ -144,7 +168,11 @@ def test_mp4_export(walkthrough, tmp_path):
     assert abs(float(info["format"]["duration"]) - total) <= 0.2
     streams = {s["codec_type"]: s for s in info["streams"]}
     assert set(streams) == {"video", "audio", "subtitle"}
-    assert (streams["video"]["codec_name"], streams["audio"]["codec_name"], streams["subtitle"]["codec_name"]) == ("h264", "aac", "mov_text")
+    assert (streams["video"]["codec_name"], streams["audio"]["codec_name"], streams["subtitle"]["codec_name"]) == (
+        "h264",
+        "aac",
+        "mov_text",
+    )
     assert (streams["video"]["width"], streams["video"]["height"]) == (1920, 1080)
     assert info["format"]["tags"]["encoder"].startswith("showntell ")
 

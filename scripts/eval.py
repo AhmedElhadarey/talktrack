@@ -29,22 +29,51 @@ sys.path.insert(0, str(ROOT / "src"))
 from showntell.model import Walkthrough  # noqa: E402
 
 URL_RE = re.compile(r"http://(?:localhost|127\.0\.0\.1):\d+/w/[A-Za-z0-9_-]+/?")
-ALLOWED = ["mcp__showntell", "Read", "Grep", "Glob", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git show:*)", "Bash(ls:*)",
-           "Bash(uv run pytest --collect-only:*)", "Bash(uv run showntell --help:*)"]
+ALLOWED = [
+    "mcp__showntell",
+    "Read",
+    "Grep",
+    "Glob",
+    "Bash(git diff:*)",
+    "Bash(git log:*)",
+    "Bash(git show:*)",
+    "Bash(ls:*)",
+    "Bash(uv run pytest --collect-only:*)",
+    "Bash(uv run showntell --help:*)",
+]
 
 
 async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: bool) -> dict:
-    cfg = {"mcpServers": {"showntell": {
-        "command": "uv", "args": ["run", "--quiet", "--directory", str(ROOT), "showntell", "mcp"],
-        "env": {"SHOWNTELL_DATA": str(data_dir), "SHOWNTELL_PORT": str(port)},
-    }}}
+    cfg = {
+        "mcpServers": {
+            "showntell": {
+                "command": "uv",
+                "args": ["run", "--quiet", "--directory", str(ROOT), "showntell", "mcp"],
+                "env": {"SHOWNTELL_DATA": str(data_dir), "SHOWNTELL_PORT": str(port)},
+            }
+        }
+    }
     cfg_file = data_dir / f"mcp-{prompt['id']}-{model}.json"
     cfg_file.write_text(json.dumps(cfg))
-    cmd = ["claude", "-p", prompt["prompt"], "--model", model, "--mcp-config", str(cfg_file), "--strict-mcp-config",
-           "--output-format", "stream-json", "--verbose", "--allowedTools", *ALLOWED]
+    cmd = [
+        "claude",
+        "-p",
+        prompt["prompt"],
+        "--model",
+        model,
+        "--mcp-config",
+        str(cfg_file),
+        "--strict-mcp-config",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--allowedTools",
+        *ALLOWED,
+    ]
     t0 = time.time()
-    proc = await asyncio.create_subprocess_exec(*cmd, cwd=ROOT, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-                                                stdin=asyncio.subprocess.DEVNULL, limit=1 << 24)
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, cwd=ROOT, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, stdin=asyncio.subprocess.DEVNULL, limit=1 << 24
+    )
     marks: dict = {"tool_calls": [], "issues": 0, "player_issues": 0, "issue_codes": {}}
     player_task = None
     url = None
@@ -72,8 +101,11 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
                 if block.get("type") != "tool_result":
                     continue
                 name = tool_names.get(block.get("tool_use_id"), "")
-                text = block["content"] if isinstance(block["content"], str) else " ".join(
-                    c.get("text", "") for c in block["content"] if isinstance(c, dict))
+                text = (
+                    block["content"]
+                    if isinstance(block["content"], str)
+                    else " ".join(c.get("text", "") for c in block["content"] if isinstance(c, dict))
+                )
                 # Claude Code passes the structured content (JSON) when a tool returns some.
                 try:
                     data = json.loads(text)
@@ -136,10 +168,16 @@ async def play_live(url: str) -> dict:
                 break
         m = await page.evaluate("window.__showntell") or {}
         await b.close()
-        return {"stalls": m.get("stalls", 0), "stall_s": round(m.get("stallSeconds", 0), 1),
-                "render_errors": m.get("renderErrors", []) + errors, "ended": m.get("ended", False),
-                "findings": m.get("findings", []), "start_delay_s": m.get("startDelay"), "holds": m.get("holds", 0),
-                "watch_s": round(time.time() - t0, 1)}
+        return {
+            "stalls": m.get("stalls", 0),
+            "stall_s": round(m.get("stallSeconds", 0), 1),
+            "render_errors": m.get("renderErrors", []) + errors,
+            "ended": m.get("ended", False),
+            "findings": m.get("findings", []),
+            "start_delay_s": m.get("startDelay"),
+            "holds": m.get("holds", 0),
+            "watch_s": round(time.time() - t0, 1),
+        }
 
 
 def walkthrough_for(data_dir: Path, url: str | None) -> Walkthrough | None:
@@ -209,12 +247,18 @@ def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
             f = audio_dir / f"{say.key}.wav"
             if not f.is_file():
                 continue
-            r = mlx_whisper.transcribe(str(f), path_or_hf_repo="mlx-community/whisper-large-v3-turbo", word_timestamps=True,
-                                       language="en", condition_on_previous_text=False)
+            r = mlx_whisper.transcribe(
+                str(f),
+                path_or_hf_repo="mlx-community/whisper-large-v3-turbo",
+                word_timestamps=True,
+                language="en",
+                condition_on_previous_text=False,
+            )
             words = [(norm_words(x["word"]), x["start"]) for seg in r["segments"] for x in seg.get("words", [])]
             flat = [(t, s) for ws, s in words for t in ws]
             heard = {t for t, _ in flat}
             audio_s += say.duration
+
             # terms written in backticks must be audible. Whisper writes some spoken forms back
             # as text ("server dot pie" as server.py, numbers as digits), so a term counts as
             # heard when either its spoken words or its written words all come back.
@@ -247,11 +291,16 @@ def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
                     cue_ok += 1
     minutes = max(audio_s / 60, 1e-6)
     located = cue_total - unlocated
-    return {"cues": cue_total, "cues_ok": cue_ok, "cues_located": located,
-            "cue_accuracy": round(cue_ok / located, 3) if located else None,
-            "cue_mean_delta": round(sum(deltas) / len(deltas), 3) if deltas else None,
-            "missing_terms": missing_terms[:20], "missing_per_min": round(len(missing_terms) / minutes, 2),
-            "audio_min": round(minutes, 2)}
+    return {
+        "cues": cue_total,
+        "cues_ok": cue_ok,
+        "cues_located": located,
+        "cue_accuracy": round(cue_ok / located, 3) if located else None,
+        "cue_mean_delta": round(sum(deltas) / len(deltas), 3) if deltas else None,
+        "missing_terms": missing_terms[:20],
+        "missing_per_min": round(len(missing_terms) / minutes, 2),
+        "audio_min": round(minutes, 2),
+    }
 
 
 def summarize(w: Walkthrough | None) -> dict:
@@ -262,9 +311,18 @@ def summarize(w: Walkthrough | None) -> dict:
     used = set()
     for s in w.slides:
         v = s.visual or {}
-        used |= {k for k, on in {"steps": bool(v.get("steps")), "scroll": bool(v.get("scroll")), "frame": bool(v.get("frame")),
-                                 "notes": bool(v.get("notes")), "stack": v.get("style") == "stack",
-                                 "checklist": v.get("style") == "checklist"}.items() if on}
+        used |= {
+            k
+            for k, on in {
+                "steps": bool(v.get("steps")),
+                "scroll": bool(v.get("scroll")),
+                "frame": bool(v.get("frame")),
+                "notes": bool(v.get("notes")),
+                "stack": v.get("style") == "stack",
+                "checklist": v.get("style") == "checklist",
+            }.items()
+            if on
+        }
         if s.kind in ("stat", "chat", "chapter", "chart", "terminal", "tree", "svg", "drawio"):
             used.add(s.kind)
     for c in cues:
@@ -272,10 +330,18 @@ def summarize(w: Walkthrough | None) -> dict:
             used.add(c["kind"])
         for style in (c.get("style") or "").split():
             used.add(style)
-    return {"features": sorted(used),"slides": len(w.slides), "paragraphs": len(says), "duration_s": round(sum(x.duration for x in says), 1),
-            "cues": len(cues), "inferred_cues": sum(1 for c in cues if c.get("inferred")),
-            "kinds": sorted({s.kind for s in w.slides}), "builds": sum(1 for s in w.slides if "build" in s.classes),
-            "from_disk": sum(1 for s in w.slides if s.visual.get("file")), "status": w.status}
+    return {
+        "features": sorted(used),
+        "slides": len(w.slides),
+        "paragraphs": len(says),
+        "duration_s": round(sum(x.duration for x in says), 1),
+        "cues": len(cues),
+        "inferred_cues": sum(1 for c in cues if c.get("inferred")),
+        "kinds": sorted({s.kind for s in w.slides}),
+        "builds": sum(1 for s in w.slides if "build" in s.classes),
+        "from_disk": sum(1 for s in w.slides if s.visual.get("file")),
+        "status": w.status,
+    }
 
 
 async def main() -> None:
@@ -331,8 +397,12 @@ async def main() -> None:
         import urllib.request
 
         d = json.loads(lock.read_text())
-        req = urllib.request.Request(f"http://127.0.0.1:{d['port']}/api/rpc/shutdown", data=b"{}", method="POST",
-                                     headers={"Authorization": f"Bearer {d['token']}", "Content-Type": "application/json"})
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{d['port']}/api/rpc/shutdown",
+            data=b"{}",
+            method="POST",
+            headers={"Authorization": f"Bearer {d['token']}", "Content-Type": "application/json"},
+        )
         try:
             urllib.request.urlopen(req, timeout=3).read()
         except Exception:
@@ -346,11 +416,13 @@ def print_table(results: list[dict]) -> None:
     print("\n" + head + "\n|" + "---|" * (head.count("|") - 1))
     for r in sorted(results, key=lambda r: (r["model"], r["id"])):
         s, pl, a = r.get("summary", {}), r.get("player", {}), r.get("asr", {})
-        print(f"| {r['id']} | {r['model']} | {r.get('link_after_start', '-')} | {r.get('finished_at', 0):.0f} | "
-              f"${r.get('cost') or 0:.2f} | {s.get('slides', '-')} | {s.get('duration_s', 0) / 60:.1f} | {r['issues']} | "
-              f"{len(pl.get('render_errors', [])) if pl else '-'} | {pl.get('stalls', '-') if pl else '-'} | "
-              f"{a.get('cue_accuracy', '-')} | {a.get('missing_per_min', '-')} | "
-              f"{sum(1 for _, n in r.get('tool_calls', []) if n == 'preview_slides')} | {', '.join(s.get('features', [])) or '-'} |")
+        print(
+            f"| {r['id']} | {r['model']} | {r.get('link_after_start', '-')} | {r.get('finished_at', 0):.0f} | "
+            f"${r.get('cost') or 0:.2f} | {s.get('slides', '-')} | {s.get('duration_s', 0) / 60:.1f} | {r['issues']} | "
+            f"{len(pl.get('render_errors', [])) if pl else '-'} | {pl.get('stalls', '-') if pl else '-'} | "
+            f"{a.get('cue_accuracy', '-')} | {a.get('missing_per_min', '-')} | "
+            f"{sum(1 for _, n in r.get('tool_calls', []) if n == 'preview_slides')} | {', '.join(s.get('features', [])) or '-'} |"
+        )
 
 
 if __name__ == "__main__":

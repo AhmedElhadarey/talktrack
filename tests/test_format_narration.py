@@ -24,7 +24,7 @@ def test_cue_with_quoted_text():
     assert n.display == "The method starts by checking the dictionary."
     (c,) = n.cues
     assert (c.at, c.end, c.label, c.target, c.text) == (21, 44, "checking the dictionary", "L12", "if key in self._data")
-    assert n.display[c.at:c.end] == "checking the dictionary"
+    assert n.display[c.at : c.end] == "checking the dictionary"
 
 
 def test_cue_with_single_quoted_and_parenthesised_titles():
@@ -96,7 +96,7 @@ def test_nested_emphasis_inside_link_keeps_offsets():
 def test_link_inside_emphasis_keeps_offsets():
     n = parse_narration("Now **see [this](#L1)** please")
     (c,) = n.cues
-    assert n.display == "Now see this please" and n.display[c.at:c.end] == "this"
+    assert n.display == "Now see this please" and n.display[c.at : c.end] == "this"
 
 
 def test_code_inside_link_is_both_cue_and_code():
@@ -145,7 +145,7 @@ def test_html_tags_are_dropped():
 def test_offsets_are_clamped_to_display_length():
     n = parse_narration("end [here](#L1)   ")
     c = n.cues[0]
-    assert c.end <= len(n.display) and n.display[c.at:c.end] == "here"
+    assert c.end <= len(n.display) and n.display[c.at : c.end] == "here"
 
 
 def test_inline_plain_strips_markup():

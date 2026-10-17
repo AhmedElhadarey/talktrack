@@ -122,8 +122,7 @@ def test_indented_line_continues_the_last_item():
 
 
 def test_parse_item_title_colon_description_and_id():
-    assert parse_item("**Memory**: fast, gone on restart {#memory}") == {
-        "id": "memory", "title": "Memory", "body": "fast, gone on restart"}
+    assert parse_item("**Memory**: fast, gone on restart {#memory}") == {"id": "memory", "title": "Memory", "body": "fast, gone on restart"}
 
 
 def test_parse_item_title_with_dash_separator():

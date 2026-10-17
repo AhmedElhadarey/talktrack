@@ -129,8 +129,29 @@ def test_line_numbers_continue_across_chunks():
 
 def test_whole_document_parses_to_expected_kinds():
     assert [b[0] for b in feed_all([DOC])] == [
-        "front", "para", "heading", "quote", "para", "heading", "code", "para", "heading", "code", "pause",
-        "heading", "list", "list", "table", "math", "math", "math", "image", "para", "footnote", "code", "para",
+        "front",
+        "para",
+        "heading",
+        "quote",
+        "para",
+        "heading",
+        "code",
+        "para",
+        "heading",
+        "code",
+        "pause",
+        "heading",
+        "list",
+        "list",
+        "table",
+        "math",
+        "math",
+        "math",
+        "image",
+        "para",
+        "footnote",
+        "code",
+        "para",
     ]
 
 

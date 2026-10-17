@@ -40,8 +40,10 @@ def test_a_slide_still_open_at_the_end_of_a_call_waits_for_its_block(build):
 
 
 def test_a_paragraph_that_starts_like_a_list_item_after_the_visual_is_spoken(build):
-    w, b = build("# T\n\nA.\n\n## Steps {#steps}\n\n```python\nx = 1\n```\n\n"
-                 "1. First the loader reads the file.\n\n- Then it parses every line in turn.\n")
+    w, b = build(
+        "# T\n\nA.\n\n## Steps {#steps}\n\n```python\nx = 1\n```\n\n"
+        "1. First the loader reads the file.\n\n- Then it parses every line in turn.\n"
+    )
     s = w.slides[-1]
     assert len(w.slides) == 2 and s.kind == "code" and not has(b.issues, "already shows")
     assert [x.text for x in s.says] == ["First the loader reads the file.", "Then it parses every line in turn."]
@@ -94,8 +96,9 @@ def test_narration_repeating_a_list_body_is_reported(build):
 
 
 def test_narration_that_differs_from_the_screen_passes(build):
-    _, b = build("# T\n\nA.\n\n## S {#s}\n> Cache first, database second\n\n"
-                 "We look in memory before paying for a round trip.\n\n## Next\n\nB.\n")
+    _, b = build(
+        "# T\n\nA.\n\n## S {#s}\n> Cache first, database second\n\nWe look in memory before paying for a round trip.\n\n## Next\n\nB.\n"
+    )
     assert not has(b.issues, "on-screen")
 
 
@@ -112,7 +115,7 @@ def test_three_slides_opening_alike_are_reported(build):
     md = "# T\n\nA.\n\n" + "".join(f"## S{i}\n\nNext we look at part {i}.\n\n" for i in range(3))
     _, b = build(md)
     b.check_all()
-    assert has(b.issues, "3 slides open with \"next we\"")
+    assert has(b.issues, '3 slides open with "next we"')
 
 
 def test_two_slides_opening_alike_pass(build):

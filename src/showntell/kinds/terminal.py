@@ -16,7 +16,7 @@ def parse_terminal(body: str, attrs: dict) -> dict:
     out = []
     for i, ln in enumerate(lines):
         m = PROMPT_RE.match(ln)
-        out.append({"n": i + 1, "cmd": bool(m), "prompt": m.group(1) if m else "", "text": ln[m.end():] if m else ln})
+        out.append({"n": i + 1, "cmd": bool(m), "prompt": m.group(1) if m else "", "text": ln[m.end() :] if m else ln})
     start = int(attrs["start"]) if str(attrs.get("start", "")).isdigit() else 1
     return {"code": "\n".join(lines), "start": start, "lines": out, "title": attrs.get("title", "Terminal")}
 

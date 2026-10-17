@@ -42,8 +42,13 @@ def parse_chart(body: str, attrs: dict) -> tuple[dict, list[str]]:
             continue
         k, v = line.split(":", 1)
         rows.append((k.strip(), [x.strip() for x in v.split(",") if x.strip()]))
-    vis: dict = {"type": ctype, "title": attrs.get("title", ""), "unit": attrs.get("unit", ""),
-                 "xlabel": attrs.get("x", ""), "ylabel": attrs.get("y", "")}
+    vis: dict = {
+        "type": ctype,
+        "title": attrs.get("title", ""),
+        "unit": attrs.get("unit", ""),
+        "xlabel": attrs.get("x", ""),
+        "ylabel": attrs.get("y", ""),
+    }
     if ctype == "line":
         if not rows or rows[0][0].lower() != "x":
             problems.append("a line chart starts with an `x: ...` line giving the x values")
@@ -109,8 +114,13 @@ def _check(vis: dict, line: int, limits: dict) -> list[Finding]:
     n = len(vis["ids"])
     if n <= CHART_MAX:
         return []
-    return [("block_too_big", f"The chart on line {line} has {n} {'series' if vis['type'] == 'line' else 'bars'}; "
-             f"charts read well up to {CHART_MAX}.", "Group the small ones, or split the chart.")]
+    return [
+        (
+            "block_too_big",
+            f"The chart on line {line} has {n} {'series' if vis['type'] == 'line' else 'bars'}; charts read well up to {CHART_MAX}.",
+            "Group the small ones, or split the chart.",
+        )
+    ]
 
 
 KIND = Kind("chart", ("chart",), parse_chart, check=_check, part=_part)

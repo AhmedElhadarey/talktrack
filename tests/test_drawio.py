@@ -49,7 +49,8 @@ def test_links_scripts_and_wrappers_are_gone():
 def test_label_html_keeps_formatting_only():
     body = FIXTURE.read_text().replace(
         "&lt;b&gt;API&lt;/b&gt; server",
-        "&lt;b onclick=&quot;x()&quot;&gt;API&lt;/b&gt;&lt;script&gt;alert(1)&lt;/script&gt;&lt;img src=x onerror=y&gt; server")
+        "&lt;b onclick=&quot;x()&quot;&gt;API&lt;/b&gt;&lt;script&gt;alert(1)&lt;/script&gt;&lt;img src=x onerror=y&gt; server",
+    )
     v, _ = parse_drawio(body, {})
     api = re.search(r'<mxCell id="api" value="([^"]*)"', v["xml"]).group(1)
     assert api.startswith("&lt;b&gt;API&lt;/b&gt;") and "onclick" not in api and "script" not in api and "img" not in api
@@ -95,17 +96,26 @@ def test_bad_files_are_reported():
 
 def test_find_by_id_label_or_slug():
     v, _ = parse_drawio(FIXTURE.read_text(), {})
-    assert [find(v, t) for t in ("queue", "Postgres", "api-server-docs", "object-store", "Nothing")] == \
-        ["queue", "db", "api", "store", None]
+    assert [find(v, t) for t in ("queue", "Postgres", "api-server-docs", "object-store", "Nothing")] == [
+        "queue",
+        "db",
+        "api",
+        "store",
+        None,
+    ]
 
 
 def test_cues_reveal_order_and_regions(build, project):
     (project / "docs").mkdir(exist_ok=True)
     (project / "docs" / "arch.drawio").write_text(FIXTURE.read_text())
-    s, codes, _ = last(build, "## A {#a .build}\n\n```drawio file=docs/arch.drawio\n```\n\n"
-                              "The [browser](#client) calls [the API](#api) over [HTTPS](#e1).\n\n"
-                              "Data sits in [Postgres](#Postgres), and [the queue](#queue) feeds [a store](#@70,50,30,50). "
-                              'The [label](# "Object store") names it.\n', root=project)
+    s, codes, _ = last(
+        build,
+        "## A {#a .build}\n\n```drawio file=docs/arch.drawio\n```\n\n"
+        "The [browser](#client) calls [the API](#api) over [HTTPS](#e1).\n\n"
+        "Data sits in [Postgres](#Postgres), and [the queue](#queue) feeds [a store](#@70,50,30,50). "
+        'The [label](# "Object store") names it.\n',
+        root=project,
+    )
     cues = [c for say in s.says for c in say.cues]
     assert s.kind == "drawio" and [c["kind"] for c in cues] == ["item", "item", "item", "item", "item", "region", "text"]
     assert cues[2]["id"] == "e1" and cues[2]["part"] == "api" and cues[4]["part"] == "cloud" and cues[3]["id"] == "db"

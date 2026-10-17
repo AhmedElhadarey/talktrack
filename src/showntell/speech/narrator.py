@@ -77,7 +77,7 @@ class Narrator:
 
     def prepare(self, display: str, code=(), say=(), voice: str = "af_heart", speed: float = 1.0) -> tuple[str, Spoken]:
         spoken = speakable(display, code, say, self.lexicon, british=voice.startswith("b"))
-        key =hashlib.sha256(f"{self.backend.model_id}|{voice}|{speed:.2f}|{spoken.text}".encode()).hexdigest()[:24]
+        key = hashlib.sha256(f"{self.backend.model_id}|{voice}|{speed:.2f}|{spoken.text}".encode()).hexdigest()[:24]
         return key, spoken
 
     def cached(self, key: str) -> dict | None:

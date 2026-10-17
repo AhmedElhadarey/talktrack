@@ -69,7 +69,7 @@ SAMPLES = [
     "Docs live at https://docs.example.com/guide and the code at github.com/acme/widgets.",
     "The cluster runs on Kubernetes with kubectl, nginx, Redis and a lockfile in the monorepo.",
     "Zustand and Jotai keep state; the formatter, the fzf picker and Rahim's tool agree.",
-    "The [checking the dictionary](#L12 \"if key\") step, then [nginx]{say=\"engine ex\"} serves it.",
+    'The [checking the dictionary](#L12 "if key") step, then [nginx]{say="engine ex"} serves it.',
     "Each `struct`s field, the `Vec<String>`, `**kwargs`, `std::io::Result` and `0x1F`.",
     "About ~20 ms, issue #123, e.g. the `README.md`, 127.0.0.1 and `--dry-run`.",
 ]
@@ -102,7 +102,7 @@ def test_every_caption_word_lands_inside_the_display(src):
 def test_identifier_maps_to_one_caption_word(src):
     display, sp = voice(src)
     name = re.search(r"`(.*)`", src).group(1)
-    (word,) = [w for w in timed_words(sp, fake_tokens(sp.text)) if display[w["c0"]:w["c1"]] == name]
+    (word,) = [w for w in timed_words(sp, fake_tokens(sp.text)) if display[w["c0"] : w["c1"]] == name]
     assert word["e"] - word["s"] > 0.5  # one caption word spans all its spoken words
 
 
@@ -133,47 +133,50 @@ def test_empty_text():
 # -- code spans -----------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(("code", "spoken"), [
-    ("useEffect", "use effect"),
-    ("HF_HUB_OFFLINE", "HF HUB offline"),
-    ("max_retries", "max retries"),
-    ("dry-run", "dry run"),
-    ("render()", "render"),
-    ("os.path.join", "[OS](/ˌOˈɛs/) dot path dot join"),
-    ("len(items)", "len of items"),
-    ("a == b", "[a](/ˈA/) double equals b"),
-    ("x != y", "x not equals y"),
-    ("x => x", "x arrow x"),
-    ("f() -> T", "f arrow T"),
-    ("p && q || r", "p and q or r"),
-    ("i <= n", "i less than or equal to n"),
-    ("n >= 0", "n greater than or equal to 0"),
-    ("count += 1", "count plus equals 1"),
-    ("x ** 2", "x to the power of 2"),
-    ("*args", "star [args](/ˈɑɹɡz/)"),
-    ("std::io", "STD colon colon io"),
-    ("Vec<String>", "[Vec](/vˈɛk/) of string"),
-    ("str | None", "string or none"),
-    ("config.py", "[config](/kˈɑnfɪɡ/) dot pie"),
-    ("App.tsx", "app dot TSX"),
-    ("package.json", "package dot jason"),
-    ("Cargo.toml", "cargo dot [toml](/tˈɑməl/)"),
-    (".env", "dot env"),
-    ("__init__.py", "dunder init dot pie"),
-    ("src/app/main.go", "source slash app slash main dot go"),
-    ("~/.zshrc", "tilde slash dot ZSHRC"),
-    ("--port", "dash dash port"),
-    ("-rf", "dash RF"),
-    ("0x1F", "hex 1 F"),
-    ("v2.3.1", "version 2 point 3 point 1"),
-    ("5ms", "5 milliseconds"),
-    ("JSON", "jason"),
-    ("API", "API"),
-    ("C++", "C plus plus"),
-    ("Next.js", "next JS"),
-    ("k8s", "[k8s](/kˈAts/)"),
-    ("npm", "NPM"),
-])
+@pytest.mark.parametrize(
+    ("code", "spoken"),
+    [
+        ("useEffect", "use effect"),
+        ("HF_HUB_OFFLINE", "HF HUB offline"),
+        ("max_retries", "max retries"),
+        ("dry-run", "dry run"),
+        ("render()", "render"),
+        ("os.path.join", "[OS](/ˌOˈɛs/) dot path dot join"),
+        ("len(items)", "len of items"),
+        ("a == b", "[a](/ˈA/) double equals b"),
+        ("x != y", "x not equals y"),
+        ("x => x", "x arrow x"),
+        ("f() -> T", "f arrow T"),
+        ("p && q || r", "p and q or r"),
+        ("i <= n", "i less than or equal to n"),
+        ("n >= 0", "n greater than or equal to 0"),
+        ("count += 1", "count plus equals 1"),
+        ("x ** 2", "x to the power of 2"),
+        ("*args", "star [args](/ˈɑɹɡz/)"),
+        ("std::io", "STD colon colon io"),
+        ("Vec<String>", "[Vec](/vˈɛk/) of string"),
+        ("str | None", "string or none"),
+        ("config.py", "[config](/kˈɑnfɪɡ/) dot pie"),
+        ("App.tsx", "app dot TSX"),
+        ("package.json", "package dot jason"),
+        ("Cargo.toml", "cargo dot [toml](/tˈɑməl/)"),
+        (".env", "dot env"),
+        ("__init__.py", "dunder init dot pie"),
+        ("src/app/main.go", "source slash app slash main dot go"),
+        ("~/.zshrc", "tilde slash dot ZSHRC"),
+        ("--port", "dash dash port"),
+        ("-rf", "dash RF"),
+        ("0x1F", "hex 1 F"),
+        ("v2.3.1", "version 2 point 3 point 1"),
+        ("5ms", "5 milliseconds"),
+        ("JSON", "jason"),
+        ("API", "API"),
+        ("C++", "C plus plus"),
+        ("Next.js", "next JS"),
+        ("k8s", "[k8s](/kˈAts/)"),
+        ("npm", "NPM"),
+    ],
+)
 def test_code_reading(code, spoken):
     assert speak_code(code) == spoken
 
@@ -192,36 +195,39 @@ def test_code_span_takes_a_plural_s():
 # -- prose ------------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(("src", "spoken"), [
-    ("It takes 5ms.", "It takes 5 milliseconds."),
-    ("It takes 1 ms.", "It takes 1 millisecond."),
-    ("It loads in 1.5s.", "It loads in 1.5 seconds."),
-    ("It uses 200MB and 4KB pages.", "It uses 200 megabytes and 4 kilobytes pages."),
-    ("It runs at 60fps with audio at 24kHz.", "It runs at 60 FPS with audio at 24 kilohertz."),
-    ("It is 3x faster on 16 GB.", "It is 3 times faster on 16 gigabytes."),
-    ("Downloads run at 100 Mbps.", "Downloads run at 100 megabits per second."),
-    ("It took ~20 ms.", "It took about 20 milliseconds."),
-    ("A 7B model.", "A 7 billion model."),
-    ("We moved to v2.3.1 today.", "We moved to version 2 point 3 point 1 today."),
-    ("It needs Python 3.13 now.", "It needs Python 3 point 13 now."),
-    ("Sorting is O(n log n).", "Sorting is order n log n."),
-    ("A lookup is O(1).", "A lookup is order 1."),
-    ("The scan is O(n^2).", "The scan is order n squared."),
-    ("It is Θ(n).", "It is theta of n."),
-    ("See https://docs.example.com/guide now.", "See docs dot example dot com slash guide now."),
-    ("Edit src/app/main.py today.", "Edit source slash app slash main dot pie today."),
-    ("Bind 127.0.0.1 here.", "Bind 1 2 7 dot 0 dot 0 dot 1 here."),
-    ("See issue #123.", "See issue number 123."),
-    ("Run it with --verbose.", "Run it with dash dash verbose."),
-    ("It runs on AWS and the OS.", "It runs on [AWS](/ˌAdˌʌbᵊljuˈɛs/) and the [OS](/ˌOˈɛs/)."),
-    ("Use JSON or YAML.", "Use jason or [YAML](/jˈæməl/)."),
-    ("Read from stdin.", "Read from standard in."),
-    ("Run kubectl behind nginx.", "Run cube control behind engine X."),
-    ("Then call os.path.join on it.", "Then call [OS](/ˌOˈɛs/) dot path dot join on it."),
-    ("Use e.g. this, i.e. that, etc. and so on.", "Use e.g. this, i.e. that, etc. and so on."),
-    ("The README.md file.", "The reed me dot MD file."),
-    ("TCP/IP and and/or stay.", "TCP/IP and and/or stay."),
-])
+@pytest.mark.parametrize(
+    ("src", "spoken"),
+    [
+        ("It takes 5ms.", "It takes 5 milliseconds."),
+        ("It takes 1 ms.", "It takes 1 millisecond."),
+        ("It loads in 1.5s.", "It loads in 1.5 seconds."),
+        ("It uses 200MB and 4KB pages.", "It uses 200 megabytes and 4 kilobytes pages."),
+        ("It runs at 60fps with audio at 24kHz.", "It runs at 60 FPS with audio at 24 kilohertz."),
+        ("It is 3x faster on 16 GB.", "It is 3 times faster on 16 gigabytes."),
+        ("Downloads run at 100 Mbps.", "Downloads run at 100 megabits per second."),
+        ("It took ~20 ms.", "It took about 20 milliseconds."),
+        ("A 7B model.", "A 7 billion model."),
+        ("We moved to v2.3.1 today.", "We moved to version 2 point 3 point 1 today."),
+        ("It needs Python 3.13 now.", "It needs Python 3 point 13 now."),
+        ("Sorting is O(n log n).", "Sorting is order n log n."),
+        ("A lookup is O(1).", "A lookup is order 1."),
+        ("The scan is O(n^2).", "The scan is order n squared."),
+        ("It is Θ(n).", "It is theta of n."),
+        ("See https://docs.example.com/guide now.", "See docs dot example dot com slash guide now."),
+        ("Edit src/app/main.py today.", "Edit source slash app slash main dot pie today."),
+        ("Bind 127.0.0.1 here.", "Bind 1 2 7 dot 0 dot 0 dot 1 here."),
+        ("See issue #123.", "See issue number 123."),
+        ("Run it with --verbose.", "Run it with dash dash verbose."),
+        ("It runs on AWS and the OS.", "It runs on [AWS](/ˌAdˌʌbᵊljuˈɛs/) and the [OS](/ˌOˈɛs/)."),
+        ("Use JSON or YAML.", "Use jason or [YAML](/jˈæməl/)."),
+        ("Read from stdin.", "Read from standard in."),
+        ("Run kubectl behind nginx.", "Run cube control behind engine X."),
+        ("Then call os.path.join on it.", "Then call [OS](/ˌOˈɛs/) dot path dot join on it."),
+        ("Use e.g. this, i.e. that, etc. and so on.", "Use e.g. this, i.e. that, etc. and so on."),
+        ("The README.md file.", "The reed me dot MD file."),
+        ("TCP/IP and and/or stay.", "TCP/IP and and/or stay."),
+    ],
+)
 def test_prose_reading(src, spoken):
     assert voice(src)[1].text == spoken
 
@@ -319,8 +325,7 @@ def test_word_list_entries_are_well_formed():
             assert value.count("ˈ") >= 1, (word, value)
         else:
             for w in value.split():
-                ok = (w.isdigit() or (w.isupper() and w.isalpha()) or pronounce._lookup(w)
-                      or pronounce._listed_value(w) is not None)
+                ok = w.isdigit() or (w.isupper() and w.isalpha()) or pronounce._lookup(w) or pronounce._listed_value(w) is not None
                 assert ok, f"{word} = {value}: misaki does not know {w!r}"
 
 
@@ -329,10 +334,12 @@ def test_word_list_entries_are_well_formed():
 
 def test_a_paragraph_takes_under_20_ms_after_warm_up():
     pronounce.warm()
-    src = ("The `parse_narration` helper reads 40 words of prose: it calls `os.path.join`, checks "
-           "that the request took 5ms, loads config.yaml through Pydantic, sends JSON to the API, "
-           "and logs a Qwerkly frobnicator and the zindlemoss widget in O(n log n) time, "
-           "so each caption word lands where the agent wrote it.")
+    src = (
+        "The `parse_narration` helper reads 40 words of prose: it calls `os.path.join`, checks "
+        "that the request took 5ms, loads config.yaml through Pydantic, sends JSON to the API, "
+        "and logs a Qwerkly frobnicator and the zindlemoss widget in O(n log n) time, "
+        "so each caption word lands where the agent wrote it."
+    )
     n = parse_narration(src)
     best = float("inf")
     for _ in range(3):
@@ -347,4 +354,4 @@ def test_a_paragraph_takes_under_20_ms_after_warm_up():
 def test_word_after_an_inline_pronunciation_keeps_its_caption():
     display, sp = voice("The Vite it builds.")  # "it" can also be found inside /vˈit/
     words = timed_words(sp, fake_tokens(sp.text))
-    assert any(display[w["c0"]:w["c1"]] == "it" for w in words)
+    assert any(display[w["c0"] : w["c1"]] == "it" for w in words)

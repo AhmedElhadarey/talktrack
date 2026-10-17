@@ -56,8 +56,7 @@ def _entries() -> tuple[list[dict], Config]:
             if not r.get("url"):
                 continue
             blurb = prompts.get(r["id"], "").removeprefix("Use showntell to ").split(". ")[0].rstrip(".")
-            entries.append({"slug": r["id"], "id": r["url"].rstrip("/").rsplit("/", 1)[-1],
-                            "blurb": f"Asked to {blurb}." if blurb else ""})
+            entries.append({"slug": r["id"], "id": r["url"].rstrip("/").rsplit("/", 1)[-1], "blurb": f"Asked to {blurb}." if blurb else ""})
     else:
         entries = json.loads(Path(args.entries).read_text()) if args.entries else []
     return [e for e in entries if only is None or e["slug"] in only], cfg
@@ -91,8 +90,9 @@ def main() -> None:
         print(f"exported {e['slug']}: {out}")
     listed = OUT / "order.txt"  # optional: one slug per line, the order of the index page
     order = listed.read_text().split() if listed.is_file() else [e["slug"] for e in entries]
-    folders = sorted((d for d in OUT.iterdir() if (d / "data.json").is_file()),
-                     key=lambda d: (order.index(d.name) if d.name in order else -1, d.name))
+    folders = sorted(
+        (d for d in OUT.iterdir() if (d / "data.json").is_file()), key=lambda d: (order.index(d.name) if d.name in order else -1, d.name)
+    )
     cards = []
     from showntell.server import render_player
 

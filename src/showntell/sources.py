@@ -30,9 +30,7 @@ class Excerpt:
 
 def resolve(root: Path | None, rel: str) -> Path:
     if root is None:
-        raise SourceError(
-            f"cannot read {rel}: no project folder is known. Pass project_dir to start_walkthrough."
-        )
+        raise SourceError(f"cannot read {rel}: no project folder is known. Pass project_dir to start_walkthrough.")
     base = root.resolve()
     p = Path(rel).expanduser()
     p = (p if p.is_absolute() else base / p).resolve()

@@ -154,14 +154,20 @@ def test_list_items_get_titles_bodies_and_ids(build):
     v = w.slides[1].visual
     assert v["style"] == "bullets"
     assert [(i["id"], i["title"], i["body"]) for i in v["items"]] == [
-        ("memory", "Memory", "fast"), ("disk", "Disk", "survives"), ("plain-item", "", "plain item")]
+        ("memory", "Memory", "fast"),
+        ("disk", "Disk", "survives"),
+        ("plain-item", "", "plain item"),
+    ]
 
 
-@pytest.mark.parametrize("md,style", [
-    ("## L {.cards}\n\n- a\n- b\n", "cards"),
-    ("## L {.steps}\n\n- a\n- b\n", "steps"),
-    ("## L\n\n1. a\n2. b\n", "steps"),
-])
+@pytest.mark.parametrize(
+    "md,style",
+    [
+        ("## L {.cards}\n\n- a\n- b\n", "cards"),
+        ("## L {.steps}\n\n- a\n- b\n", "steps"),
+        ("## L\n\n1. a\n2. b\n", "steps"),
+    ],
+)
 def test_list_styles(build, md, style):
     w, _ = build("# T\n\nA.\n\n" + md + "\nB.\n")
     assert w.slides[1].visual["style"] == style

@@ -106,8 +106,14 @@ def test_ensure_passes_the_data_folder_to_the_child(cfg, monkeypatch):
 
 
 def test_ensure_reuses_a_running_daemon_of_this_version(cfg, monkeypatch):
-    lock = {"pid": os.getpid(), "port": cfg.port, "token": "t", "version": __version__, "build": daemon.build_id(),
-            "health": {"busy": False}}
+    lock = {
+        "pid": os.getpid(),
+        "port": cfg.port,
+        "token": "t",
+        "version": __version__,
+        "build": daemon.build_id(),
+        "health": {"busy": False},
+    }
     monkeypatch.setattr(daemon, "running", lambda c: lock)
     monkeypatch.setattr(daemon.subprocess, "Popen", lambda *a, **k: pytest.fail("must not start another daemon"))
     assert daemon.ensure(cfg, log=lambda m: None) is lock
@@ -178,8 +184,9 @@ async def test_the_shim_reports_a_plain_text_refusal_readably():
     import httpx
 
     svc = RemoteService("http://127.0.0.1:1", "t")
-    svc.client = httpx.AsyncClient(transport=httpx.MockTransport(
-        lambda req: httpx.Response(403, text="local clients only", headers={"content-type": "text/plain"})))
+    svc.client = httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda req: httpx.Response(403, text="local clients only", headers={"content-type": "text/plain"}))
+    )
     with pytest.raises(ValueError, match="403: local clients only"):
         await svc.list()
 
@@ -230,8 +237,9 @@ def _get_json(url: str) -> dict:
 
 
 def _post(url: str, token: str) -> dict:
-    req = urllib.request.Request(url, data=b"{}", method="POST",
-                                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    req = urllib.request.Request(
+        url, data=b"{}", method="POST", headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    )
     with urllib.request.urlopen(req, timeout=2) as r:
         return json.loads(r.read())
 
@@ -320,6 +328,7 @@ def test_concurrent_clients_share_one_daemon(tmp_path):
     old = os.environ.get("SHOWNTELL_SPEECH")
     os.environ["SHOWNTELL_SPEECH"] = "fake"
     try:
+
         def start(_):
             cfg = Config()
             cfg.data_dir, cfg.port = tmp_path, port
@@ -329,8 +338,12 @@ def test_concurrent_clients_share_one_daemon(tmp_path):
             pids = set(ex.map(start, range(4)))
         assert len(pids) == 1
         lock = json.loads((tmp_path / "daemon.json").read_text())
-        req = urllib.request.Request(f"http://127.0.0.1:{lock['port']}/api/rpc/shutdown", data=b"{}", method="POST",
-                                     headers={"Authorization": f"Bearer {lock['token']}", "Content-Type": "application/json"})
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{lock['port']}/api/rpc/shutdown",
+            data=b"{}",
+            method="POST",
+            headers={"Authorization": f"Bearer {lock['token']}", "Content-Type": "application/json"},
+        )
         urllib.request.urlopen(req, timeout=3).read()
     finally:
         if old is None:

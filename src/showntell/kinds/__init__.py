@@ -18,12 +18,25 @@ from .stat import parse_stat
 from .terminal import parse_terminal
 from .tree import parse_tree
 
-KINDS: dict[str, Kind] = {k.name: k for k in (chart.KIND, stat.KIND, chat.KIND, terminal.KIND, tree.KIND, svg.KIND,
-                                              drawio.KIND)}
+KINDS: dict[str, Kind] = {k.name: k for k in (chart.KIND, stat.KIND, chat.KIND, terminal.KIND, tree.KIND, svg.KIND, drawio.KIND)}
 BY_LANG: dict[str, Kind] = {lang: k for k in KINDS.values() for lang in k.langs}
 
-__all__ = ["BY_LANG", "KINDS", "Kind", "find_part", "for_lang", "get", "labels", "line_kind", "parse_chart", "parse_chat",
-           "parse_stat", "parse_terminal", "parse_tree", "part_kind"]
+__all__ = [
+    "BY_LANG",
+    "KINDS",
+    "Kind",
+    "find_part",
+    "for_lang",
+    "get",
+    "labels",
+    "line_kind",
+    "parse_chart",
+    "parse_chat",
+    "parse_stat",
+    "parse_terminal",
+    "parse_tree",
+    "part_kind",
+]
 
 
 def for_lang(lang: str) -> Kind | None:

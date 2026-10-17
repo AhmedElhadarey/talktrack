@@ -22,8 +22,14 @@ def codes(issues) -> list[str]:
 def test_issue_is_its_text_and_carries_fields():
     i = Issue("code_too_tall", "Code shows 30 lines.", "Show fewer.", slide="s", line=4)
     assert i == "Code shows 30 lines. Show fewer." and "30 lines" in i
-    assert i.to_dict() == {"code": "code_too_tall", "severity": "warning", "message": "Code shows 30 lines.",
-                           "fix": "Show fewer.", "slide": "s", "line": 4}
+    assert i.to_dict() == {
+        "code": "code_too_tall",
+        "severity": "warning",
+        "message": "Code shows 30 lines.",
+        "fix": "Show fewer.",
+        "slide": "s",
+        "line": 4,
+    }
 
 
 def test_unknown_code_is_refused():
@@ -45,8 +51,10 @@ def test_summarize_orders_by_severity_and_folds_repeats():
 
 
 def test_line_text_marks_errors_and_names_the_code():
-    assert line_text(Issue("cue_off_code", "Past the end.", "Use gutter numbers.").to_dict()) == \
-        "- Error: Past the end. Use gutter numbers. (cue_off_code)"
+    assert (
+        line_text(Issue("cue_off_code", "Past the end.", "Use gutter numbers.").to_dict())
+        == "- Error: Past the end. Use gutter numbers. (cue_off_code)"
+    )
     assert line_text(Issue("no_cues", "No cues.").to_dict()) == "- No cues. (no_cues)"
 
 
@@ -81,19 +89,23 @@ def test_builder_issues_name_slide_and_line(build):
     assert i.slide == "big" and i.fix
 
 
-@pytest.mark.parametrize("text, what", [
-    ("Thanks to @octocat for this.", "a handle"),
-    ("See https://example.com/x for more.", "a URL"),
-    ("Commit 3f9a2c1b fixed it.", "a commit hash"),
-])
+@pytest.mark.parametrize(
+    "text, what",
+    [
+        ("Thanks to @octocat for this.", "a handle"),
+        ("See https://example.com/x for more.", "a URL"),
+        ("Commit 3f9a2c1b fixed it.", "a commit hash"),
+    ],
+)
 def test_spoken_handles_urls_and_hashes_are_flagged(build, text, what):
     _, b = build(f"# T\n\nA.\n\n## S {{#s}}\n\n- **One**: a\n\n{text}\n")
     b.check_all()
     assert any(i.code == "spoken_handle" and what in i for i in b.issues)
 
 
-@pytest.mark.parametrize("text", ["Email me at me@example.com.", "The 1024 byte limit.", "Use `3f9a2c1b` here.",
-                                  "A decade of facade work."])
+@pytest.mark.parametrize(
+    "text", ["Email me at me@example.com.", "The 1024 byte limit.", "Use `3f9a2c1b` here.", "A decade of facade work."]
+)
 def test_ordinary_text_is_not_a_handle(build, text):
     _, b = build(f"# T\n\nA.\n\n## S {{#s}}\n\n- **One**: a\n\n{text}\n")
     b.check_all()
@@ -129,8 +141,9 @@ def test_a_run_of_code_slides_suggests_a_diagram(build):
     _, b = build("# T\n\nA.\n\n" + slides)
     b.check_all()
     assert "code_run" in codes(b.issues)
-    _, b = build("# T\n\nA.\n\n" + slides.replace("## C2 {#c2}\n\n```python\nx = 2\n```",
-                                                    "## C2 {#c2}\n\n```mermaid\nflowchart LR\n  a --> b\n```"))
+    _, b = build(
+        "# T\n\nA.\n\n" + slides.replace("## C2 {#c2}\n\n```python\nx = 2\n```", "## C2 {#c2}\n\n```mermaid\nflowchart LR\n  a --> b\n```")
+    )
     b.check_all()
     assert "code_run" not in codes(b.issues)
 

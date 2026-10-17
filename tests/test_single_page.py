@@ -72,8 +72,12 @@ def _free_port() -> int:
 def _voiced(data, markdown: str, root: str) -> str:
     """Write a walkthrough with a fake-speech daemon and wait until it is voiced and saved."""
     env = {**os.environ, "SHOWNTELL_DATA": str(data), "SHOWNTELL_SPEECH": "fake", "SHOWNTELL_FINISH_CHECK": "0"}
-    proc = subprocess.Popen([sys.executable, "-m", "showntell", "serve", "--port", str(_free_port()), "--speech", "fake"],
-                            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "showntell", "serve", "--port", str(_free_port()), "--speech", "fake"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     try:
         lock, deadline = None, time.time() + 20
         while time.time() < deadline:
@@ -123,7 +127,7 @@ def test_one_page_plays_every_kind_offline(tmp_path):
     wid = _voiced(data, DOC, str(ROOT))
     page_file = export_html(data, wid, tmp_path / "walk.html")
     html = page_file.read_text()
-    assert "katex" in html and "mermaid" in html and "src=\"static" not in html
+    assert "katex" in html and "mermaid" in html and 'src="static' not in html
     url = page_file.as_uri()
     with pw.sync_playwright() as p:
         try:
@@ -186,9 +190,11 @@ def test_a_hand_drawn_drawing_carries_its_library_and_font(tmp_path):
     pw = pytest.importorskip("playwright.sync_api")
     from showntell.export import export_html
 
-    md = ("# Sketch\n\nOpening words.\n\n## Box {#box}\n\n```svg sketch\n<svg viewBox=\"0 0 1150 560\">"
-          "<rect id=\"r\" x=\"100\" y=\"100\" width=\"400\" height=\"200\" fill=\"#4f8cff\"/>"
-          "<text x=\"120\" y=\"400\" font-size=\"40\" fill=\"var(--fg)\">by hand</text></svg>\n```\n\nA [box](#r).\n")
+    md = (
+        '# Sketch\n\nOpening words.\n\n## Box {#box}\n\n```svg sketch\n<svg viewBox="0 0 1150 560">'
+        '<rect id="r" x="100" y="100" width="400" height="200" fill="#4f8cff"/>'
+        '<text x="120" y="400" font-size="40" fill="var(--fg)">by hand</text></svg>\n```\n\nA [box](#r).\n'
+    )
     data = tmp_path / "data"
     wid = _voiced(data, md, str(tmp_path))
     url = export_html(data, wid, tmp_path / "sketch.html").as_uri()
@@ -199,7 +205,10 @@ def test_a_hand_drawn_drawing_carries_its_library_and_font(tmp_path):
             pytest.skip(f"Chromium unavailable: {e}")
         page = b.new_page()
         other = []
-        page.route("**/*", lambda route: route.continue_() if route.request.url.split("?")[0] == url else (other.append(route.request.url), route.abort()))
+        page.route(
+            "**/*",
+            lambda route: route.continue_() if route.request.url.split("?")[0] == url else (other.append(route.request.url), route.abort()),
+        )
         page.goto(url + "?capture=1")
         page.wait_for_function("window.__showntell?.duration?.() > 0")
         page.evaluate("(t) => window.__showntell.seek(t)", page.evaluate("window.__showntell.duration()") - 0.2)
@@ -216,8 +225,10 @@ def test_a_drawio_diagram_plays_offline_from_one_page(tmp_path):
 
     from showntell.export import export_html
 
-    md = ("# Diagram\n\nOpening words.\n\n## Architecture {#arch}\n\n```drawio file=tests/fixtures/drawio/architecture.drawio\n```\n\n"
-          "The diagram as drawn.\n")
+    md = (
+        "# Diagram\n\nOpening words.\n\n## Architecture {#arch}\n\n```drawio file=tests/fixtures/drawio/architecture.drawio\n```\n\n"
+        "The diagram as drawn.\n"
+    )
     data = tmp_path / "data"
     wid = _voiced(data, md, str(ROOT))
     url = export_html(data, wid, tmp_path / "drawio.html").as_uri()
@@ -228,7 +239,10 @@ def test_a_drawio_diagram_plays_offline_from_one_page(tmp_path):
             pytest.skip(f"Chromium unavailable: {e}")
         page = b.new_page()
         other, errors = [], []
-        page.route("**/*", lambda route: route.continue_() if route.request.url.split("?")[0] == url else (other.append(route.request.url), route.abort()))
+        page.route(
+            "**/*",
+            lambda route: route.continue_() if route.request.url.split("?")[0] == url else (other.append(route.request.url), route.abort()),
+        )
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.goto(url + "?capture=1")
         page.wait_for_function("window.__showntell?.duration?.() > 0")

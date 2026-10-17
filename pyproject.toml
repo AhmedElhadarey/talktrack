@@ -75,7 +75,7 @@ markers = [
 ]
 
 [tool.ruff]
-line-length = 120
+line-length = 140
 target-version = "py312"
 extend-exclude = ["tests/js/golden/files"]  # frozen excerpts of source files, not code
 

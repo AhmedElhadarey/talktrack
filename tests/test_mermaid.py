@@ -25,15 +25,18 @@ def test_graph_keyword_and_bare_ids_with_spaces():
     assert order == ["A", "B", "C"] and nodes == {"A": "A", "B": "B", "C": "C"}
 
 
-@pytest.mark.parametrize("line,node,label", [
-    ('a["Quoted label"] --> b', "a", "Quoted label"),
-    ("b((Circle)) --> c", "b", "Circle"),
-    ("c[(Database)] --> d", "c", "Database"),
-    ("d{{Hexagon}} --> e", "d", "Hexagon"),
-    ("e([Stadium]) --> f", "e", "Stadium"),
-    ("f[[Subroutine]] --> g", "f", "Subroutine"),
-    ("g>Flag] --> h", "g", "Flag"),
-])
+@pytest.mark.parametrize(
+    "line,node,label",
+    [
+        ('a["Quoted label"] --> b', "a", "Quoted label"),
+        ("b((Circle)) --> c", "b", "Circle"),
+        ("c[(Database)] --> d", "c", "Database"),
+        ("d{{Hexagon}} --> e", "d", "Hexagon"),
+        ("e([Stadium]) --> f", "e", "Stadium"),
+        ("f[[Subroutine]] --> g", "f", "Subroutine"),
+        ("g>Flag] --> h", "g", "Flag"),
+    ],
+)
 def test_flowchart_node_shapes(line, node, label):
     nodes, _, _ = parse_mermaid("flowchart LR\n  " + line + "\n")
     assert nodes[node] == label

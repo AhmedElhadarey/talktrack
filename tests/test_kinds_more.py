@@ -37,7 +37,7 @@ STEPS = "## E {#e}\n\n```python step\ndef f(xs):\n    t = 0\n    for x in xs:\n 
 
 
 def test_steps_build_one_slide_and_line_cues_follow_the_step(build):
-    s, codes, _ = last(build, STEPS + "The loop [adds](#L4). Then [one call](#step-2) and [sum](#L2 \"sum\").\n")
+    s, codes, _ = last(build, STEPS + 'The loop [adds](#L4). Then [one call](#step-2) and [sum](#L2 "sum").\n')
     assert s.kind == "code" and len(s.visual["steps"]) == 2 and "extra_visual" not in codes
     cues = s.says[0].cues
     assert [(c["kind"], c.get("step"), c.get("n")) for c in cues] == [("lines", 1, None), ("step", None, 2), ("lines", 2, None)]

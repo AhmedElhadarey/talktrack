@@ -43,11 +43,14 @@ def test_terminal_splits_commands_from_output():
     assert [x["cmd"] for x in v["lines"]] == [True, False, True, True] and v["lines"][0]["text"] == "ls"
 
 
-@pytest.mark.parametrize("body", [
-    "src/\n  app.py\n  cache/\n    lru.py\ntests/",
-    "src\n    app.py\n    cache\n        lru.py\ntests/",
-    ".\n├── src\n│   ├── app.py\n│   └── cache\n│       └── lru.py\n└── tests/",
-])
+@pytest.mark.parametrize(
+    "body",
+    [
+        "src/\n  app.py\n  cache/\n    lru.py\ntests/",
+        "src\n    app.py\n    cache\n        lru.py\ntests/",
+        ".\n├── src\n│   ├── app.py\n│   └── cache\n│       └── lru.py\n└── tests/",
+    ],
+)
 def test_tree_paths_from_indentation_or_tree_output(body):
     v, problems = parse_tree(body, {})
     assert not problems
@@ -125,7 +128,9 @@ def test_every_catalogue_example_builds_cleanly(build, project, k):
     if k["kind"] == "diff":
         pytest.skip("needs a git repository")
     if k["kind"] == "drawio":  # its example reads a file, as draw.io slides do
-        (project / "docs" / "architecture.drawio").write_text((Path(__file__).parent / "fixtures" / "drawio" / "architecture.drawio").read_text())
+        (project / "docs" / "architecture.drawio").write_text(
+            (Path(__file__).parent / "fixtures" / "drawio" / "architecture.drawio").read_text()
+        )
     w, b = build(f"# T\n\nOpening.\n\n## Example {{#ex}}\n\n{md}\n\nA sentence about it.\n", root=project)
     kind = w.slides[-1].kind
     assert kind == k["kind"], (kind, k["kind"])

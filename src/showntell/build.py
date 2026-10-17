@@ -68,8 +68,11 @@ class Builder(CueResolver, Checks):
             self._apply(block)
         if self.parser.pending.strip():
             first = self.parser.pending.strip().split("\n", 1)[0][:40]
-            self._issue("block_open", f"`{first}` is still open at the end of this call; your next add_slides call completes it.",
-                        "Close every code block within one call.")
+            self._issue(
+                "block_open",
+                f"`{first}` is still open at the end of this call; your next add_slides call completes it.",
+                "Close every code block within one call.",
+            )
         elif check_last and self.w.slides and not self.pending_old:
             # Slides arrive whole, so the last one is done: check it now, not a call later when
             # the next heading arrives. Checking it again then reports only what is new.
@@ -117,7 +120,11 @@ class Builder(CueResolver, Checks):
                 if a["frame"] in FRAMES:
                     self.w.frame = a["frame"]
                 else:
-                    self._issue("front_matter", f"Front matter frame `{a['frame']}` is not one of {', '.join(FRAMES)}; kept {self.w.frame}.", line=b.line)
+                    self._issue(
+                        "front_matter",
+                        f"Front matter frame `{a['frame']}` is not one of {', '.join(FRAMES)}; kept {self.w.frame}.",
+                        line=b.line,
+                    )
             if a.get("voice"):
                 if a["voice"] in VOICES:
                     self.w.voice = a["voice"]
@@ -129,7 +136,11 @@ class Builder(CueResolver, Checks):
                 if a["theme"] in THEMES:
                     self.w.theme = a["theme"]
                 else:
-                    self._issue("front_matter", f"Front matter theme `{a['theme']}` is not one of {', '.join(THEMES)}; kept {self.w.theme}.", line=b.line)
+                    self._issue(
+                        "front_matter",
+                        f"Front matter theme `{a['theme']}` is not one of {', '.join(THEMES)}; kept {self.w.theme}.",
+                        line=b.line,
+                    )
             if a.get("speed"):
                 try:
                     self.w.speed = max(SPEED_RANGE[0], min(SPEED_RANGE[1], float(a["speed"])))
@@ -186,8 +197,12 @@ class Builder(CueResolver, Checks):
     def _slide_for_visual(self, kind: str) -> Slide:
         s = self._current()
         if s.visual and not (kind == "list" and s.kind == "list"):
-            self._issue("extra_visual", f"Slide `{s.id}` already shows a {s.kind}; the next visual got its own slide.",
-                        "Give each visual its own heading.", slide=s.id)
+            self._issue(
+                "extra_visual",
+                f"Slide `{s.id}` already shows a {s.kind}; the next visual got its own slide.",
+                "Give each visual its own heading.",
+                slide=s.id,
+            )
             s = self._new_slide(Block("heading", self.visual_line, s.title, attrs={"classes": list(s.classes)}))
         return s
 
@@ -269,9 +284,17 @@ class Builder(CueResolver, Checks):
                 while it["id"] in used:
                     it["id"] += "-2"
                 used.add(it["id"])
-            style = ("cards" if "cards" in s.classes else "stack" if "stack" in s.classes
-                     else "checklist" if ("checklist" in s.classes or any("check" in it for it in items))
-                     else "steps" if ("steps" in s.classes or b.attrs.get("ordered")) else "bullets")
+            style = (
+                "cards"
+                if "cards" in s.classes
+                else "stack"
+                if "stack" in s.classes
+                else "checklist"
+                if ("checklist" in s.classes or any("check" in it for it in items))
+                else "steps"
+                if ("steps" in s.classes or b.attrs.get("ordered"))
+                else "bullets"
+            )
             return self._set(s, "list", {"style": style, "items": items})
         if b.kind == "image":
             return self._image(b)
@@ -285,8 +308,12 @@ class Builder(CueResolver, Checks):
                 self._issue("source_error", f"Line {b.line}: {e}", line=b.line)
                 return
             if b.text.strip():
-                self._issue("code_body_ignored", f"The {k.name} block for {b.attrs['file']} had a body; showed the file instead.",
-                            "Leave the body empty with file=.", line=b.line)
+                self._issue(
+                    "code_body_ignored",
+                    f"The {k.name} block for {b.attrs['file']} had a body; showed the file instead.",
+                    "Leave the body empty with file=.",
+                    line=b.line,
+                )
         vis, problems = k.parse(body, b.attrs)
         for i, p in enumerate(problems):  # the format once per block
             self._issue(k.error_code, f"Line {b.line}: {p}.", k.fix() if i == 0 else k.hint, line=b.line)
@@ -319,8 +346,12 @@ class Builder(CueResolver, Checks):
             try:
                 ex, _ = sources.read_excerpt(self.root, b.attrs["file"], b.attrs.get("lines"))
                 if b.text.strip():
-                    self._issue("code_body_ignored", f"Code block for {b.attrs['file']} had a body; showed the file instead.",
-                                "Leave the body empty with file=.", line=b.line)
+                    self._issue(
+                        "code_body_ignored",
+                        f"Code block for {b.attrs['file']} had a body; showed the file instead.",
+                        "Leave the body empty with file=.",
+                        line=b.line,
+                    )
                 if not self.w.sha:
                     self.w.sha = sources.head_sha(self.root)
                 return ex
@@ -343,8 +374,12 @@ class Builder(CueResolver, Checks):
                 self._issue("source_error", f"Line {b.line}: {e}", line=b.line)
                 return
             if generated(b.attrs["file"]):
-                self._issue("generated_file", f"Line {b.line}: {b.attrs['file']} is a lockfile or generated file.",
-                            "Skip it unless it is the point of the change.", line=b.line)
+                self._issue(
+                    "generated_file",
+                    f"Line {b.line}: {b.attrs['file']} is a lockfile or generated file.",
+                    "Skip it unless it is the point of the change.",
+                    line=b.line,
+                )
             lang = b.attrs.get("lang") or _lang_from_name(b.attrs["file"])
             vis = {
                 "lang": lang,
@@ -357,8 +392,12 @@ class Builder(CueResolver, Checks):
             old, new = sources.split_unified(b.text)
             hunks = sources.hunk_count(b.text)
             if hunks > 1:
-                self._issue("diff_hunks", f"Line {b.line}: this diff has {hunks} hunks; line numbers follow the first one.",
-                            "Show one hunk per slide, or use file= with rev=.", line=b.line)
+                self._issue(
+                    "diff_hunks",
+                    f"Line {b.line}: this diff has {hunks} hunks; line numbers follow the first one.",
+                    "Show one hunk per slide, or use file= with rev=.",
+                    line=b.line,
+                )
             lang = b.attrs.get("lang", "")
             vis = {
                 "lang": lang,
@@ -372,8 +411,11 @@ class Builder(CueResolver, Checks):
         if self.pending_old:
             ob, ex = self.pending_old
             self.pending_old = None
-            self._issue("old_without_new", f"Line {ob.line}: an `old` code block had no `new` block after it; showed it as plain code.",
-                        line=ob.line)
+            self._issue(
+                "old_without_new",
+                f"Line {ob.line}: an `old` code block had no `new` block after it; showed it as plain code.",
+                line=ob.line,
+            )
             vis = {"lang": ob.lang, "code": ex.code, "start": ex.start, "title": ob.attrs.get("title") or self._name(ob)}
             self._set(self._slide_for_visual("code"), "code", vis)
 
@@ -387,8 +429,12 @@ class Builder(CueResolver, Checks):
         if alt:
             vis["alt"] = alt
         if len(nodes) > self.limits["nodes"]:
-            self._issue("diagram_too_big", f"The diagram on line {b.line} has {len(nodes)} nodes; this frame reads well up to {self.limits['nodes']}.",
-                        "Split it across slides.", line=b.line)
+            self._issue(
+                "diagram_too_big",
+                f"The diagram on line {b.line} has {len(nodes)} nodes; this frame reads well up to {self.limits['nodes']}.",
+                "Split it across slides.",
+                line=b.line,
+            )
         return vis
 
     def _image(self, b: Block) -> None:
@@ -422,7 +468,11 @@ class Builder(CueResolver, Checks):
                 if b.attrs.get("url"):
                     vis["url"] = b.attrs["url"][:120]
             else:
-                self._issue("image_error", f"Line {b.line}: frame `{frame}` is not one of {', '.join(IMAGE_FRAMES)}; showed the image unframed.", line=b.line)
+                self._issue(
+                    "image_error",
+                    f"Line {b.line}: frame `{frame}` is not one of {', '.join(IMAGE_FRAMES)}; showed the image unframed.",
+                    line=b.line,
+                )
         self._set(s, "image", vis)
 
     # -- narration ----------------------------------------------------------------------
@@ -447,6 +497,21 @@ class Builder(CueResolver, Checks):
 
 def _lang_from_name(name: str) -> str:
     ext = Path(name).suffix.lower().lstrip(".")
-    return {"py": "python", "js": "javascript", "ts": "typescript", "tsx": "typescript", "jsx": "javascript",
-            "rs": "rust", "rb": "ruby", "md": "markdown", "yml": "yaml", "sh": "bash", "zsh": "bash",
-            "kt": "kotlin", "cs": "csharp", "h": "c", "hpp": "cpp", "cc": "cpp"}.get(ext, ext)
+    return {
+        "py": "python",
+        "js": "javascript",
+        "ts": "typescript",
+        "tsx": "typescript",
+        "jsx": "javascript",
+        "rs": "rust",
+        "rb": "ruby",
+        "md": "markdown",
+        "yml": "yaml",
+        "sh": "bash",
+        "zsh": "bash",
+        "kt": "kotlin",
+        "cs": "csharp",
+        "h": "c",
+        "hpp": "cpp",
+        "cc": "cpp",
+    }.get(ext, ext)

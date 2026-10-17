@@ -158,8 +158,15 @@ class LocalService:
             raise ValueError(str(e)) from e
         return {
             "url": s.url,
-            "slides": [{"id": sid, "title": next(x.title for x in s.w.slides if x.id == sid), "at_s": round(t, 1),
-                        "png": base64.b64encode(png).decode()} for sid, t, png in zip(want, times, pngs, strict=True)],
+            "slides": [
+                {
+                    "id": sid,
+                    "title": next(x.title for x in s.w.slides if x.id == sid),
+                    "at_s": round(t, 1),
+                    "png": base64.b64encode(png).decode(),
+                }
+                for sid, t, png in zip(want, times, pngs, strict=True)
+            ],
             "unknown": unknown,
             "player_issues": _dicts(s.take_player_issues()),
         }
@@ -178,8 +185,7 @@ class RemoteService:
         import httpx
 
         self.base = base.rstrip("/")
-        self.client = httpx.AsyncClient(timeout=httpx.Timeout(70.0, connect=5.0),
-                                        headers={"Authorization": f"Bearer {token}"})
+        self.client = httpx.AsyncClient(timeout=httpx.Timeout(70.0, connect=5.0), headers={"Authorization": f"Bearer {token}"})
 
     async def _call(self, method: str, **kw) -> Any:
         r = await self.client.post(f"{self.base}/api/rpc/{method}", json=kw)

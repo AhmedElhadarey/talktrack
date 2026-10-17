@@ -224,7 +224,6 @@ def test_never_imports_mlx(backend):
         f"b = OnnxBackend(Path({str(_data_dir())!r})); b.load(); b.synth('Hello there.', 'af_heart', 1.0)\n"
         "print(sorted(m for m in sys.modules if m.split('.')[0] in ('mlx', 'mlx_audio')))\n"
     )
-    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120,
-                       env={**os.environ, "HF_HUB_OFFLINE": "1"})
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120, env={**os.environ, "HF_HUB_OFFLINE": "1"})
     assert r.returncode == 0, r.stderr[-2000:]
     assert r.stdout.strip().splitlines()[-1] == "[]"

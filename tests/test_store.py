@@ -374,13 +374,16 @@ async def test_adding_after_finish_reopens(service, store):
 # -- handles -----------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("mangle", [
-    lambda h: h.split(".")[0] + ".wrongkey",
-    lambda h: h.split(".")[0],
-    lambda h: "",
-    lambda h: "short.key",
-    lambda h: "../../etc." + h.split(".")[1],
-])
+@pytest.mark.parametrize(
+    "mangle",
+    [
+        lambda h: h.split(".")[0] + ".wrongkey",
+        lambda h: h.split(".")[0],
+        lambda h: "",
+        lambda h: "short.key",
+        lambda h: "../../etc." + h.split(".")[1],
+    ],
+)
 async def test_by_handle_rejects_wrong_keys(store, mangle):
     s = store.create("T")
     with pytest.raises(ValueError, match="unknown handle"):
@@ -393,8 +396,7 @@ async def test_by_handle_accepts_the_right_key(store):
 
 
 async def test_service_calls_with_bad_handle_raise(service):
-    for call in (service.add("x.y", "a"), service.playable("x.y", 0), service.revise("x.y", "s", "a"),
-                 service.finish("x.y", None)):
+    for call in (service.add("x.y", "a"), service.playable("x.y", 0), service.revise("x.y", "s", "a"), service.finish("x.y", None)):
         with pytest.raises(ValueError):
             await call
 

@@ -79,22 +79,27 @@ async def test_public_url_host_is_allowed(http, tmp_path, service):
 
 async def test_cross_origin_post_is_403(http, walk):
     async with http() as c:
-        r = await c.post(f"/w/{walk.w.id}/report", json={"message": "x"},
-                         headers={"Origin": "https://evil.example", "X-Report-Key": walk.w.report_key})
+        r = await c.post(
+            f"/w/{walk.w.id}/report", json={"message": "x"}, headers={"Origin": "https://evil.example", "X-Report-Key": walk.w.report_key}
+        )
     assert (r.status_code, r.text) == (403, "cross-origin request") and walk.player_issues == []
 
 
 async def test_same_machine_origin_post_is_allowed(http, walk):
     async with http() as c:
-        r = await c.post(f"/w/{walk.w.id}/report", json={"message": "x"},
-                         headers={"Origin": "http://localhost:4799", "X-Report-Key": walk.w.report_key})
+        r = await c.post(
+            f"/w/{walk.w.id}/report", json={"message": "x"}, headers={"Origin": "http://localhost:4799", "X-Report-Key": walk.w.report_key}
+        )
     assert r.status_code == 200
 
 
 async def test_non_json_post_is_415(http, walk):
     async with http() as c:
-        r = await c.post(f"/w/{walk.w.id}/report", content=b"message=x",
-                         headers={"Content-Type": "application/x-www-form-urlencoded", "X-Report-Key": walk.w.report_key})
+        r = await c.post(
+            f"/w/{walk.w.id}/report",
+            content=b"message=x",
+            headers={"Content-Type": "application/x-www-form-urlencoded", "X-Report-Key": walk.w.report_key},
+        )
     assert (r.status_code, r.text) == (415, "JSON only")
 
 
@@ -121,8 +126,7 @@ async def test_report_with_wrong_key_is_403(http, walk):
 
 async def test_report_with_right_key_reaches_the_agent(http, walk, service):
     async with http() as c:
-        r = await c.post(f"/w/{walk.w.id}/report", json={"message": "Diagram failed"},
-                         headers={"X-Report-Key": walk.w.report_key})
+        r = await c.post(f"/w/{walk.w.id}/report", json={"message": "Diagram failed"}, headers={"X-Report-Key": walk.w.report_key})
     assert r.status_code == 200 and r.json() == {"ok": True}
     assert walk.player_issues == ["Diagram failed"]
 
@@ -280,8 +284,11 @@ async def test_rpc_bad_arguments_are_400(http):
 async def test_rpc_runs_the_flow(http):
     auth = {"Authorization": f"Bearer {RPC_TOKEN}"}
     async with http() as c:
-        start = (await c.post("/api/rpc/start", json={"title": "T", "frame": "square", "voice": "", "speed": 1.0,
-                                                       "project_dir": None}, headers=auth)).json()["result"]
+        start = (
+            await c.post(
+                "/api/rpc/start", json={"title": "T", "frame": "square", "voice": "", "speed": 1.0, "project_dir": None}, headers=auth
+            )
+        ).json()["result"]
         await c.post("/api/rpc/add", json={"handle": start["handle"], "markdown": OPENING}, headers=auth)
         p = (await c.post("/api/rpc/playable", json={"handle": start["handle"], "timeout": 5}, headers=auth)).json()
     assert p["result"]["status"] == "ready" and p["result"]["frame"] == "square"
@@ -329,16 +336,21 @@ async def test_token_mode_health_needs_no_token(http, wide_cfg):
 
 async def test_token_mode_refuses_mcp_from_other_machines(http, wide_cfg):
     async with http(client=("10.1.2.3", 5555), cfg=wide_cfg) as c:
-        r = await c.post("/mcp?t=sekret-token", json={"jsonrpc": "2.0", "id": 1, "method": "ping"},
-                         headers={"Accept": "application/json, text/event-stream"})
+        r = await c.post(
+            "/mcp?t=sekret-token",
+            json={"jsonrpc": "2.0", "id": 1, "method": "ping"},
+            headers={"Accept": "application/json, text/event-stream"},
+        )
     assert (r.status_code, r.text) == (403, "local clients only")
 
 
 async def test_token_mode_accepts_same_origin_posts(http, wide_cfg, walk):
     async with http(client=("10.1.2.3", 5555), cfg=wide_cfg) as c:
-        r = await c.post(f"/w/{walk.w.id}/report?t=sekret-token", json={"message": "m"},
-                         headers={"Host": "192.168.1.5:4799", "Origin": "http://192.168.1.5:4799",
-                                  "X-Report-Key": walk.w.report_key})
+        r = await c.post(
+            f"/w/{walk.w.id}/report?t=sekret-token",
+            json={"message": "m"},
+            headers={"Host": "192.168.1.5:4799", "Origin": "http://192.168.1.5:4799", "X-Report-Key": walk.w.report_key},
+        )
     assert r.status_code == 200
 
 

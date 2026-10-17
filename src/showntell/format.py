@@ -59,7 +59,7 @@ def parse_info(info: str) -> tuple[str, dict]:
     m = re.match(r"^([\w+#.-]+)(?=\s|$)", info)
     if m and "=" not in m.group(1):
         lang = m.group(1)
-        info = info[m.end():]
+        info = info[m.end() :]
     attrs = parse_attrs(info)
     flags = [f.lower() for f in attrs.pop("flags", [])]
     attrs["flags"] = flags
@@ -404,7 +404,7 @@ def parse_narration(src: str) -> Narration:
                 if i < L and src[i] == "{":  # cue attributes such as {.circle} or {.zoom}
                     close = src.find("}", i)
                     if close != -1:
-                        styles = [c for c in parse_attrs(src[i + 1: close])["classes"] if c in CUE_STYLES]
+                        styles = [c for c in parse_attrs(src[i + 1 : close])["classes"] if c in CUE_STYLES]
                         cue.style = " ".join(dict.fromkeys(styles))
                         i = close + 1
                 continue
@@ -465,7 +465,7 @@ def parse_item(text: str) -> dict:
     cm = re.match(r"^\[([ xX])\]\s+", text)
     if cm:
         check = cm.group(1).lower() == "x"
-        text = text[cm.end():]
+        text = text[cm.end() :]
     m = ATTRS_TAIL_RE.search(text)
     if m and "#" in m.group(1):
         attrs = parse_attrs(m.group(1))

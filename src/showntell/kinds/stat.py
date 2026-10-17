@@ -26,8 +26,14 @@ def parse_stat(body: str, attrs: dict) -> tuple[dict, list[str]]:
         if not 1 <= len(parts) <= 2 or any(n is None for n in nums):
             problems.append(f"stat `{label}` needs a number, or `before -> after`")
             continue
-        it = {"id": slug(label), "label": label, "after": nums[-1][0], "text": parts[-1],
-              "unit": nums[-1][1] or attrs.get("unit", ""), "decimals": nums[-1][2]}
+        it = {
+            "id": slug(label),
+            "label": label,
+            "after": nums[-1][0],
+            "text": parts[-1],
+            "unit": nums[-1][1] or attrs.get("unit", ""),
+            "decimals": nums[-1][2],
+        }
         if len(parts) == 2:
             it["before"] = nums[0][0]
         items.append(it)
@@ -46,8 +52,13 @@ def _value(text: str) -> tuple[float, str, int] | None:
 def _check(vis: dict, line: int, limits: dict) -> list[Finding]:
     if len(vis["items"]) <= STAT_MAX:
         return []
-    return [("block_too_big", f"The stat block on line {line} has {len(vis['items'])} numbers; a slide holds {STAT_MAX} at a glance.",
-             "Keep the ones that matter, or use a chart.")]
+    return [
+        (
+            "block_too_big",
+            f"The stat block on line {line} has {len(vis['items'])} numbers; a slide holds {STAT_MAX} at a glance.",
+            "Keep the ones that matter, or use a chart.",
+        )
+    ]
 
 
 KIND = Kind("stat", ("stat",), parse_stat, check=_check, part=lambda vis: "number")

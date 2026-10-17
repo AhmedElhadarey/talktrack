@@ -195,9 +195,26 @@ def _past(ps: str) -> str:
 
 # misaki's US phonemes in its British notation, longest first: no r after vowels, goat is Q,
 # lot is ɒ, trap is a, long vowels marked, no flap T.
-_TO_BRITISH = [("ɑɹ", "ɑː"), ("ɔɹ", "ɔː"), ("ɜɹ", "ɜː"), ("əɹ", "ə"), ("ɛɹ", "ɛː"), ("ɪɹ", "ɪə"), ("ʊɹ", "ʊə"),
-               ("O", "Q"), ("ɑ", "ɒ"), ("ɔ", "ɔː"), ("æ", "a"), ("ˈi", "ˈiː"), ("ˌi", "ˌiː"), ("u", "uː"),
-               ("T", "t"), ("ɾ", "t"), ("ʔ", "t"), ("ᵻ", "ɪ")]
+_TO_BRITISH = [
+    ("ɑɹ", "ɑː"),
+    ("ɔɹ", "ɔː"),
+    ("ɜɹ", "ɜː"),
+    ("əɹ", "ə"),
+    ("ɛɹ", "ɛː"),
+    ("ɪɹ", "ɪə"),
+    ("ʊɹ", "ʊə"),
+    ("O", "Q"),
+    ("ɑ", "ɒ"),
+    ("ɔ", "ɔː"),
+    ("æ", "a"),
+    ("ˈi", "ˈiː"),
+    ("ˌi", "ˌiː"),
+    ("u", "uː"),
+    ("T", "t"),
+    ("ɾ", "t"),
+    ("ʔ", "t"),
+    ("ᵻ", "ɪ"),
+]
 _INLINE_RE = re.compile(r"\[([^\]]+)\]\(/([^)]*)/\)")
 
 
@@ -370,14 +387,38 @@ def _say_piece(p: str, depth: int = 0) -> str | None:
 # -- guessing a pronunciation -----------------------------------------------------------------
 
 # Affixes that are not words themselves; their phonemes join a dictionary stem.
-_PREFIXES = {"un": "ˌʌn", "re": "ɹˌi", "de": "dˌi", "pre": "pɹˌi", "non": "nˌɑn", "sub": "sˌʌb",
-             "dis": "dˌɪs", "mis": "mˌɪs", "co": "kˌO"}
+_PREFIXES = {"un": "ˌʌn", "re": "ɹˌi", "de": "dˌi", "pre": "pɹˌi", "non": "nˌɑn", "sub": "sˌʌb", "dis": "dˌɪs", "mis": "mˌɪs", "co": "kˌO"}
 _SUFFIXES = {
-    "s": "<s>", "es": "<s>", "ed": "<ed>", "ing": "ɪŋ", "ings": "ɪŋz", "er": "əɹ", "ers": "əɹz",
-    "able": "əbᵊl", "ible": "əbᵊl", "ability": "əbˈɪlᵻTi", "ize": "ˌIz", "izes": "ˌIzᵻz", "ized": "ˌIzd",
-    "izing": "ˌIzɪŋ", "izer": "ˌIzəɹ", "izers": "ˌIzəɹz", "ization": "əzˈAʃən", "ify": "əfˌI",
-    "ified": "əfˌId", "less": "ləs", "ness": "nəs", "ful": "fəl", "ment": "mənt", "ments": "mənts",
-    "ly": "li", "y": "i", "ish": "ɪʃ", "ism": "ɪzəm", "ist": "ɪst", "ists": "ɪsts",
+    "s": "<s>",
+    "es": "<s>",
+    "ed": "<ed>",
+    "ing": "ɪŋ",
+    "ings": "ɪŋz",
+    "er": "əɹ",
+    "ers": "əɹz",
+    "able": "əbᵊl",
+    "ible": "əbᵊl",
+    "ability": "əbˈɪlᵻTi",
+    "ize": "ˌIz",
+    "izes": "ˌIzᵻz",
+    "ized": "ˌIzd",
+    "izing": "ˌIzɪŋ",
+    "izer": "ˌIzəɹ",
+    "izers": "ˌIzəɹz",
+    "ization": "əzˈAʃən",
+    "ify": "əfˌI",
+    "ified": "əfˌId",
+    "less": "ləs",
+    "ness": "nəs",
+    "ful": "fəl",
+    "ment": "mənt",
+    "ments": "mənts",
+    "ly": "li",
+    "y": "i",
+    "ish": "ɪʃ",
+    "ism": "ɪzəm",
+    "ist": "ɪst",
+    "ists": "ɪsts",
 }
 # Two-letter words that may stand as pieces of a compound
 _SHORT = frozenset("up in on go do to me my by no so we it at as or of if an be he us ok".split())
@@ -460,22 +501,89 @@ def _guess(w: str, allow_rules: bool = True) -> str:
 
 
 # Letter-to-sound rules, longest spelling first. Enough to make an unknown name audible.
-_LTS_GROUPS = sorted({
-    "tion": "ʃən", "sion": "ʒən", "ture": "ʧəɹ", "ough": "O", "augh": "ɔ", "eigh": "A", "igh": "I",
-    "tch": "ʧ", "dge": "ʤ", "sch": "sk", "chr": "kɹ", "que": "k",
-    "ch": "ʧ", "sh": "ʃ", "th": "θ", "ph": "f", "ck": "k", "ng": "ŋ", "qu": "kw", "qw": "kw", "wh": "w", "gh": "ɡ",
-    "ee": "i", "ea": "i", "oo": "u", "ou": "W", "ow": "O", "oa": "O", "ai": "A", "ay": "A", "ei": "A",
-    "ey": "A", "oi": "Y", "oy": "Y", "au": "ɔ", "aw": "ɔ", "ue": "u", "ew": "ju", "ie": "i",
-    "ar": "ɑɹ", "er": "əɹ", "ir": "ɜɹ", "ur": "ɜɹ", "or": "ɔɹ",
-}.items(), key=lambda kv: -len(kv[0]))
-_LTS_ONE = {"a": "æ", "b": "b", "c": "k", "d": "d", "e": "ɛ", "f": "f", "g": "ɡ", "h": "h", "i": "ɪ", "j": "ʤ",
-            "k": "k", "l": "l", "m": "m", "n": "n", "o": "ɑ", "p": "p", "q": "k", "r": "ɹ", "s": "s", "t": "t",
-            "u": "ʌ", "v": "v", "w": "w", "x": "ks", "y": "ɪ", "z": "z"}
+_LTS_GROUPS = sorted(
+    {
+        "tion": "ʃən",
+        "sion": "ʒən",
+        "ture": "ʧəɹ",
+        "ough": "O",
+        "augh": "ɔ",
+        "eigh": "A",
+        "igh": "I",
+        "tch": "ʧ",
+        "dge": "ʤ",
+        "sch": "sk",
+        "chr": "kɹ",
+        "que": "k",
+        "ch": "ʧ",
+        "sh": "ʃ",
+        "th": "θ",
+        "ph": "f",
+        "ck": "k",
+        "ng": "ŋ",
+        "qu": "kw",
+        "qw": "kw",
+        "wh": "w",
+        "gh": "ɡ",
+        "ee": "i",
+        "ea": "i",
+        "oo": "u",
+        "ou": "W",
+        "ow": "O",
+        "oa": "O",
+        "ai": "A",
+        "ay": "A",
+        "ei": "A",
+        "ey": "A",
+        "oi": "Y",
+        "oy": "Y",
+        "au": "ɔ",
+        "aw": "ɔ",
+        "ue": "u",
+        "ew": "ju",
+        "ie": "i",
+        "ar": "ɑɹ",
+        "er": "əɹ",
+        "ir": "ɜɹ",
+        "ur": "ɜɹ",
+        "or": "ɔɹ",
+    }.items(),
+    key=lambda kv: -len(kv[0]),
+)
+_LTS_ONE = {
+    "a": "æ",
+    "b": "b",
+    "c": "k",
+    "d": "d",
+    "e": "ɛ",
+    "f": "f",
+    "g": "ɡ",
+    "h": "h",
+    "i": "ɪ",
+    "j": "ʤ",
+    "k": "k",
+    "l": "l",
+    "m": "m",
+    "n": "n",
+    "o": "ɑ",
+    "p": "p",
+    "q": "k",
+    "r": "ɹ",
+    "s": "s",
+    "t": "t",
+    "u": "ʌ",
+    "v": "v",
+    "w": "w",
+    "x": "ks",
+    "y": "ɪ",
+    "z": "z",
+}
 _LTS_LONG = {"a": "A", "e": "i", "i": "I", "o": "O", "u": "u", "y": "I"}
 _LTS_FINAL = {"a": "ə", "e": "i", "i": "i", "o": "O", "u": "u", "y": "i"}
 _ONSETS = frozenset(
     "bl br ch cl cr dr dw fl fr gl gn gr kl kn kr kw ph pl pr ps qu qw sc sh sk sl sm sn sp st sv sw th tr "
-    "tw wh wr zh sch scr shr sph spl spr squ str thr".split())
+    "tw wh wr zh sch scr shr sph spl spr squ str thr".split()
+)
 
 
 def _lts(s: str) -> str | None:
@@ -526,7 +634,7 @@ def _lts(s: str) -> str | None:
     if k is None:
         return None
     if ps[k] == "ə":
-        ps = ps[:k] + "ɜ" + ps[k + 1:] if ps[k + 1:k + 2] == "ɹ" else ps[:k] + "ʌ" + ps[k + 1:]
+        ps = ps[:k] + "ɜ" + ps[k + 1 :] if ps[k + 1 : k + 2] == "ɹ" else ps[:k] + "ʌ" + ps[k + 1 :]
     return ps[:k] + "ˈ" + ps[k:]
 
 
@@ -534,46 +642,220 @@ def _lts(s: str) -> str | None:
 
 # How file extensions are said; other words from the word list are resolved through it.
 _EXTS = {
-    "py": "pie", "pyi": "pyi", "pyc": "pyc", "ipynb": "ipynb", "js": "J S", "mjs": "M J S", "cjs": "C J S",
-    "ts": "T S", "mts": "M T S", "cts": "C T S", "tsx": "T S X", "jsx": "J S X", "json": "jason",
-    "jsonl": "jsonl", "yaml": "yaml", "yml": "yml", "toml": "toml", "md": "M D", "mdx": "M D X", "rs": "R S",
-    "go": "go", "sh": "S H", "zsh": "Z S H", "bash": "bash", "fish": "fish", "txt": "text", "csv": "C S V",
-    "tsv": "T S V", "html": "H T M L", "htm": "H T M", "css": "C S S", "scss": "S C S S", "sass": "sass",
-    "less": "less", "c": "C", "h": "H", "cc": "C C", "cpp": "C P P", "hpp": "H P P", "java": "java",
-    "kt": "K T", "kts": "K T S", "swift": "swift", "rb": "R B", "php": "P H P", "sql": "S Q L",
-    "lock": "lock", "lockb": "lock B", "env": "env", "cfg": "C F G", "conf": "/kˈɑnf/", "ini": "I N I",
-    "xml": "X M L", "svg": "S V G", "png": "P N G", "jpg": "/ʤˈApˌɛɡ/", "jpeg": "/ʤˈApˌɛɡ/", "gif": "gif",
-    "webp": "web P", "ico": "I C O", "pdf": "P D F", "wav": "wave", "mp3": "M P 3", "mp4": "M P 4",
-    "mov": "M O V", "webm": "web M", "log": "log", "lua": "lua", "ex": "E X", "exs": "E X S", "dart": "dart",
-    "vue": "view", "svelte": "svelte", "astro": "astro", "rst": "R S T", "tex": "tech", "wasm": "wasm",
-    "so": "S O", "dylib": "/dˈIlɪb/", "dll": "D L L", "exe": "E X E", "zip": "zip", "gz": "G Z",
-    "tgz": "T G Z", "tar": "tar", "whl": "wheel", "pkl": "pickle", "pt": "P T", "pth": "P T H",
-    "onnx": "onnx", "gguf": "gguf", "safetensors": "safetensors", "bin": "bin", "db": "D B",
-    "sqlite": "sqlite", "proto": "proto", "graphql": "graphql", "tf": "T F", "hcl": "H C L", "nix": "nix",
-    "mod": "mod", "sum": "sum", "plist": "P list", "jar": "jar", "cs": "C S", "fs": "F S", "r": "R",
-    "jl": "J L", "pl": "P L", "hs": "H S", "ml": "M L", "clj": "C L J", "erl": "E R L", "kdl": "K D L",
-    "ps1": "P S 1", "bat": "bat", "cmd": "C M D", "map": "map", "out": "out", "o": "O", "a": "A",
-    "gradle": "gradle", "pem": "P E M", "crt": "C R T", "key": "key", "csr": "C S R", "patch": "patch",
-    "diff": "diff", "orig": "orig", "bak": "back", "tmp": "temp", "old": "old", "sample": "sample",
-    "example": "example", "service": "service", "socket": "socket", "timer": "timer", "rules": "rules",
+    "py": "pie",
+    "pyi": "pyi",
+    "pyc": "pyc",
+    "ipynb": "ipynb",
+    "js": "J S",
+    "mjs": "M J S",
+    "cjs": "C J S",
+    "ts": "T S",
+    "mts": "M T S",
+    "cts": "C T S",
+    "tsx": "T S X",
+    "jsx": "J S X",
+    "json": "jason",
+    "jsonl": "jsonl",
+    "yaml": "yaml",
+    "yml": "yml",
+    "toml": "toml",
+    "md": "M D",
+    "mdx": "M D X",
+    "rs": "R S",
+    "go": "go",
+    "sh": "S H",
+    "zsh": "Z S H",
+    "bash": "bash",
+    "fish": "fish",
+    "txt": "text",
+    "csv": "C S V",
+    "tsv": "T S V",
+    "html": "H T M L",
+    "htm": "H T M",
+    "css": "C S S",
+    "scss": "S C S S",
+    "sass": "sass",
+    "less": "less",
+    "c": "C",
+    "h": "H",
+    "cc": "C C",
+    "cpp": "C P P",
+    "hpp": "H P P",
+    "java": "java",
+    "kt": "K T",
+    "kts": "K T S",
+    "swift": "swift",
+    "rb": "R B",
+    "php": "P H P",
+    "sql": "S Q L",
+    "lock": "lock",
+    "lockb": "lock B",
+    "env": "env",
+    "cfg": "C F G",
+    "conf": "/kˈɑnf/",
+    "ini": "I N I",
+    "xml": "X M L",
+    "svg": "S V G",
+    "png": "P N G",
+    "jpg": "/ʤˈApˌɛɡ/",
+    "jpeg": "/ʤˈApˌɛɡ/",
+    "gif": "gif",
+    "webp": "web P",
+    "ico": "I C O",
+    "pdf": "P D F",
+    "wav": "wave",
+    "mp3": "M P 3",
+    "mp4": "M P 4",
+    "mov": "M O V",
+    "webm": "web M",
+    "log": "log",
+    "lua": "lua",
+    "ex": "E X",
+    "exs": "E X S",
+    "dart": "dart",
+    "vue": "view",
+    "svelte": "svelte",
+    "astro": "astro",
+    "rst": "R S T",
+    "tex": "tech",
+    "wasm": "wasm",
+    "so": "S O",
+    "dylib": "/dˈIlɪb/",
+    "dll": "D L L",
+    "exe": "E X E",
+    "zip": "zip",
+    "gz": "G Z",
+    "tgz": "T G Z",
+    "tar": "tar",
+    "whl": "wheel",
+    "pkl": "pickle",
+    "pt": "P T",
+    "pth": "P T H",
+    "onnx": "onnx",
+    "gguf": "gguf",
+    "safetensors": "safetensors",
+    "bin": "bin",
+    "db": "D B",
+    "sqlite": "sqlite",
+    "proto": "proto",
+    "graphql": "graphql",
+    "tf": "T F",
+    "hcl": "H C L",
+    "nix": "nix",
+    "mod": "mod",
+    "sum": "sum",
+    "plist": "P list",
+    "jar": "jar",
+    "cs": "C S",
+    "fs": "F S",
+    "r": "R",
+    "jl": "J L",
+    "pl": "P L",
+    "hs": "H S",
+    "ml": "M L",
+    "clj": "C L J",
+    "erl": "E R L",
+    "kdl": "K D L",
+    "ps1": "P S 1",
+    "bat": "bat",
+    "cmd": "C M D",
+    "map": "map",
+    "out": "out",
+    "o": "O",
+    "a": "A",
+    "gradle": "gradle",
+    "pem": "P E M",
+    "crt": "C R T",
+    "key": "key",
+    "csr": "C S R",
+    "patch": "patch",
+    "diff": "diff",
+    "orig": "orig",
+    "bak": "back",
+    "tmp": "temp",
+    "old": "old",
+    "sample": "sample",
+    "example": "example",
+    "service": "service",
+    "socket": "socket",
+    "timer": "timer",
+    "rules": "rules",
 }
 _EXT_RE = "|".join(sorted((re.escape(e) for e in _EXTS), key=len, reverse=True))
 
 _OPS = {
-    "===": "triple equals", "!==": "not equals", "**=": "power equals", "...": "dot dot dot",
-    "..=": "dot dot equals", "<=>": "spaceship", ">>>": "unsigned shift right", "<<=": "shift left equals",
-    ">>=": "shift right equals", "??=": "nullish equals", "||=": "or equals", "&&=": "and equals",
-    "==": "double equals", "!=": "not equals", "<=": "less than or equal to", ">=": "greater than or equal to",
-    "=>": "arrow", "->": "arrow", "<-": "left arrow", "&&": "and", "||": "or", "++": "plus plus",
-    "--": "minus minus", "+=": "plus equals", "-=": "minus equals", "*=": "times equals", "/=": "divide equals",
-    "%=": "mod equals", "^=": "xor equals", "|=": "or equals", "&=": "and equals", "**": "to the power of",
-    "//": "slash slash", "::": "colon colon", ":=": "colon equals", "..": "dot dot", "?.": "question dot",
-    "??": "double question mark", "<<": "shift left", ">>": "shift right", "|>": "pipe", "<>": "not equals",
-    "=": "equals", "<": "less than", ">": "greater than", "+": "plus", "-": "minus", "*": "times",
-    "/": "slash", "%": "mod", "^": "xor", "~": "tilde", "!": "not", "?": "question mark", "&": "and",
-    "|": "pipe", "@": "at", "#": "hash", "$": "dollar", "\\": "backslash", ":": "colon", ".": "dot",
-    "→": "to", "←": "from", "⇒": "implies", "≤": "less than or equal to", "≥": "greater than or equal to",
-    "≠": "not equal to", "≈": "about", "×": "times", "±": "plus or minus", "∞": "infinity",
+    "===": "triple equals",
+    "!==": "not equals",
+    "**=": "power equals",
+    "...": "dot dot dot",
+    "..=": "dot dot equals",
+    "<=>": "spaceship",
+    ">>>": "unsigned shift right",
+    "<<=": "shift left equals",
+    ">>=": "shift right equals",
+    "??=": "nullish equals",
+    "||=": "or equals",
+    "&&=": "and equals",
+    "==": "double equals",
+    "!=": "not equals",
+    "<=": "less than or equal to",
+    ">=": "greater than or equal to",
+    "=>": "arrow",
+    "->": "arrow",
+    "<-": "left arrow",
+    "&&": "and",
+    "||": "or",
+    "++": "plus plus",
+    "--": "minus minus",
+    "+=": "plus equals",
+    "-=": "minus equals",
+    "*=": "times equals",
+    "/=": "divide equals",
+    "%=": "mod equals",
+    "^=": "xor equals",
+    "|=": "or equals",
+    "&=": "and equals",
+    "**": "to the power of",
+    "//": "slash slash",
+    "::": "colon colon",
+    ":=": "colon equals",
+    "..": "dot dot",
+    "?.": "question dot",
+    "??": "double question mark",
+    "<<": "shift left",
+    ">>": "shift right",
+    "|>": "pipe",
+    "<>": "not equals",
+    "=": "equals",
+    "<": "less than",
+    ">": "greater than",
+    "+": "plus",
+    "-": "minus",
+    "*": "times",
+    "/": "slash",
+    "%": "mod",
+    "^": "xor",
+    "~": "tilde",
+    "!": "not",
+    "?": "question mark",
+    "&": "and",
+    "|": "pipe",
+    "@": "at",
+    "#": "hash",
+    "$": "dollar",
+    "\\": "backslash",
+    ":": "colon",
+    ".": "dot",
+    "→": "to",
+    "←": "from",
+    "⇒": "implies",
+    "≤": "less than or equal to",
+    "≥": "greater than or equal to",
+    "≠": "not equal to",
+    "≈": "about",
+    "×": "times",
+    "±": "plus or minus",
+    "∞": "infinity",
 }
 _OP_RE = "|".join(re.escape(o) for o in sorted(_OPS, key=len, reverse=True))
 
@@ -846,27 +1128,62 @@ def _user_value(value: str, word: str) -> str:
 # -- reading prose --------------------------------------------------------------------------------
 
 _UNITS = {  # as written: (singular, plural)
-    "ns": ("nanosecond", "nanoseconds"), "µs": ("microsecond", "microseconds"),
-    "μs": ("microsecond", "microseconds"), "us": ("microsecond", "microseconds"),
-    "ms": ("millisecond", "milliseconds"), "s": ("second", "seconds"), "sec": ("second", "seconds"),
-    "secs": ("seconds", "seconds"), "min": ("minute", "minutes"), "mins": ("minutes", "minutes"),
-    "h": ("hour", "hours"), "hr": ("hour", "hours"), "hrs": ("hours", "hours"),
-    "KB": ("kilobyte", "kilobytes"), "kB": ("kilobyte", "kilobytes"), "MB": ("megabyte", "megabytes"),
-    "GB": ("gigabyte", "gigabytes"), "TB": ("terabyte", "terabytes"), "PB": ("petabyte", "petabytes"),
-    "KiB": ("kibibyte", "kibibytes"), "MiB": ("mebibyte", "mebibytes"), "GiB": ("gibibyte", "gibibytes"),
-    "TiB": ("tebibyte", "tebibytes"), "Kb": ("kilobit", "kilobits"), "Mb": ("megabit", "megabits"),
-    "Gb": ("gigabit", "gigabits"), "kbps": ("kilobit per second", "kilobits per second"),
-    "Kbps": ("kilobit per second", "kilobits per second"), "Mbps": ("megabit per second", "megabits per second"),
-    "Gbps": ("gigabit per second", "gigabits per second"), "KB/s": ("kilobyte per second", "kilobytes per second"),
-    "MB/s": ("megabyte per second", "megabytes per second"), "GB/s": ("gigabyte per second", "gigabytes per second"),
-    "Hz": ("hertz", "hertz"), "kHz": ("kilohertz", "kilohertz"), "MHz": ("megahertz", "megahertz"),
-    "GHz": ("gigahertz", "gigahertz"), "fps": ("FPS", "FPS"), "px": ("pixel", "pixels"), "dpi": ("DPI", "DPI"),
-    "pt": ("point", "points"), "dB": ("decibel", "decibels"), "x": ("times", "times"), "×": ("times", "times"),
-    "M": ("million", "million"), "B": ("billion", "billion"), "rps": ("request per second", "requests per second"),
-    "qps": ("query per second", "queries per second"), "req/s": ("request per second", "requests per second"),
-    "tok/s": ("token per second", "tokens per second"), "ops/s": ("operation per second", "operations per second"),
-    "LOC": ("line of code", "lines of code"), "W": ("watt", "watts"), "mAh": ("milliamp hour", "milliamp hours"),
-    "°C": ("degree Celsius", "degrees Celsius"), "°F": ("degree Fahrenheit", "degrees Fahrenheit"),
+    "ns": ("nanosecond", "nanoseconds"),
+    "µs": ("microsecond", "microseconds"),
+    "μs": ("microsecond", "microseconds"),
+    "us": ("microsecond", "microseconds"),
+    "ms": ("millisecond", "milliseconds"),
+    "s": ("second", "seconds"),
+    "sec": ("second", "seconds"),
+    "secs": ("seconds", "seconds"),
+    "min": ("minute", "minutes"),
+    "mins": ("minutes", "minutes"),
+    "h": ("hour", "hours"),
+    "hr": ("hour", "hours"),
+    "hrs": ("hours", "hours"),
+    "KB": ("kilobyte", "kilobytes"),
+    "kB": ("kilobyte", "kilobytes"),
+    "MB": ("megabyte", "megabytes"),
+    "GB": ("gigabyte", "gigabytes"),
+    "TB": ("terabyte", "terabytes"),
+    "PB": ("petabyte", "petabytes"),
+    "KiB": ("kibibyte", "kibibytes"),
+    "MiB": ("mebibyte", "mebibytes"),
+    "GiB": ("gibibyte", "gibibytes"),
+    "TiB": ("tebibyte", "tebibytes"),
+    "Kb": ("kilobit", "kilobits"),
+    "Mb": ("megabit", "megabits"),
+    "Gb": ("gigabit", "gigabits"),
+    "kbps": ("kilobit per second", "kilobits per second"),
+    "Kbps": ("kilobit per second", "kilobits per second"),
+    "Mbps": ("megabit per second", "megabits per second"),
+    "Gbps": ("gigabit per second", "gigabits per second"),
+    "KB/s": ("kilobyte per second", "kilobytes per second"),
+    "MB/s": ("megabyte per second", "megabytes per second"),
+    "GB/s": ("gigabyte per second", "gigabytes per second"),
+    "Hz": ("hertz", "hertz"),
+    "kHz": ("kilohertz", "kilohertz"),
+    "MHz": ("megahertz", "megahertz"),
+    "GHz": ("gigahertz", "gigahertz"),
+    "fps": ("FPS", "FPS"),
+    "px": ("pixel", "pixels"),
+    "dpi": ("DPI", "DPI"),
+    "pt": ("point", "points"),
+    "dB": ("decibel", "decibels"),
+    "x": ("times", "times"),
+    "×": ("times", "times"),
+    "M": ("million", "million"),
+    "B": ("billion", "billion"),
+    "rps": ("request per second", "requests per second"),
+    "qps": ("query per second", "queries per second"),
+    "req/s": ("request per second", "requests per second"),
+    "tok/s": ("token per second", "tokens per second"),
+    "ops/s": ("operation per second", "operations per second"),
+    "LOC": ("line of code", "lines of code"),
+    "W": ("watt", "watts"),
+    "mAh": ("milliamp hour", "milliamp hours"),
+    "°C": ("degree Celsius", "degrees Celsius"),
+    "°F": ("degree Fahrenheit", "degrees Fahrenheit"),
 }
 # Single letters only right after the number (5s, 3x, 7B); longer units may follow a space (5 ms).
 _TIGHT_ONLY = {"s", "h", "x", "M", "B", "W", "×"}
@@ -933,8 +1250,7 @@ def _say_bigo(t: str) -> str:
             # variables as written: a lowercase n reads more clearly here than N
             out.append(" ".join(spell(c) if c in "aA" else c for c in g) if not _lookup(g) or len(g) <= 2 else g)
         else:
-            out.append({"*": "times", "·": "times", "×": "times", "+": "plus", "-": "minus", "/": "over",
-                        "!": "factorial"}.get(g, g))
+            out.append({"*": "times", "·": "times", "×": "times", "+": "plus", "-": "minus", "/": "over", "!": "factorial"}.get(g, g))
     return " ".join(out)
 
 
@@ -970,8 +1286,9 @@ def _say_chunk(core: str, lexicon: dict[str, str] | None) -> str | None:
     if re.fullmatch(r"[OΘΩ]\(.+\)", core):
         return _say_bigo(core)
     if "/" in core and re.fullmatch(r"[\w.~@%+*/-]+", core):
-        is_path = (core.startswith(("/", "~/", "./", "../")) or core.endswith("/") or core.count("/") >= 2
-                   or re.search(rf"\.(?:{_EXT_RE})$", core))
+        is_path = (
+            core.startswith(("/", "~/", "./", "../")) or core.endswith("/") or core.count("/") >= 2 or re.search(rf"\.(?:{_EXT_RE})$", core)
+        )
         if is_path:
             return _say_path(core)
         sides = core.split("/")  # and/or, TCP/IP, HTTP/2: misaki reads the sides, slash unsaid
@@ -1011,7 +1328,7 @@ def _prose(text: str, lexicon: dict[str, str] | None) -> list[tuple[int, int, st
             t = m.group()
             about = "about " if t[0] in "~≈" else ""
             n = re.match(_NUM, t.lstrip("~≈")).group()
-            marks.append((m.start(), m.end(), about + _unit(n, t.lstrip("~≈")[len(n):].strip())))
+            marks.append((m.start(), m.end(), about + _unit(n, t.lstrip("~≈")[len(n) :].strip())))
         else:
             a, b = m.span("prodver")
             marks += _prose_chunks(text, m.start(), a, lexicon)
@@ -1028,7 +1345,7 @@ def _prose_chunks(text: str, a: int, b: int, lexicon: dict[str, str] | None) -> 
             s += 1
         while e > s and text[e - 1] in _TRAIL and not (text[e - 1] == ")" and text.count("(", s, e) >= text.count(")", s, e)):
             e -= 1
-        if s >= e or re.fullmatch(r"(?:[A-Za-z]\.){2,}", text[s:e + 1]):
+        if s >= e or re.fullmatch(r"(?:[A-Za-z]\.){2,}", text[s : e + 1]):
             continue  # e.g., i.e.: misaki reads these
         said = _say_chunk(text[s:e], lexicon)
         if said is not None and said != text[s:e]:
@@ -1038,6 +1355,7 @@ def _prose_chunks(text: str, a: int, b: int, lexicon: dict[str, str] | None) -> 
 
 def _rescue(text: str) -> str:
     """Fill in only the words misaki would skip in silence; used for explicit `say` text."""
+
     def fix(m: re.Match) -> str:
         w = m.group()
         if all(known(p) or p.isdigit() for p in _pieces(w)):

@@ -48,16 +48,36 @@ Then reply with only a JSON object, no other text:
 
 
 def test_the_model_receives_the_guide_the_link_and_the_pictures(tmp_path, free_port):
-    cfg = {"mcpServers": {"showntell": {
-        "command": "uv", "args": ["run", "--quiet", "--directory", str(ROOT), "showntell", "mcp"],
-        "env": {"SHOWNTELL_DATA": str(tmp_path / "data"), "SHOWNTELL_PORT": str(free_port), "SHOWNTELL_SPEECH": "fake"},
-    }}}
+    cfg = {
+        "mcpServers": {
+            "showntell": {
+                "command": "uv",
+                "args": ["run", "--quiet", "--directory", str(ROOT), "showntell", "mcp"],
+                "env": {"SHOWNTELL_DATA": str(tmp_path / "data"), "SHOWNTELL_PORT": str(free_port), "SHOWNTELL_SPEECH": "fake"},
+            }
+        }
+    }
     (tmp_path / "mcp.json").write_text(json.dumps(cfg))
     try:
         r = subprocess.run(
-            ["claude", "-p", PROMPT, "--model", "sonnet", "--mcp-config", str(tmp_path / "mcp.json"), "--strict-mcp-config",
-             "--allowedTools", "mcp__showntell"],
-            cwd=ROOT, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=300)
+            [
+                "claude",
+                "-p",
+                PROMPT,
+                "--model",
+                "sonnet",
+                "--mcp-config",
+                str(tmp_path / "mcp.json"),
+                "--strict-mcp-config",
+                "--allowedTools",
+                "mcp__showntell",
+            ],
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
         m = re.search(r"\{.*\}", r.stdout, re.S)
         assert m, f"no JSON in the answer:\n{r.stdout}\n{r.stderr}"
         got = json.loads(m.group(0))

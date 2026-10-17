@@ -73,8 +73,20 @@ def write_lock(cfg: Config, token: str) -> None:
     tmp = cfg.lockfile.with_suffix(".part")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:
-        json.dump({"pid": os.getpid(), "port": cfg.port, "host": cfg.host, "version": _version(), "build": build_id(), "built": built_at(), "token": token,
-                   "url": cfg.base_url, "started": time.time()}, f)
+        json.dump(
+            {
+                "pid": os.getpid(),
+                "port": cfg.port,
+                "host": cfg.host,
+                "version": _version(),
+                "build": build_id(),
+                "built": built_at(),
+                "token": token,
+                "url": cfg.base_url,
+                "started": time.time(),
+            },
+            f,
+        )
     os.replace(tmp, cfg.lockfile)
 
 
@@ -127,8 +139,12 @@ def running(cfg: Config) -> dict | None:
 
 
 def _shutdown(lock: dict) -> None:
-    req = urllib.request.Request(f"http://127.0.0.1:{lock['port']}/api/rpc/shutdown", data=b"{}", method="POST",
-                                 headers={"Authorization": f"Bearer {lock['token']}", "Content-Type": "application/json"})
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{lock['port']}/api/rpc/shutdown",
+        data=b"{}",
+        method="POST",
+        headers={"Authorization": f"Bearer {lock['token']}", "Content-Type": "application/json"},
+    )
     try:
         urllib.request.urlopen(req, timeout=2).read()
     except Exception:
@@ -150,8 +166,10 @@ def _ensure(cfg: Config, log) -> dict:
         if not newer_than(lock):
             # Two installs (a plugin and a checkout, say) would otherwise replace each other's
             # daemon on every start, reloading the voice model and cutting off open players.
-            log(f"showntell: using the running daemon, version {old}, which is newer than this copy "
-                f"({_version()}); `showntell stop` replaces it")
+            log(
+                f"showntell: using the running daemon, version {old}, which is newer than this copy "
+                f"({_version()}); `showntell stop` replaces it"
+            )
             return lock
         if lock["health"].get("busy"):
             log(f"showntell: a daemon of version {old} is busy; using it for now")
@@ -171,8 +189,7 @@ def _ensure(cfg: Config, log) -> dict:
     detach: dict = {"start_new_session": True}
     if os.name == "nt":  # outlive the MCP client's console
         detach = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
-    subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=logfile, stderr=logfile,
-                     env={**os.environ, "PYTHONUNBUFFERED": "1"}, **detach)
+    subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=logfile, stderr=logfile, env={**os.environ, "PYTHONUNBUFFERED": "1"}, **detach)
     deadline = time.time() + 60
     while time.time() < deadline:
         lock = running(cfg)
@@ -204,8 +221,11 @@ def _version_key(v: str) -> tuple[int, ...]:
 def _own_files() -> list[Path]:
     """The package's own files: code, player, text; not vendored libraries or bytecode."""
     root = Path(__file__).parent
-    return [p for p in sorted(root.rglob("*")) if p.is_file() and "__pycache__" not in p.parts
-            and "vendor" not in p.parts and p.suffix not in (".pyc", ".pyo")]
+    return [
+        p
+        for p in sorted(root.rglob("*"))
+        if p.is_file() and "__pycache__" not in p.parts and "vendor" not in p.parts and p.suffix not in (".pyc", ".pyo")
+    ]
 
 
 @functools.lru_cache(maxsize=1)

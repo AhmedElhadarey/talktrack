@@ -67,8 +67,15 @@ def reply(name: str, default: str, **kw: Any) -> str:
 def guide(frame: str) -> str:
     lim = LIMITS.get(frame, LIMITS["landscape"])
     g = texts()["guide"]
-    for k, v in {"FRAME": frame, "LINES": lim["lines"], "WIDTH": lim["width"], "DIFF_LINES": lim["diff_lines"],
-                 "DIFF_WIDTH": lim["diff_width"], "NODES": lim["nodes"], "DRAWING": lim["drawing"]}.items():
+    for k, v in {
+        "FRAME": frame,
+        "LINES": lim["lines"],
+        "WIDTH": lim["width"],
+        "DIFF_LINES": lim["diff_lines"],
+        "DIFF_WIDTH": lim["diff_width"],
+        "NODES": lim["nodes"],
+        "DRAWING": lim["drawing"],
+    }.items():
         g = g.replace("{{" + k + "}}", str(v))
     return g
 
@@ -109,8 +116,9 @@ WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent
 
 def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
     """MCP server with showntell's tools, prompts and resources, backed by `service`."""
-    mcp = MCPServer("showntell", instructions=texts()["instructions"], version=__version__,
-                    website_url="https://github.com/rahimnathwani/showntell")
+    mcp = MCPServer(
+        "showntell", instructions=texts()["instructions"], version=__version__, website_url="https://github.com/rahimnathwani/showntell"
+    )
 
     async def _root(ctx: Context | None, given: str) -> str | None:
         if given:
@@ -154,12 +162,19 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
             assert p is not None
             if p["status"] == "ready":
                 status = "playable"
-                parts.append(reply("playable", "PLAYABLE NOW ({seconds}s). Send the user this link in a message before your next tool call, then keep adding slides:\n{url}",
-                                   seconds=f"{time.time() - t0:.1f}", url=r["url"]))
+                parts.append(
+                    reply(
+                        "playable",
+                        "PLAYABLE NOW ({seconds}s). Send the user this link in a message before your next tool call, then keep adding slides:\n{url}",
+                        seconds=f"{time.time() - t0:.1f}",
+                        url=r["url"],
+                    )
+                )
             elif p["status"] == "error":
                 status = "error"
-                parts.append(reply("voice_error", "The narration could not be voiced: {error}. Link: {url}",
-                                   error=p.get("error", ""), url=r["url"]))
+                parts.append(
+                    reply("voice_error", "The narration could not be voiced: {error}. Link: {url}", error=p.get("error", ""), url=r["url"])
+                )
             elif p["status"] == "empty":
                 status = "waiting"
                 parts.append(reply("need_opening", "Nothing to play yet: send the title slide with a spoken sentence."))
@@ -185,16 +200,18 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
         issues = _issues_text(r["issues"], r["player_issues"])
         if issues:
             parts.append(issues)
-        data = {"url": r["url"], "status": status, "issues": r["issues"], "player_issues": r["player_issues"],
-                "slides": r["total_slides"]}
+        data = {"url": r["url"], "status": status, "issues": r["issues"], "player_issues": r["player_issues"], "slides": r["total_slides"]}
         return _result("\n".join(parts), data)
 
-    @mcp.tool(title=tool_text("start_walkthrough", "title", "Start walkthrough"),
-              description=tool_text("start_walkthrough"), annotations=WRITE)
+    @mcp.tool(
+        title=tool_text("start_walkthrough", "title", "Start walkthrough"), description=tool_text("start_walkthrough"), annotations=WRITE
+    )
     async def start_walkthrough(
         title: Annotated[str, Field(description=arg_text("start_walkthrough", "title"))],
-        frame: Annotated[Literal["landscape", "square", "portrait"], Field(description=arg_text("start_walkthrough", "frame"))] = "landscape",
-        voice: Annotated[str, Field(description=arg_text('start_walkthrough', 'voice') + ' ' + ', '.join(VOICES) + '.')] = "",
+        frame: Annotated[
+            Literal["landscape", "square", "portrait"], Field(description=arg_text("start_walkthrough", "frame"))
+        ] = "landscape",
+        voice: Annotated[str, Field(description=arg_text("start_walkthrough", "voice") + " " + ", ".join(VOICES) + ".")] = "",
         speed: Annotated[float, Field(description=arg_text("start_walkthrough", "speed"))] = 1.0,
         project_dir: Annotated[str, Field(description=arg_text("start_walkthrough", "project_dir"))] = "",
         opening: Annotated[str, Field(description=arg_text("start_walkthrough", "opening"))] = "",
@@ -205,11 +222,18 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
             r = await service.start(title, frame, voice, speed, await _root(ctx, project_dir), theme)
         except ValueError as e:
             return _error(str(e))
-        head = reply("started", "Handle: {handle}\nLink (not playable yet): {url}\nNext: call add_slides now with only the title slide and one or two spoken sentences.",
-                     handle=r["handle"], url=r["url"])
+        head = reply(
+            "started",
+            "Handle: {handle}\nLink (not playable yet): {url}\nNext: call add_slides now with only the title slide and one or two spoken sentences.",
+            handle=r["handle"],
+            url=r["url"],
+        )
         # Which folder file= and rev= read from, so a wrong guess shows before the first source_error.
-        project = (reply("project", "Project folder: {root}", root=r["root"]) if r.get("root")
-                   else reply("no_project", "No project folder: pass project_dir to show files from disk."))
+        project = (
+            reply("project", "Project folder: {root}", root=r["root"])
+            if r.get("root")
+            else reply("no_project", "No project folder: pass project_dir to show files from disk.")
+        )
         if opening.strip():
             # The opening came with the call: voice it now and return the link, saving a round trip.
             res = await _append(r["handle"], opening, ctx)
@@ -218,8 +242,9 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
             return CallToolResult(content=[TextContent(type="text", text=text)], structured_content=data, is_error=res.is_error)
         text = head + "\n" + project
         if not r["speech"]["ready"]:
-            text += "\n" + reply("loading", "The voice model is {status}; the first add_slides call may take longer.",
-                                 status=r["speech"]["describe"])
+            text += "\n" + reply(
+                "loading", "The voice model is {status}; the first add_slides call may take longer.", status=r["speech"]["describe"]
+            )
         return _result(text, {"handle": r["handle"], "url": r["url"], "status": "started", "issues": []})
 
     @mcp.tool(title=tool_text("add_slides", "title", "Add slides"), description=tool_text("add_slides"), annotations=WRITE)
@@ -247,12 +272,22 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
             text += " The player shows the new version now and fills in its audio as it is voiced."
         text += f"\nWatch only this slide: {_slide_link(r['url'], r['slide'])}"
         issues = _issues_text(r["issues"], r["player_issues"])
-        return _result(text + ("\n" + issues if issues else ""),
-                       {"url": r["url"], "status": "revised", "issues": r["issues"], "player_issues": r["player_issues"],
-                        "slide": r["slide"], "staged": bool(r.get("staged")), "slide_url": _slide_link(r["url"], r["slide"])})
+        return _result(
+            text + ("\n" + issues if issues else ""),
+            {
+                "url": r["url"],
+                "status": "revised",
+                "issues": r["issues"],
+                "player_issues": r["player_issues"],
+                "slide": r["slide"],
+                "staged": bool(r.get("staged")),
+                "slide_url": _slide_link(r["url"], r["slide"]),
+            },
+        )
 
-    @mcp.tool(title=tool_text("finish_walkthrough", "title", "Finish walkthrough"),
-              description=tool_text("finish_walkthrough"), annotations=WRITE)
+    @mcp.tool(
+        title=tool_text("finish_walkthrough", "title", "Finish walkthrough"), description=tool_text("finish_walkthrough"), annotations=WRITE
+    )
     async def finish_walkthrough(
         handle: Annotated[str, Field(description=arg_text("finish_walkthrough", "handle"))],
         questions: Annotated[list[str] | None, Field(description=arg_text("finish_walkthrough", "questions"))] = None,
@@ -261,30 +296,50 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
             r = await service.finish(handle, questions)
         except ValueError as e:
             return _error(str(e))
-        text = reply("finished", "Finished: {url} ({slides} slides, {duration}). Tell the user it is done, with the link.",
-                     url=r["url"], slides=r["slides"], duration=mmss(r["duration_s"]))
+        text = reply(
+            "finished",
+            "Finished: {url} ({slides} slides, {duration}). Tell the user it is done, with the link.",
+            url=r["url"],
+            slides=r["slides"],
+            duration=mmss(r["duration_s"]),
+        )
         if r["pending"]:
             text += f"\n{r['pending']} paragraph(s) are still being voiced; the player fills them in as they finish."
         if r.get("outline"):
             text += "\nSlides (id at start time): " + ", ".join(f"{o['id']} {mmss(o['start_s'])}" for o in r["outline"])
         issues = _issues_text(r["issues"], r["player_issues"])
-        return _result(text + ("\n" + issues if issues else ""),
-                       {"url": r["url"], "status": "finished", "issues": r["issues"], "player_issues": r["player_issues"],
-                        "slides": r["slides"], "outline": r.get("outline", [])})
+        return _result(
+            text + ("\n" + issues if issues else ""),
+            {
+                "url": r["url"],
+                "status": "finished",
+                "issues": r["issues"],
+                "player_issues": r["player_issues"],
+                "slides": r["slides"],
+                "outline": r.get("outline", []),
+            },
+        )
 
-    @mcp.tool(title=tool_text("list_walkthroughs", "title", "List walkthroughs"),
-              description=tool_text("list_walkthroughs"),
-              annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
+    @mcp.tool(
+        title=tool_text("list_walkthroughs", "title", "List walkthroughs"),
+        description=tool_text("list_walkthroughs"),
+        annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
+    )
     async def list_walkthroughs() -> CallToolResult:
         rows = await service.list()
         if not rows:
             return _result("No walkthroughs yet.", {"walkthroughs": []})
-        lines = [f"- {r['title']} — {r['slides']} slides, {mmss(r['duration'])}, {r['status']}. "
-                 f"handle: {r['handle']} link: {r['url']}" for r in rows]
+        lines = [
+            f"- {r['title']} — {r['slides']} slides, {mmss(r['duration'])}, {r['status']}. handle: {r['handle']} link: {r['url']}"
+            for r in rows
+        ]
         return _result("\n".join(lines), {"walkthroughs": rows})
 
-    @mcp.tool(title=tool_text("preview_slides", "title", "Preview slides"), description=tool_text("preview_slides"),
-              annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
+    @mcp.tool(
+        title=tool_text("preview_slides", "title", "Preview slides"),
+        description=tool_text("preview_slides"),
+        annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
+    )
     async def preview_slides(
         handle: Annotated[str, Field(description=arg_text("preview_slides", "handle"))],
         slides: Annotated[list[str] | None, Field(description=arg_text("preview_slides", "slides"))] = None,
@@ -293,9 +348,15 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
             r = await service.preview(handle, slides)
         except ValueError as e:
             return _error(str(e))
-        content: list = [TextContent(type="text", text=(
-            f"{len(r['slides'])} slide(s), each as it looks once fully revealed."
-            + (f" Unknown slide ids: {', '.join(r['unknown'])}." if r["unknown"] else "")))]
+        content: list = [
+            TextContent(
+                type="text",
+                text=(
+                    f"{len(r['slides'])} slide(s), each as it looks once fully revealed."
+                    + (f" Unknown slide ids: {', '.join(r['unknown'])}." if r["unknown"] else "")
+                ),
+            )
+        ]
         for sl in r["slides"]:
             content.append(TextContent(type="text", text=f"Slide `{sl['id']}` ({sl['title']}), at {mmss(sl['at_s'])}:"))
             content.append(ImageContent(type="image", data=sl["png"], mime_type="image/png"))
@@ -308,19 +369,33 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
     for name, p in texts()["prompts"].items():
         _register_prompt(mcp, name, p)
 
-    @mcp.resource("showntell://walkthroughs", name="walkthroughs", title="Recent walkthroughs",
-                  description="Recent walkthroughs with titles, links and handles", mime_type="application/json")
+    @mcp.resource(
+        "showntell://walkthroughs",
+        name="walkthroughs",
+        title="Recent walkthroughs",
+        description="Recent walkthroughs with titles, links and handles",
+        mime_type="application/json",
+    )
     async def walkthroughs_resource() -> str:
         return json.dumps(await service.list(), indent=1)
 
-    @mcp.resource("showntell://slide-kinds", name="slide-kinds", title="Slide kinds",
-                  description="Every kind of visual a slide can show: how to write it, what cues point at, how it reveals, with an example",
-                  mime_type="application/json")
+    @mcp.resource(
+        "showntell://slide-kinds",
+        name="slide-kinds",
+        title="Slide kinds",
+        description="Every kind of visual a slide can show: how to write it, what cues point at, how it reveals, with an example",
+        mime_type="application/json",
+    )
     async def kinds_resource() -> str:
         return (TEXT / "kinds.json").read_text()
 
-    @mcp.resource("showntell://walkthroughs/{wid}", name="walkthrough", title="Walkthrough source",
-                  description="The Markdown a walkthrough was written in, to read or revise", mime_type="text/markdown")
+    @mcp.resource(
+        "showntell://walkthroughs/{wid}",
+        name="walkthrough",
+        title="Walkthrough source",
+        description="The Markdown a walkthrough was written in, to read or revise",
+        mime_type="text/markdown",
+    )
     async def walkthrough_resource(wid: str) -> str:
         return await service.source(wid)
 
@@ -367,9 +442,10 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
         s = session_or_404(request)
         if not s:
             return HTMLResponse("Walkthrough not found", status_code=404)
-        return HTMLResponse(render_player(s.w.title, s.w.frame, s.w.report_key, "../../static", live=True,
-                                          theme=s.w.theme, tokens=s.w.tokens),
-                            headers={"Cache-Control": "no-store"})
+        return HTMLResponse(
+            render_player(s.w.title, s.w.frame, s.w.report_key, "../../static", live=True, theme=s.w.theme, tokens=s.w.tokens),
+            headers={"Cache-Control": "no-store"},
+        )
 
     @mcp.custom_route("/w/{wid}/data.json", methods=["GET"])
     async def data(request: Request) -> Response:
@@ -404,8 +480,7 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
             finally:
                 s.unsubscribe(q)
 
-        return StreamingResponse(stream(), media_type="text/event-stream",
-                                 headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
+        return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
 
     @mcp.custom_route("/w/{wid}/report", methods=["POST"])
     async def report(request: Request) -> Response:
@@ -461,16 +536,24 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
     @mcp.custom_route("/health", methods=["GET"])
     async def health(request: Request) -> Response:
         n = store.narrator
-        return JSONResponse({
-            "app": "showntell",
-            "version": __version__,
-            "speech": {"backend": n.backend.name, "state": n.status.state, "detail": n.status.describe(),
-                       "queue": n.backlog(), "speed": n.speed_factor(), "stats": n.stats},
-            "walkthroughs_open": len(store.sessions),
-            "uptime_s": round(time.time() - started, 1),
-            "busy": n.backlog() > 0 or any(s.w.status == "writing" and time.time() - s.w.updated < 120
-                                          for s in store.sessions.values()),
-        })
+        return JSONResponse(
+            {
+                "app": "showntell",
+                "version": __version__,
+                "speech": {
+                    "backend": n.backend.name,
+                    "state": n.status.state,
+                    "detail": n.status.describe(),
+                    "queue": n.backlog(),
+                    "speed": n.speed_factor(),
+                    "stats": n.stats,
+                },
+                "walkthroughs_open": len(store.sessions),
+                "uptime_s": round(time.time() - started, 1),
+                "busy": n.backlog() > 0
+                or any(s.w.status == "writing" and time.time() - s.w.updated < 120 for s in store.sessions.values()),
+            }
+        )
 
     @mcp.custom_route("/api/rpc/{method}", methods=["POST"])
     async def rpc(request: Request) -> Response:
@@ -508,17 +591,22 @@ def _file(base: Path, rel: str, immutable: bool = False) -> Response:
     return FileResponse(path, headers=headers)
 
 
-def render_player(title: str, frame: str, report_key: str, static: str, live: bool, theme: str = "dark",
-                  tokens: dict | None = None) -> str:
+def render_player(title: str, frame: str, report_key: str, static: str, live: bool, theme: str = "dark", tokens: dict | None = None) -> str:
     from .themes import THEMES, clean_tokens, style_attr
 
     page = (STATIC / "player.html").read_text()
     theme = theme if theme in THEMES else "dark"
     style = html.escape(style_attr(clean_tokens(tokens or {})[0]))
-    return (page.replace("{{TITLE}}", html.escape(title)).replace("{{FRAME}}", frame)
-            .replace("{{THEME}}", theme).replace("{{TOKENS}}", style)
-            .replace("{{REPORT_KEY}}", report_key if live else "").replace("{{STATIC}}", static)
-            .replace("{{LIVE}}", "1" if live else "0").replace("{{VERSION}}", __version__))
+    return (
+        page.replace("{{TITLE}}", html.escape(title))
+        .replace("{{FRAME}}", frame)
+        .replace("{{THEME}}", theme)
+        .replace("{{TOKENS}}", style)
+        .replace("{{REPORT_KEY}}", report_key if live else "")
+        .replace("{{STATIC}}", static)
+        .replace("{{LIVE}}", "1" if live else "0")
+        .replace("{{VERSION}}", __version__)
+    )
 
 
 def render_index(rows: list[dict], suffix: str) -> str:

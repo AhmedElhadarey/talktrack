@@ -39,7 +39,7 @@ def parse_vtt(text: str) -> list[tuple[float, float, str]]:
 
 def test_sentence_ends_and_pauses_break_phrases():
     x = say("The cache is checked first. On a miss we load it and store it for later", gaps={9: 0.6})
-    groups = [" ".join(x.text[w["c0"]:w["c1"]] for w in g) for g in phrases(x)]
+    groups = [" ".join(x.text[w["c0"] : w["c1"]] for w in g) for g in phrases(x)]
     assert groups[0] == "The cache is checked first"
     assert groups[1] == "On a miss we load"  # a long silence after "load"
     assert all(len(g) <= MAX_WORDS for g in phrases(x))
@@ -59,8 +59,10 @@ def test_long_runs_are_split():
 
 def test_cues_cover_their_words_and_never_overlap():
     w = Walkthrough(id="w" * 22, key="k", report_key="r", title="T")
-    w.slides = [Slide(id="a", says=[say("First sentence here. Second one follows, after a pause and then more words.", gaps={2: 0.8})]),
-                Slide(id="b", says=[say("Another slide speaks now.")])]
+    w.slides = [
+        Slide(id="a", says=[say("First sentence here. Second one follows, after a pause and then more words.", gaps={2: 0.8})]),
+        Slide(id="b", says=[say("Another slide speaks now.")]),
+    ]
     cues = parse_vtt(vtt(w))
     assert cues
     for (a, z, _), (a2, _, _) in zip(cues, cues[1:], strict=False):

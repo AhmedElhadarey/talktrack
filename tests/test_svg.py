@@ -76,9 +76,12 @@ def test_find_by_id_title_text_or_slug():
 
 
 def test_cues_point_at_parts_nested_parts_regions_and_text(build):
-    s, codes, _ = last(build, f"## D {{#d .build}}\n\n```svg\n{DRAWING}\n```\n\n"
-                              "The [sun](#sun) has [a core](#core). Then [the beam](#beam) at [the corner](#@0,0,20,20) "
-                              'reaches [you](# "Your eye").\n')
+    s, codes, _ = last(
+        build,
+        f"## D {{#d .build}}\n\n```svg\n{DRAWING}\n```\n\n"
+        "The [sun](#sun) has [a core](#core). Then [the beam](#beam) at [the corner](#@0,0,20,20) "
+        'reaches [you](# "Your eye").\n',
+    )
     cues = s.says[0].cues
     assert s.kind == "svg" and [c["kind"] for c in cues] == ["item", "item", "item", "region", "text"]
     assert cues[1]["id"] == "core" and cues[1]["part"] == "sun" and "part" not in cues[0]
@@ -110,8 +113,11 @@ def test_drawings_are_read_from_disk(build, project):
 def test_step_drawings_are_versions_of_one_slide(build):
     one = '<svg viewBox="0 0 100 100"><circle id="moon" cx="80" cy="50" r="5"/></svg>'
     two = '<svg viewBox="0 0 100 100"><circle id="moon" cx="50" cy="20" r="5"/><text id="note">later</text></svg>'
-    s, codes, _ = last(build, f"## O {{#o}}\n\n```svg step\n{one}\n```\n```svg step\n{two}\n```\n\n"
-                              "The [moon](#moon) moves [a week later](#step-2), see [the note](#note).\n")
+    s, codes, _ = last(
+        build,
+        f"## O {{#o}}\n\n```svg step\n{one}\n```\n```svg step\n{two}\n```\n\n"
+        "The [moon](#moon) moves [a week later](#step-2), see [the note](#note).\n",
+    )
     assert s.kind == "svg" and len(s.visual["steps"]) == 2 and s.visual["steps"][1]["ids"] == ["moon", "note"]
     assert [c["kind"] for c in s.says[0].cues] == ["item", "step", "item"] and s.says[0].cues[1]["n"] == 2
     assert "extra_visual" not in codes and not [c for c in codes if c.startswith("cue")]
@@ -120,5 +126,7 @@ def test_step_drawings_are_versions_of_one_slide(build):
 
 
 def test_sketch_is_a_flag_on_the_fence(build):
-    s, _, _ = last(build, '## S\n\n```svg sketch\n<svg viewBox="0 0 10 10"><rect id="r" width="5" height="5"/></svg>\n```\n\nA [box](#r).\n')
+    s, _, _ = last(
+        build, '## S\n\n```svg sketch\n<svg viewBox="0 0 10 10"><rect id="r" width="5" height="5"/></svg>\n```\n\nA [box](#r).\n'
+    )
     assert s.visual.get("sketch") is True

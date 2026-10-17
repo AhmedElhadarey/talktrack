@@ -178,8 +178,25 @@ The [search box](#@4,16,55,9) sits above [the first result](#@4,31,92,14){.circl
 [Sunlight](#beam) meets the air. [Blue](#blue) scatters toward [your eye](#eye) and [red](#red) passes on.
 """
 
-KINDS = ["title", "code", "diff", "diagram", "list", "list", "table", "math", "text",
-         "chapter", "chart", "stat", "chat", "terminal", "tree", "image", "svg"]
+KINDS = [
+    "title",
+    "code",
+    "diff",
+    "diagram",
+    "list",
+    "list",
+    "table",
+    "math",
+    "text",
+    "chapter",
+    "chart",
+    "stat",
+    "chat",
+    "terminal",
+    "tree",
+    "image",
+    "svg",
+]
 
 
 BASELINES = Path(__file__).parent / "baselines" / "linux"
@@ -214,8 +231,12 @@ def daemon(tmp_path_factory):
     data = tmp_path_factory.mktemp("browser-data")
     port = _free_port()
     env = {**os.environ, "SHOWNTELL_DATA": str(data), "SHOWNTELL_SPEECH": "fake"}
-    proc = subprocess.Popen([sys.executable, "-m", "showntell", "serve", "--port", str(port), "--speech", "fake"],
-                            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "showntell", "serve", "--port", str(port), "--speech", "fake"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     deadline = time.time() + 20
     lock = None
     while time.time() < deadline:
@@ -419,7 +440,11 @@ def test_the_player_reports_text_shrunk_too_far(daemon, browser):
     call = _rpc(daemon)
     r = call("start", title="Too big", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
     long = "\n".join(f"value_{i} = compute_something_long(alpha, beta, gamma, delta, epsilon_{i})" for i in range(70))
-    call("add", handle=r["handle"], markdown=f"# Too big\n\nOpening words.\n\n## Wall {{#wall}}\n\n```python\n{long}\n```\n\nA wall of code.\n")
+    call(
+        "add",
+        handle=r["handle"],
+        markdown=f"# Too big\n\nOpening words.\n\n## Wall {{#wall}}\n\n```python\n{long}\n```\n\nA wall of code.\n",
+    )
     call("playable", handle=r["handle"], timeout=10)
     url = r["url"].replace("localhost", "127.0.0.1") + "/"
     page = browser.new_page(viewport={"width": 1280, "height": 800})
@@ -435,7 +460,11 @@ def test_finish_draws_every_slide_and_reports_layout(daemon):
     call = _rpc(daemon)
     r = call("start", title="Unopened", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
     long = "\n".join(f"value_{i} = compute_something_long(alpha, beta, gamma, delta, epsilon_{i})" for i in range(70))
-    call("add", handle=r["handle"], markdown=f"# Unopened\n\nOpening words.\n\n## Wall {{#wall}}\n\n```python\n{long}\n```\n\nA wall of code.\n")
+    call(
+        "add",
+        handle=r["handle"],
+        markdown=f"# Unopened\n\nOpening words.\n\n## Wall {{#wall}}\n\n```python\n{long}\n```\n\nA wall of code.\n",
+    )
     call("playable", handle=r["handle"], timeout=10)
     f = call("finish", handle=r["handle"], questions=None)
     assert any(i["code"] == "text_too_small" and i["slide"] == "wall" for i in f["player_issues"])
@@ -458,8 +487,10 @@ def test_a_new_code_version_clears_the_scroll_focus(daemon, browser):
     call = _rpc(daemon)
     r = call("start", title="Focus", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
     one = "\n".join(f"step_{i} = compute(step_{i - 1})" for i in range(1, 45))
-    md = (f"# Focus\n\nOpening words.\n\n## Faster {{#faster}}\n\n```python step scroll\n{one}\n```\n```python step scroll\n{one.replace('compute(', 'fast(')}\n```\n\n"
-          "First [this line](#L30). Then it [gets faster](#step-2), all of it at once, everywhere. And [this one](#L40).\n")
+    md = (
+        f"# Focus\n\nOpening words.\n\n## Faster {{#faster}}\n\n```python step scroll\n{one}\n```\n```python step scroll\n{one.replace('compute(', 'fast(')}\n```\n\n"
+        "First [this line](#L30). Then it [gets faster](#step-2), all of it at once, everywhere. And [this one](#L40).\n"
+    )
     call("add", handle=r["handle"], markdown=md)
     call("playable", handle=r["handle"], timeout=10)
     url = r["url"].replace("localhost", "127.0.0.1") + "/"
@@ -595,9 +626,16 @@ def test_newer_visuals_follow_the_narration(daemon, browser):
     page.wait_for_selector(".k-chapter")
     assert page.text_content(".k-chapter .chapter-n") == "Part 1"
     assert at("evolve", 0, 0.3, "document.querySelector('.codebox .tag').textContent") == "Step 1 of 2"
-    tag, line = at("evolve", 2, 0.3, "[document.querySelector('.codebox .tag').textContent, document.querySelector('.ln.hl .tx').textContent]")
+    tag, line = at(
+        "evolve", 2, 0.3, "[document.querySelector('.codebox .tag').textContent, document.querySelector('.ln.hl .tx').textContent]"
+    )
     assert tag == "Step 2 of 2" and "sum" in line
-    shift, focusing = at("long", 1, 0.3, "[getComputedStyle(document.querySelector('.codebox.scroll .code')).transform, document.querySelector('.codebox.scroll').classList.contains('focusing')]")
+    shift, focusing = at(
+        "long",
+        1,
+        0.3,
+        "[getComputedStyle(document.querySelector('.codebox.scroll .code')).transform, document.querySelector('.codebox.scroll').classList.contains('focusing')]",
+    )
     assert shift not in ("none", "") and focusing
     x1 = at("path", 0, 0.2, "+document.querySelector('circle.packet').getAttribute('cx')")
     x2 = at("path", 0, 1.2, "+document.querySelector('circle.packet').getAttribute('cx')")
@@ -606,9 +644,14 @@ def test_newer_visuals_follow_the_narration(daemon, browser):
     early = at("numbers", 0, 0.2, "document.querySelector('.stat .num').textContent")
     late = at("numbers", 0, 3.0, "document.querySelector('.stat .num').textContent")
     assert late == "100 ms" and early not in ("100 ms", "400 ms")
-    inside, zoomed = at("screen", 0, 0.4, """(() => { const p = document.querySelector('#pointer').getBoundingClientRect();
+    inside, zoomed = at(
+        "screen",
+        0,
+        0.4,
+        """(() => { const p = document.querySelector('#pointer').getBoundingClientRect();
         const i = document.querySelector('.device img').getBoundingClientRect();
-        return [p.left >= i.left - 12 && p.top >= i.top - 12, !!document.querySelector('.slide-body').style.transform]; })()""")
+        return [p.left >= i.left - 12 && p.top >= i.top - 12, !!document.querySelector('.slide-body').style.transform]; })()""",
+    )
     assert inside and zoomed
     ticked = at("ship", 1, 0.3, "[...document.querySelectorAll('.entry.ticked')].map((e) => e.dataset.id)")
     assert ticked == ["tests"]
@@ -753,7 +796,9 @@ def test_drawing_steps_glide_on_the_clock_and_frames_capture_the_motion(daemon, 
     at = _at(page, "phase", 1, 0.0)
     page.goto(url + "?capture=1")
     page.wait_for_function("window.__showntell?.duration?.() > 0")
-    angle = "(() => { const g = document.querySelector('.drawing').shadowRoot.getElementById('moon'); return g.getAttribute('transform'); })()"
+    angle = (
+        "(() => { const g = document.querySelector('.drawing').shadowRoot.getElementById('moon'); return g.getAttribute('transform'); })()"
+    )
     seen = []
     for d in (-0.2, 0.6, 2.0):
         page.evaluate("(t) => window.__showntell.seek(t)", at + d)
@@ -824,9 +869,11 @@ def test_moving_dots_and_counting_numbers_change_the_capture_key(daemon, browser
 def test_a_drawing_past_its_viewbox_is_reported(daemon):
     call = _rpc(daemon)
     r = call("start", title="Spill", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
-    md = ("# Spill\n\nOpening words.\n\n## Off the edge {#edge}\n\n```svg\n<svg viewBox=\"0 0 1150 560\">"
-          "<circle id=\"a\" cx=\"575\" cy=\"280\" r=\"100\" fill=\"#2f7de1\"/>"
-          "<text id=\"b\" x=\"575\" y=\"700\" font-size=\"30\" fill=\"var(--fg)\">below the slide</text></svg>\n```\n\nA [circle](#a).\n")
+    md = (
+        '# Spill\n\nOpening words.\n\n## Off the edge {#edge}\n\n```svg\n<svg viewBox="0 0 1150 560">'
+        '<circle id="a" cx="575" cy="280" r="100" fill="#2f7de1"/>'
+        '<text id="b" x="575" y="700" font-size="30" fill="var(--fg)">below the slide</text></svg>\n```\n\nA [circle](#a).\n'
+    )
     call("add", handle=r["handle"], markdown=md)
     call("playable", handle=r["handle"], timeout=10)
     f = call("finish", handle=r["handle"], questions=None)

@@ -8,6 +8,7 @@ applies. A zoom of about 0.82 or more reads comfortably; build.LIMITS and docs/f
     uv run showntell serve --speech fake --port 4803 --data /tmp/showntell-measure &
     uv run scripts/measure_limits.py /tmp/showntell-measure/daemon.json
 """
+
 import asyncio
 import json
 import sys
@@ -19,13 +20,29 @@ lock = json.load(open(sys.argv[1]))
 base = f"http://127.0.0.1:{lock['port']}"
 H = {"Authorization": f"Bearer {lock['token']}"}
 
+
 def rpc(m, **kw):
     r = httpx.post(f"{base}/api/rpc/{m}", json=kw, headers=H, timeout=30)
     r.raise_for_status()
     return r.json()["result"]
 
+
 SIZES = {
-    "code": [(10, 40), (14, 40), (18, 40), (22, 40), (26, 40), (30, 40), (34, 40), (12, 50), (12, 60), (12, 70), (12, 80), (12, 90), (12, 100)],
+    "code": [
+        (10, 40),
+        (14, 40),
+        (18, 40),
+        (22, 40),
+        (26, 40),
+        (30, 40),
+        (34, 40),
+        (12, 50),
+        (12, 60),
+        (12, 70),
+        (12, 80),
+        (12, 90),
+        (12, 100),
+    ],
     "diff": [(10, 30), (14, 30), (16, 30), (18, 30), (20, 30), (22, 30), (8, 36), (8, 42), (8, 48), (8, 54), (8, 60)],
 }
 
@@ -34,10 +51,14 @@ def code(lines, width):
     row = ("x = compute(alpha, beta) + " + "y" * 200)[:width]
     return "\n".join(row for _ in range(lines))
 
+
 async def zoom_for(page, url):
     await page.goto(url + "?at=4")
     await page.wait_for_timeout(700)
-    return await page.evaluate("(() => { const c = document.querySelector('.slide-body > *'); return c ? parseFloat(c.dataset.scale || 1) : null })()")
+    return await page.evaluate(
+        "(() => { const c = document.querySelector('.slide-body > *'); return c ? parseFloat(c.dataset.scale || 1) : null })()"
+    )
+
 
 async def main():
     out = {}
@@ -58,4 +79,6 @@ async def main():
         await b.close()
     for k, rows in out.items():
         print(k, " ".join(f"{n}x{w}:{z:.2f}" for n, w, z in rows))
+
+
 asyncio.run(main())

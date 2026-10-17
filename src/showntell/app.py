@@ -41,6 +41,7 @@ class Guard:
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "lifespan" and self.on_shutdown:
+
             async def receive_and_clean():
                 msg = await receive()
                 if msg["type"] == "lifespan.shutdown":
@@ -80,6 +81,7 @@ class Guard:
             if not (ok_query or ok_cookie):
                 return await _deny(send, 401, "access token required: open the link you were given")
             if ok_query and not ok_cookie:
+
                 async def send_with_cookie(message):
                     if message["type"] == "http.response.start":
                         message.setdefault("headers", [])
@@ -94,8 +96,13 @@ class Guard:
 
 async def _deny(send, status: int, text: str) -> None:
     body = text.encode()
-    await send({"type": "http.response.start", "status": status,
-                "headers": [(b"content-type", b"text/plain"), (b"content-length", str(len(body)).encode())]})
+    await send(
+        {
+            "type": "http.response.start",
+            "status": status,
+            "headers": [(b"content-type", b"text/plain"), (b"content-length", str(len(body)).encode())],
+        }
+    )
     await send({"type": "http.response.body", "body": body})
 
 
@@ -129,8 +136,7 @@ def serve(cfg: Config) -> None:
     narrator.lexicon = load_lexicon(cfg)
     narrator.start()
     suffix = f"?t={cfg.access_token}" if cfg.access_token else ""
-    store = Store(cfg.data_dir, cfg.base_url, narrator, default_voice=cfg.voice, open_browser=cfg.open_browser,
-                  link_suffix=suffix)
+    store = Store(cfg.data_dir, cfg.base_url, narrator, default_voice=cfg.voice, open_browser=cfg.open_browser, link_suffix=suffix)
     service = LocalService(store, layout_check=cfg.finish_check)
     mcp = create_mcp(service)
     rpc_token = secrets.token_urlsafe(24)
@@ -151,8 +157,7 @@ def serve(cfg: Config) -> None:
         allowed_hosts=["127.0.0.1:*", "localhost:*", "[::1]:*"],
         allowed_origins=["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
     )
-    app = Guard(mcp.streamable_http_app(streamable_http_path="/mcp", transport_security=security, host=cfg.host), cfg,
-                on_shutdown=cleanup)
+    app = Guard(mcp.streamable_http_app(streamable_http_path="/mcp", transport_security=security, host=cfg.host), cfg, on_shutdown=cleanup)
 
     async def main() -> None:
         store.loop = asyncio.get_running_loop()
@@ -160,8 +165,13 @@ def serve(cfg: Config) -> None:
         server = uvicorn.Server(config)
         holder["server"] = server
         daemon.write_lock(cfg, rpc_token)
-        log.info("showntell %s at %s (MCP: http://localhost:%d/mcp, speech: %s)",
-                 _version(), cfg.base_url + "/" + suffix, cfg.port, narrator.backend.name)
+        log.info(
+            "showntell %s at %s (MCP: http://localhost:%d/mcp, speech: %s)",
+            _version(),
+            cfg.base_url + "/" + suffix,
+            cfg.port,
+            narrator.backend.name,
+        )
         try:
             await server.serve()
         finally:

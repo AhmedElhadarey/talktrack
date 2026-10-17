@@ -58,16 +58,19 @@ def test_resolve_without_root_explains_project_dir():
 # -- ranges -----------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("spec,expected", [
-    ("10-24", (10, 24)),
-    ("10", (10, 10)),
-    ("10-", (10, None)),
-    ("24-10", (10, 24)),
-    ("10:24", (10, 24)),
-    (" 3 - 5 ", (3, 5)),
-    (None, (None, None)),
-    ("", (None, None)),
-])
+@pytest.mark.parametrize(
+    "spec,expected",
+    [
+        ("10-24", (10, 24)),
+        ("10", (10, 10)),
+        ("10-", (10, None)),
+        ("24-10", (10, 24)),
+        ("10:24", (10, 24)),
+        (" 3 - 5 ", (3, 5)),
+        (None, (None, None)),
+        ("", (None, None)),
+    ],
+)
 def test_parse_range(spec, expected):
     assert sources.parse_range(spec) == expected
 

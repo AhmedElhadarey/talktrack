@@ -17,7 +17,7 @@ _COLOR = re.compile(r"^(#[0-9a-fA-F]{3,8}|rgba?\(\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\
 def token_names() -> list[str]:
     """Colour tokens defined by the default theme in themes.css."""
     css = CSS.read_text()
-    block = css[css.index(":root"): css.index("}", css.index(":root"))]
+    block = css[css.index(":root") : css.index("}", css.index(":root"))]
     return [n for n in re.findall(r"--([a-z0-9-]+):", block) if n != "scheme"]
 
 

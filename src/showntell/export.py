@@ -107,13 +107,18 @@ def phrases(say) -> list[list[dict]]:
     words = say.words
     for i, w_ in enumerate(words):
         group.append(w_)
-        after = say.text[w_["c1"]: w_["c1"] + 1]
+        after = say.text[w_["c1"] : w_["c1"] + 1]
         nxt = words[i + 1] if i + 1 < len(words) else None
         gap = (nxt["s"] - w_["e"]) if nxt else 0.0
         span = w_["e"] - group[0]["s"]
-        if (nxt is None or after in (".", "?", "!") or gap >= PAUSE_BREAK
-                or (after in (",", ";", ":") and (gap >= COMMA_PAUSE or len(group) >= 4))
-                or len(group) >= MAX_WORDS or span >= MAX_SECONDS):
+        if (
+            nxt is None
+            or after in (".", "?", "!")
+            or gap >= PAUSE_BREAK
+            or (after in (",", ";", ":") and (gap >= COMMA_PAUSE or len(group) >= 4))
+            or len(group) >= MAX_WORDS
+            or span >= MAX_SECONDS
+        ):
             out.append(group)
             group = []
     if group:
@@ -121,8 +126,9 @@ def phrases(say) -> list[list[dict]]:
     return out
 
 
-def export(data_dir: Path, wid: str, out: Path, mp3: bool = False, static_href: str = "static",
-           copy_static: bool = True, poster: bool = False) -> Path:
+def export(
+    data_dir: Path, wid: str, out: Path, mp3: bool = False, static_href: str = "static", copy_static: bool = True, poster: bool = False
+) -> Path:
     """Write the walkthrough to `out`. A gallery of several exports can share one copy of the
     player: pass `static_href="../static"` and `copy_static=False`, and copy `STATIC` once.
     `poster` also writes poster.png when Playwright is installed (needs `copy_static`)."""
@@ -173,9 +179,11 @@ def export(data_dir: Path, wid: str, out: Path, mp3: bool = False, static_href: 
         (out / "source.md").write_text(src_md.read_text())
     if poster and copy_static and write_poster(out):
         page = (out / "index.html").read_text()
-        meta = ('<meta property="og:image" content="poster.png">\n'
-                '<meta name="twitter:card" content="summary_large_image">\n'
-                '<meta name="twitter:image" content="poster.png">\n')
+        meta = (
+            '<meta property="og:image" content="poster.png">\n'
+            '<meta name="twitter:card" content="summary_large_image">\n'
+            '<meta name="twitter:image" content="poster.png">\n'
+        )
         (out / "index.html").write_text(page.replace("</head>", meta + "</head>", 1))
     return out
 
@@ -191,8 +199,18 @@ LIBRARIES = {
     "terminal": ["vendor/hljs/highlight.min.js"],
     "drawio": ["vendor/drawio/viewer-static.min.js"],
 }
-MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp",
-        ".svg": "image/svg+xml", ".avif": "image/avif", ".mp3": "audio/mpeg", ".wav": "audio/wav", ".woff2": "font/woff2"}
+MIME = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+    ".avif": "image/avif",
+    ".mp3": "audio/mpeg",
+    ".wav": "audio/wav",
+    ".woff2": "font/woff2",
+}
 GZIP_OVER = 100_000  # characters; smaller libraries are not worth unpacking
 _IMPORT_RE = re.compile(r"""(\bfrom\s*|\bimport\s*)(["'])(\.{1,2}/[^"']+)\2""")
 
@@ -310,18 +328,29 @@ def export_html(data_dir: Path, wid: str, out: Path) -> Path:
     css = "\n".join((STATIC / n).read_text() for n in ("themes.css", "player.css"))
     if "</style" in css:
         raise RuntimeError("the player's CSS cannot be inlined")
-    page = _swap(page, '<link rel="icon" href="__STATIC__/icon.svg" type="image/svg+xml">',
-                 f'<link rel="icon" href="{_data_uri(STATIC / "icon.svg")}" type="image/svg+xml">')
-    page = _swap(page, '<link rel="stylesheet" href="__STATIC__/themes.css">\n<link rel="stylesheet" href="__STATIC__/player.css">',
-                 f"<style>\n{css}\n</style>")
+    page = _swap(
+        page,
+        '<link rel="icon" href="__STATIC__/icon.svg" type="image/svg+xml">',
+        f'<link rel="icon" href="{_data_uri(STATIC / "icon.svg")}" type="image/svg+xml">',
+    )
+    page = _swap(
+        page,
+        '<link rel="stylesheet" href="__STATIC__/themes.css">\n<link rel="stylesheet" href="__STATIC__/player.css">',
+        f"<style>\n{css}\n</style>",
+    )
     page = _swap(page, '<script src="__STATIC__/vendor/hljs/highlight.min.js"></script>\n', "")
-    page = _swap(page, '<script type="module" src="__STATIC__/js/main.js"></script>',
-                 f'<script type="importmap">{_script_json({"imports": _modules()})}</script>\n'
-                 '<script type="module">import "showntell/js/main.js";</script>')
+    page = _swap(
+        page,
+        '<script type="module" src="__STATIC__/js/main.js"></script>',
+        f'<script type="importmap">{_script_json({"imports": _modules()})}</script>\n'
+        '<script type="module">import "showntell/js/main.js";</script>',
+    )
     page = _swap(page, 'data-static="__STATIC__"', 'data-static="static"')
     # The walkthrough and the libraries come last, so the page draws before they are parsed.
-    tail = (f'<script type="application/json" id="showntell-data">{_script_json(data)}</script>\n'
-            f'<script type="application/json" id="showntell-files">{_script_json(files)}</script>\n{_BOOT}\n')
+    tail = (
+        f'<script type="application/json" id="showntell-data">{_script_json(data)}</script>\n'
+        f'<script type="application/json" id="showntell-files">{_script_json(files)}</script>\n{_BOOT}\n'
+    )
     page = _swap(page, "</body>", tail + "</body>")
     if "__STATIC__" in page:
         raise RuntimeError("player.html references a file the single page does not carry")
@@ -389,8 +418,10 @@ def _export_mp4(cfg: Config, wid: str, dest: Path, args) -> None:
     r = render_mp4(cfg.data_dir, wid, dest, fps=args.fps, workers=args.workers, captions=args.burn_captions)
     for e in r["errors"]:
         print(f"- player: {e}", file=sys.stderr)
-    print(f"Exported to {dest} ({dest.stat().st_size / 1e6:.1f} MB, {r['duration']:.1f} s, {r['frames']} frames at "
-          f"{r['fps']} fps) in {r['seconds']:.1f} s: {r['speed']:.1f} s of video per second")
+    print(
+        f"Exported to {dest} ({dest.stat().st_size / 1e6:.1f} MB, {r['duration']:.1f} s, {r['frames']} frames at "
+        f"{r['fps']} fps) in {r['seconds']:.1f} s: {r['speed']:.1f} s of video per second"
+    )
 
 
 def _play_and_wait(cfg: Config, path: Path) -> str:

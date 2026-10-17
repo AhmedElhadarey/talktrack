@@ -26,17 +26,82 @@ MAX_BYTES = 2_000_000
 MAX_CELLS = 400
 WRAPPERS = ("UserObject", "object")
 CELL_ATTRS = ("id", "value", "style", "vertex", "edge", "parent", "source", "target", "connectable", "collapsed", "visible")
-MODEL_ATTRS = ("dx", "dy", "grid", "gridSize", "guides", "tooltips", "connect", "arrows", "fold", "page", "pageScale",
-               "pageWidth", "pageHeight", "background", "shadow", "adaptiveColors")
-GEOMETRY = {"mxGeometry": ("x", "y", "width", "height", "relative", "as"), "mxPoint": ("x", "y", "as"),
-            "Array": ("as",), "mxRectangle": ("x", "y", "width", "height", "as")}
+MODEL_ATTRS = (
+    "dx",
+    "dy",
+    "grid",
+    "gridSize",
+    "guides",
+    "tooltips",
+    "connect",
+    "arrows",
+    "fold",
+    "page",
+    "pageScale",
+    "pageWidth",
+    "pageHeight",
+    "background",
+    "shadow",
+    "adaptiveColors",
+)
+GEOMETRY = {
+    "mxGeometry": ("x", "y", "width", "height", "relative", "as"),
+    "mxPoint": ("x", "y", "as"),
+    "Array": ("as",),
+    "mxRectangle": ("x", "y", "width", "height", "as"),
+}
 # Style keys that point outside the drawing or make it interactive.
 STYLE_DROP = {"link", "fontSource", "placeholders", "tooltip", "clickable", "editable", "movable", "resizable"}
-LABEL_TAGS = {"b", "i", "u", "s", "strike", "strong", "em", "code", "pre", "br", "hr", "span", "div", "p", "font", "sub",
-              "sup", "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6", "table", "thead", "tbody", "tr", "td", "th",
-              "blockquote"}
-LABEL_ATTRS = {"style", "color", "face", "size", "align", "colspan", "rowspan", "width", "height", "border", "cellpadding",
-               "cellspacing", "valign"}
+LABEL_TAGS = {
+    "b",
+    "i",
+    "u",
+    "s",
+    "strike",
+    "strong",
+    "em",
+    "code",
+    "pre",
+    "br",
+    "hr",
+    "span",
+    "div",
+    "p",
+    "font",
+    "sub",
+    "sup",
+    "ul",
+    "ol",
+    "li",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "td",
+    "th",
+    "blockquote",
+}
+LABEL_ATTRS = {
+    "style",
+    "color",
+    "face",
+    "size",
+    "align",
+    "colspan",
+    "rowspan",
+    "width",
+    "height",
+    "border",
+    "cellpadding",
+    "cellspacing",
+    "valign",
+}
 VOID = {"br", "hr"}
 UNSAFE = re.compile(r"url\(|expression\(|javascript:|@import|behavior\s*:", re.I)
 
@@ -217,11 +282,20 @@ def parse_drawio(body: str, attrs: dict) -> tuple[dict, list[str]]:
         geo = "".join(_geometry(c) for c in cell)
         out.append("<mxCell" + "".join(f" {k}={quoteattr(v)}" for k, v in a.items()) + f">{geo}</mxCell>")
         if cid is not None:
-            info[cid] = {"parent": cell.get("parent"), "vertex": cell.get("vertex") == "1", "edge": cell.get("edge") == "1",
-                         "source": cell.get("source"), "target": cell.get("target"), "label": plain(raw or "", is_html)}
+            info[cid] = {
+                "parent": cell.get("parent"),
+                "vertex": cell.get("vertex") == "1",
+                "edge": cell.get("edge") == "1",
+                "source": cell.get("source"),
+                "target": cell.get("target"),
+                "label": plain(raw or "", is_html),
+            }
     mattrs = "".join(f" {k}={quoteattr(model.get(k))}" for k in MODEL_ATTRS if model.get(k) is not None)
-    vis["xml"] = (f"<mxfile><diagram id=\"page\" name={quoteattr(name)}><mxGraphModel{mattrs} math=\"0\"><root>"
-                  + "".join(out) + "</root></mxGraphModel></diagram></mxfile>")
+    vis["xml"] = (
+        f'<mxfile><diagram id="page" name={quoteattr(name)}><mxGraphModel{mattrs} math="0"><root>'
+        + "".join(out)
+        + "</root></mxGraphModel></diagram></mxfile>"
+    )
 
     # Parts: the cells directly on a layer (a child of the root cell), in source order.
     roots = {cid for cid, c in info.items() if not c["parent"]}
@@ -251,8 +325,14 @@ def parse_drawio(body: str, attrs: dict) -> tuple[dict, list[str]]:
         t = top(cid)
         if t and t != cid:
             part_of[cid] = t
-    vis.update(ids=order, part_of=part_of, edges=edges, page=name,
-               items=[{"id": cid, "label": info[cid]["label"]} for cid in shown], cells=len(shown))
+    vis.update(
+        ids=order,
+        part_of=part_of,
+        edges=edges,
+        page=name,
+        items=[{"id": cid, "label": info[cid]["label"]} for cid in shown],
+        cells=len(shown),
+    )
     return vis, []
 
 
@@ -273,11 +353,25 @@ def labels(vis: dict) -> list[tuple[str, str]]:
 def _check(vis: dict, line: int, limits: dict) -> list[Finding]:
     n = vis.pop("cells", 0)
     if n > MAX_CELLS:
-        return [("block_too_big", f"The diagram on line {line} has {n} shapes and connectors; a slide reads well with far fewer.",
-                 "Show one page or area of it, or split it across slides.")]
+        return [
+            (
+                "block_too_big",
+                f"The diagram on line {line} has {n} shapes and connectors; a slide reads well with far fewer.",
+                "Show one page or area of it, or split it across slides.",
+            )
+        ]
     return []
 
 
-KIND = Kind("drawio", ("drawio",), parse_drawio, check=_check, part=lambda vis: "cell", find=find, labels=labels,
-            reads_file=True, regions=True,
-            hint="Point file= at a .drawio file, or a .drawio.svg export, and pick a page with page=.")
+KIND = Kind(
+    "drawio",
+    ("drawio",),
+    parse_drawio,
+    check=_check,
+    part=lambda vis: "cell",
+    find=find,
+    labels=labels,
+    reads_file=True,
+    regions=True,
+    hint="Point file= at a .drawio file, or a .drawio.svg export, and pick a page with page=.",
+)

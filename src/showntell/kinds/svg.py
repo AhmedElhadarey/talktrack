@@ -21,38 +21,188 @@ SVG_NS = "http://www.w3.org/2000/svg"
 XLINK = "{http://www.w3.org/1999/xlink}"
 
 ELEMENTS = {
-    "svg", "g", "defs", "symbol", "use", "title", "desc", "switch",
-    "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "image",
-    "text", "tspan", "textPath",
-    "linearGradient", "radialGradient", "stop", "pattern", "clipPath", "mask", "marker",
-    "filter", "feGaussianBlur", "feOffset", "feFlood", "feComposite", "feMerge", "feMergeNode",
-    "feBlend", "feColorMatrix", "feDropShadow", "feMorphology",
+    "svg",
+    "g",
+    "defs",
+    "symbol",
+    "use",
+    "title",
+    "desc",
+    "switch",
+    "path",
+    "rect",
+    "circle",
+    "ellipse",
+    "line",
+    "polyline",
+    "polygon",
+    "image",
+    "text",
+    "tspan",
+    "textPath",
+    "linearGradient",
+    "radialGradient",
+    "stop",
+    "pattern",
+    "clipPath",
+    "mask",
+    "marker",
+    "filter",
+    "feGaussianBlur",
+    "feOffset",
+    "feFlood",
+    "feComposite",
+    "feMerge",
+    "feMergeNode",
+    "feBlend",
+    "feColorMatrix",
+    "feDropShadow",
+    "feMorphology",
     "style",
 }
 UNWRAP = {"a"}  # links lose their target but keep their drawing
 # Containers whose children are definitions, not drawing: never parts of a reveal.
-DEFINITIONS = {"defs", "symbol", "linearGradient", "radialGradient", "pattern", "clipPath", "mask", "marker", "filter",
-               "title", "desc", "style"}
+DEFINITIONS = {
+    "defs",
+    "symbol",
+    "linearGradient",
+    "radialGradient",
+    "pattern",
+    "clipPath",
+    "mask",
+    "marker",
+    "filter",
+    "title",
+    "desc",
+    "style",
+}
 
 PRESENTATION = {
-    "fill", "fill-opacity", "fill-rule", "stroke", "stroke-width", "stroke-opacity", "stroke-linecap", "stroke-linejoin",
-    "stroke-dasharray", "stroke-dashoffset", "stroke-miterlimit", "opacity", "color", "display", "visibility",
-    "font-family", "font-size", "font-weight", "font-style", "font-variant", "text-anchor", "dominant-baseline",
-    "alignment-baseline", "baseline-shift", "letter-spacing", "word-spacing", "text-decoration", "writing-mode",
-    "marker-start", "marker-mid", "marker-end", "clip-path", "clip-rule", "mask", "filter", "paint-order",
-    "vector-effect", "shape-rendering", "text-rendering", "stop-color", "stop-opacity", "flood-color",
-    "flood-opacity", "mix-blend-mode", "white-space", "transform-origin", "transform-box", "pointer-events", "direction",
-    "unicode-bidi", "overflow",
+    "fill",
+    "fill-opacity",
+    "fill-rule",
+    "stroke",
+    "stroke-width",
+    "stroke-opacity",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "stroke-dasharray",
+    "stroke-dashoffset",
+    "stroke-miterlimit",
+    "opacity",
+    "color",
+    "display",
+    "visibility",
+    "font-family",
+    "font-size",
+    "font-weight",
+    "font-style",
+    "font-variant",
+    "text-anchor",
+    "dominant-baseline",
+    "alignment-baseline",
+    "baseline-shift",
+    "letter-spacing",
+    "word-spacing",
+    "text-decoration",
+    "writing-mode",
+    "marker-start",
+    "marker-mid",
+    "marker-end",
+    "clip-path",
+    "clip-rule",
+    "mask",
+    "filter",
+    "paint-order",
+    "vector-effect",
+    "shape-rendering",
+    "text-rendering",
+    "stop-color",
+    "stop-opacity",
+    "flood-color",
+    "flood-opacity",
+    "mix-blend-mode",
+    "white-space",
+    "transform-origin",
+    "transform-box",
+    "pointer-events",
+    "direction",
+    "unicode-bidi",
+    "overflow",
 }
 GENERIC_FONTS = ("serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui", "ui-sans-serif", "ui-monospace")
 ATTRIBUTES = PRESENTATION | {
-    "id", "class", "style", "transform", "viewBox", "preserveAspectRatio", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy",
-    "r", "rx", "ry", "fx", "fy", "fr", "width", "height", "d", "points", "pathLength", "offset", "gradientUnits",
-    "gradientTransform", "spreadMethod", "patternUnits", "patternContentUnits", "patternTransform", "markerWidth",
-    "markerHeight", "markerUnits", "refX", "refY", "orient", "clipPathUnits", "maskUnits", "maskContentUnits",
-    "filterUnits", "primitiveUnits", "in", "in2", "result", "stdDeviation", "dx", "dy", "operator", "k1", "k2", "k3",
-    "k4", "mode", "values", "type", "radius", "href", "startOffset", "method", "spacing", "textLength", "lengthAdjust",
-    "rotate", "side", "role", "aria-label", "aria-hidden", "xml:space", "systemLanguage",
+    "id",
+    "class",
+    "style",
+    "transform",
+    "viewBox",
+    "preserveAspectRatio",
+    "x",
+    "y",
+    "x1",
+    "y1",
+    "x2",
+    "y2",
+    "cx",
+    "cy",
+    "r",
+    "rx",
+    "ry",
+    "fx",
+    "fy",
+    "fr",
+    "width",
+    "height",
+    "d",
+    "points",
+    "pathLength",
+    "offset",
+    "gradientUnits",
+    "gradientTransform",
+    "spreadMethod",
+    "patternUnits",
+    "patternContentUnits",
+    "patternTransform",
+    "markerWidth",
+    "markerHeight",
+    "markerUnits",
+    "refX",
+    "refY",
+    "orient",
+    "clipPathUnits",
+    "maskUnits",
+    "maskContentUnits",
+    "filterUnits",
+    "primitiveUnits",
+    "in",
+    "in2",
+    "result",
+    "stdDeviation",
+    "dx",
+    "dy",
+    "operator",
+    "k1",
+    "k2",
+    "k3",
+    "k4",
+    "mode",
+    "values",
+    "type",
+    "radius",
+    "href",
+    "startOffset",
+    "method",
+    "spacing",
+    "textLength",
+    "lengthAdjust",
+    "rotate",
+    "side",
+    "role",
+    "aria-label",
+    "aria-hidden",
+    "xml:space",
+    "systemLanguage",
 }
 BACKGROUND_RE = re.compile(r"^(#[0-9a-fA-F]{3,8}|[a-z]{3,20}|var\(--[a-z0-9-]+\))$")
 URL_RE = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)", re.I)
@@ -208,7 +358,7 @@ def parse_svg(body: str, attrs: dict) -> tuple[dict, list[str]]:
     if len(box) != 4 or any(x is None for x in box):
         w, h = _number(root.get("width")), _number(root.get("height"))
         if not (w and h):
-            return vis, ["the <svg> needs a viewBox, such as viewBox=\"0 0 1100 560\""]
+            return vis, ['the <svg> needs a viewBox, such as viewBox="0 0 1100 560"']
         box = [0.0, 0.0, w, h]
         root.set("viewBox", f"0 0 {w:g} {h:g}")
     for k in ("width", "height", "x", "y"):
@@ -243,8 +393,16 @@ def parse_svg(body: str, attrs: dict) -> tuple[dict, list[str]]:
         first.setdefault(it["id"], it)
     dupes = sorted({it["id"] for it in items if first[it["id"]] is not it})
     problems = [f"id `{d}` is used more than once; cues reach the first" for d in dupes]
-    vis.update(svg=svg, ids=list(dict.fromkeys(ids)), items=list(first.values()), part_of=part_of, box=box,
-               removed=cleaner.removed, elements=cleaner.count, from_file=bool(attrs.get("file")))
+    vis.update(
+        svg=svg,
+        ids=list(dict.fromkeys(ids)),
+        items=list(first.values()),
+        part_of=part_of,
+        box=box,
+        removed=cleaner.removed,
+        elements=cleaner.count,
+        from_file=bool(attrs.get("file")),
+    )
     return vis, problems
 
 
@@ -283,14 +441,36 @@ def _check(vis: dict, line: int, limits: dict) -> list[Finding]:
     from_file = vis.pop("from_file", False)
     if removed:
         what = ", ".join(f"{k} ({v})" if v > 1 else k for k, v in sorted(removed.items(), key=lambda kv: -kv[1])[:8])
-        out.append(("svg_removed", f"The drawing on line {line} lost parts the player does not allow: {what}.",
-                    "An exported file usually keeps plain-text copies of its labels; check the slide with preview_slides."
-                    if from_file else "Draw with shapes, paths and text only; no scripts, links, embedded HTML or animation elements."))
+        out.append(
+            (
+                "svg_removed",
+                f"The drawing on line {line} lost parts the player does not allow: {what}.",
+                "An exported file usually keeps plain-text copies of its labels; check the slide with preview_slides."
+                if from_file
+                else "Draw with shapes, paths and text only; no scripts, links, embedded HTML or animation elements.",
+            )
+        )
     if n > MAX_ELEMENTS:
-        out.append(("block_too_big", f"The drawing on line {line} has {n} elements; drawings read well with far fewer.",
-                    "Simplify it, or split it across slides."))
+        out.append(
+            (
+                "block_too_big",
+                f"The drawing on line {line} has {n} elements; drawings read well with far fewer.",
+                "Simplify it, or split it across slides.",
+            )
+        )
     return out
 
 
-KIND = Kind("svg", ("svg",), parse_svg, check=_check, part=lambda vis: "element", hint="", find=find, labels=labels,
-            reads_file=True, regions=True, steps=STEP_KEYS)
+KIND = Kind(
+    "svg",
+    ("svg",),
+    parse_svg,
+    check=_check,
+    part=lambda vis: "element",
+    hint="",
+    find=find,
+    labels=labels,
+    reads_file=True,
+    regions=True,
+    steps=STEP_KEYS,
+)

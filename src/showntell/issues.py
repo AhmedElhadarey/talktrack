@@ -70,8 +70,17 @@ CODES: dict[str, tuple[str, str]] = {
     "not_checked": ("info", "a check could not run"),
 }
 
-PLAYER_CODES = {"render_error", "audio_error", "player_error", "text_too_small", "overflow", "pointer_offstage",
-                "slow_render", "viewer_waited", "drawing_overlap"}
+PLAYER_CODES = {
+    "render_error",
+    "audio_error",
+    "player_error",
+    "text_too_small",
+    "overflow",
+    "pointer_offstage",
+    "slow_render",
+    "viewer_waited",
+    "drawing_overlap",
+}
 MAX_PER_REPLY = 12
 MAX_PER_CODE = 3
 
@@ -85,8 +94,17 @@ class Issue(str):
     line: int | None
     source: str
 
-    def __new__(cls, code: str, message: str, fix: str = "", *, slide: str | None = None, line: int | None = None,
-                severity: str | None = None, source: str = "server") -> Issue:
+    def __new__(
+        cls,
+        code: str,
+        message: str,
+        fix: str = "",
+        *,
+        slide: str | None = None,
+        line: int | None = None,
+        severity: str | None = None,
+        source: str = "server",
+    ) -> Issue:
         if code not in CODES:
             raise KeyError(f"unknown issue code {code!r}")
         message, fix = message.strip(), fix.strip()

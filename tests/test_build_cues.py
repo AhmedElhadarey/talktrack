@@ -175,8 +175,9 @@ def test_unknown_flowchart_node_lists_the_nodes(cues):
 
 
 def test_cues_written_before_the_visual_are_resolved_when_it_arrives(build, project):
-    w, b = build("# T\n\nA.\n\n## C\n\nThe [guard](#L12) first.\n\n```python file=src/cache.py lines=10-24\n```\n",
-                 root=project, check_last=False)
+    w, b = build(
+        "# T\n\nA.\n\n## C\n\nThe [guard](#L12) first.\n\n```python file=src/cache.py lines=10-24\n```\n", root=project, check_last=False
+    )
     (c,) = w.slides[1].says[0].cues
     assert (c["kind"], c["l0"]) == ("lines", 12) and not b.issues
 

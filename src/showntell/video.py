@@ -38,8 +38,10 @@ IMAGE = "jpeg"
 def require_ffmpeg() -> None:
     missing = [x for x in ("ffmpeg", "ffprobe") if not shutil.which(x)]
     if missing:
-        raise SystemExit(f"MP4 export needs {' and '.join(missing)} on PATH: install FFmpeg "
-                         "(macOS: `brew install ffmpeg`; Debian or Ubuntu: `apt install ffmpeg`)")
+        raise SystemExit(
+            f"MP4 export needs {' and '.join(missing)} on PATH: install FFmpeg "
+            "(macOS: `brew install ffmpeg`; Debian or Ubuntu: `apt install ffmpeg`)"
+        )
 
 
 def default_workers() -> int:
@@ -84,17 +86,43 @@ def soundtrack(folder: Path, total: float, dest: Path) -> int:
 
 
 def _segment_cmd(fps: int, out: Path, image: str) -> list[str]:
-    return ["ffmpeg", "-y", "-loglevel", "error", "-f", "image2pipe", "-c:v", "mjpeg" if image == "jpeg" else "png",
-            "-framerate", str(fps), "-i", "-", "-an",
-            "-c:v", "libx264", "-preset", PRESET, "-crf", "20", "-tune", "stillimage", "-pix_fmt", "yuv420p",
-            "-g", str(fps * 10), "-fflags", "+bitexact", "-flags:v", "+bitexact", str(out)]
+    return [
+        "ffmpeg",
+        "-y",
+        "-loglevel",
+        "error",
+        "-f",
+        "image2pipe",
+        "-c:v",
+        "mjpeg" if image == "jpeg" else "png",
+        "-framerate",
+        str(fps),
+        "-i",
+        "-",
+        "-an",
+        "-c:v",
+        "libx264",
+        "-preset",
+        PRESET,
+        "-crf",
+        "20",
+        "-tune",
+        "stillimage",
+        "-pix_fmt",
+        "yuv420p",
+        "-g",
+        str(fps * 10),
+        "-fflags",
+        "+bitexact",
+        "-flags:v",
+        "+bitexact",
+        str(out),
+    ]
 
 
-async def _render_range(browser, url: str, fps: int, a: int, b: int, out: Path, image: str, captions: bool,
-                        progress: list[int]) -> dict:
+async def _render_range(browser, url: str, fps: int, a: int, b: int, out: Path, image: str, captions: bool, progress: list[int]) -> dict:
     """Frames a..b-1 into one segment file. Returns counts for the speed report."""
-    proc = await asyncio.create_subprocess_exec(*_segment_cmd(fps, out, image), stdin=subprocess.PIPE,
-                                                stderr=subprocess.PIPE)
+    proc = await asyncio.create_subprocess_exec(*_segment_cmd(fps, out, image), stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     shots = 0
     try:
         async with Capturer(url, captions=captions, image=image, browser=browser) as c:
@@ -119,8 +147,9 @@ async def _render_range(browser, url: str, fps: int, a: int, b: int, out: Path, 
     return {"frames": b - a, "shots": shots, "errors": errors, "total": player_total}
 
 
-async def _render_frames(url: str, fps: int, n: int, workers: int, work: Path, image: str, captions: bool,
-                         quiet: bool) -> tuple[list[Path], dict]:
+async def _render_frames(
+    url: str, fps: int, n: int, workers: int, work: Path, image: str, captions: bool, quiet: bool
+) -> tuple[list[Path], dict]:
     async_playwright = require_playwright()
     bounds = [round(n * k / workers) for k in range(workers + 1)]
     ranges = [(bounds[k], bounds[k + 1]) for k in range(workers) if bounds[k + 1] > bounds[k]]
@@ -130,8 +159,10 @@ async def _render_frames(url: str, fps: int, n: int, workers: int, work: Path, i
         # One browser per worker: screenshots of pages in one browser queue on its compositor.
         browsers = await asyncio.gather(*(launch(pw) for _ in ranges))
         try:
-            tasks = [asyncio.create_task(_render_range(br, url, fps, a, b, seg, image, captions, progress))
-                     for br, (a, b), seg in zip(browsers, ranges, segs, strict=True)]
+            tasks = [
+                asyncio.create_task(_render_range(br, url, fps, a, b, seg, image, captions, progress))
+                for br, (a, b), seg in zip(browsers, ranges, segs, strict=True)
+            ]
             pending = set(tasks)
             while pending:
                 done, pending = await asyncio.wait(pending, timeout=1.0, return_when=asyncio.FIRST_EXCEPTION)
@@ -149,8 +180,12 @@ async def _render_frames(url: str, fps: int, n: int, workers: int, work: Path, i
         finally:
             for br in browsers:
                 await br.close()
-    stats = {"frames": sum(r["frames"] for r in results), "shots": sum(r["shots"] for r in results),
-             "errors": sorted({e for r in results for e in r["errors"]}), "total": results[0]["total"]}
+    stats = {
+        "frames": sum(r["frames"] for r in results),
+        "shots": sum(r["shots"] for r in results),
+        "errors": sorted({e for r in results for e in r["errors"]}),
+        "total": results[0]["total"],
+    }
     return segs, stats
 
 
@@ -172,17 +207,40 @@ def _mux(segs: list[Path], wav: Path, vtt: Path, out: Path, work: Path) -> None:
     cmd += ["-c:v", "copy", "-c:a", "aac", "-b:a", "128k"] + (["-c:s", "mov_text", "-metadata:s:s:0", "language=eng"] if subs else [])
     # One tag: the encoder (©too), naming showntell and its version. libavformat always overwrites
     # `encoder` with its own name, but the MP4 muxer prefers `encoding_tool` for that atom.
-    cmd += ["-map_metadata", "-1", "-map_chapters", "-1", "-flags:a", "+bitexact",
-            "-metadata", f"encoding_tool=showntell {__version__}",
-            "-movflags", "+faststart", str(out)]
+    cmd += [
+        "-map_metadata",
+        "-1",
+        "-map_chapters",
+        "-1",
+        "-flags:a",
+        "+bitexact",
+        "-metadata",
+        f"encoding_tool=showntell {__version__}",
+        "-movflags",
+        "+faststart",
+        str(out),
+    ]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         raise SystemExit(f"ffmpeg could not join the video: {r.stderr.strip()}")
 
 
 def probe(path: Path) -> dict:
-    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration:format_tags:stream=codec_type,codec_name,width,height",
-                        "-of", "json", str(path)], capture_output=True, text=True, check=True)
+    r = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration:format_tags:stream=codec_type,codec_name,width,height",
+            "-of",
+            "json",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     return json.loads(r.stdout)
 
 
@@ -196,8 +254,17 @@ def check_duration(path: Path, expected: float) -> float:
 # -- entry point ----------------------------------------------------------------------------
 
 
-def render_mp4(data_dir: Path, wid: str, out: Path, *, fps: int = 30, workers: int | None = None,
-               captions: bool = False, image: str = IMAGE, quiet: bool = False) -> dict:
+def render_mp4(
+    data_dir: Path,
+    wid: str,
+    out: Path,
+    *,
+    fps: int = 30,
+    workers: int | None = None,
+    captions: bool = False,
+    image: str = IMAGE,
+    quiet: bool = False,
+) -> dict:
     """Render walkthrough `wid` to an MP4 at `out`. Returns timing and frame counts."""
     require_ffmpeg()
     try:
@@ -228,6 +295,15 @@ def render_mp4(data_dir: Path, wid: str, out: Path, *, fps: int = 30, workers: i
         _mux(segs, wav, folder / "captions.vtt", out, work)
     got = check_duration(out, total)
     wall = time.monotonic() - t0
-    return {"duration": got, "timeline": total, "frames": n, "shots": stats["shots"], "clips": clips,
-            "workers": workers, "seconds": wall, "speed": total / wall if wall else 0.0, "errors": stats["errors"],
-            "fps": fps}
+    return {
+        "duration": got,
+        "timeline": total,
+        "frames": n,
+        "shots": stats["shots"],
+        "clips": clips,
+        "workers": workers,
+        "seconds": wall,
+        "speed": total / wall if wall else 0.0,
+        "errors": stats["errors"],
+        "fps": fps,
+    }

@@ -34,8 +34,10 @@ def test_drawio_renders_offline_points_at_cells_and_reveals(daemon, browser):  #
     url = r["url"].replace("localhost", "127.0.0.1") + "/"
     page = browser.new_page(viewport={"width": 1280, "height": 800})
     outside, errors = [], []
-    page.route("**/*", lambda route: (outside.append(route.request.url), route.abort())
-               if "127.0.0.1" not in route.request.url else route.continue_())
+    page.route(
+        "**/*",
+        lambda route: (outside.append(route.request.url), route.abort()) if "127.0.0.1" not in route.request.url else route.continue_(),
+    )
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto(url)
     page.wait_for_function("window.__showntell !== undefined")

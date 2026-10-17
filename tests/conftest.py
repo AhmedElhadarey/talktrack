@@ -153,10 +153,8 @@ def repo(tmp_path: Path) -> Repo:
 def build(tmp_path: Path):
     """`w, b = build(markdown, frame=..., root=...)`: a fresh walkthrough built from Markdown."""
 
-    def _build(markdown: str, frame: str = "landscape", root: Path | None = None, title: str = "Demo walk",
-               check_last: bool = True):
-        w = Walkthrough(id="w" * 22, key="k" * 22, report_key="r" * 16, title=title, frame=frame,
-                        root=str(root) if root else None)
+    def _build(markdown: str, frame: str = "landscape", root: Path | None = None, title: str = "Demo walk", check_last: bool = True):
+        w = Walkthrough(id="w" * 22, key="k" * 22, report_key="r" * 16, title=title, frame=frame, root=str(root) if root else None)
         b = Builder(w, tmp_path / "assets")
         b.add(markdown, check_last=check_last)
         return w, b

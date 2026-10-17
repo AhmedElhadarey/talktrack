@@ -81,8 +81,7 @@ def main(argv: list[str] | None = None) -> None:
         else:
             p.print_help()
             return
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s",
-                        datefmt="%H:%M:%S", stream=sys.stderr)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s", datefmt="%H:%M:%S", stream=sys.stderr)
     for noisy in ("httpx", "httpx2", "mcp.server.streamable_http", "mcp.server.lowlevel.server", "huggingface_hub"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
@@ -245,15 +244,19 @@ def autostart(cfg: Config, action: str) -> None:
     env = {k: v for k, v in os.environ.items() if k.startswith(("SHOWNTELL_", "HF_"))}
     env["PATH"] = os.environ.get("PATH", "/usr/bin:/bin")
     plist.parent.mkdir(parents=True, exist_ok=True)
-    plist.write_bytes(plistlib.dumps({
-        "Label": LABEL,
-        "ProgramArguments": [sys.executable, "-m", "showntell", "serve", "--port", str(cfg.port)],
-        "EnvironmentVariables": env,
-        "RunAtLoad": True,
-        "KeepAlive": True,
-        "StandardOutPath": log,
-        "StandardErrorPath": log,
-    }))
+    plist.write_bytes(
+        plistlib.dumps(
+            {
+                "Label": LABEL,
+                "ProgramArguments": [sys.executable, "-m", "showntell", "serve", "--port", str(cfg.port)],
+                "EnvironmentVariables": env,
+                "RunAtLoad": True,
+                "KeepAlive": True,
+                "StandardOutPath": log,
+                "StandardErrorPath": log,
+            }
+        )
+    )
     r = subprocess.run(["launchctl", "bootstrap", domain, str(plist)], capture_output=True, text=True)
     if r.returncode != 0:
         raise SystemExit(f"launchctl refused the agent: {r.stderr.strip()}")

@@ -76,13 +76,27 @@ def doctor(cfg: Config, args) -> None:
     if lock:
         h = lock["health"]
         same = daemon.same_build(lock)
-        _row(OK if same else WARN, "daemon", f"running at {lock['url']} (pid {lock['pid']}, version {lock.get('version')}, "
-             f"speech {h['speech']['state']})" + ("" if same else "; it runs older code and will be replaced when idle"
-                                                  if daemon.newer_than(lock) else "; it runs newer code than this copy"))
+        _row(
+            OK if same else WARN,
+            "daemon",
+            f"running at {lock['url']} (pid {lock['pid']}, version {lock.get('version')}, "
+            f"speech {h['speech']['state']})"
+            + (
+                ""
+                if same
+                else "; it runs older code and will be replaced when idle"
+                if daemon.newer_than(lock)
+                else "; it runs newer code than this copy"
+            ),
+        )
     else:
         with socket.socket() as s:
             free = s.connect_ex(("127.0.0.1", cfg.port)) != 0
-        _row(OK if free else WARN, "port", f"{cfg.port} is free" if free else f"{cfg.port} is in use by another program; showntell will pick the next free port")
+        _row(
+            OK if free else WARN,
+            "port",
+            f"{cfg.port} is free" if free else f"{cfg.port} is in use by another program; showntell will pick the next free port",
+        )
         _row(OK, "daemon", "not running; MCP clients start it on demand")
 
     print()

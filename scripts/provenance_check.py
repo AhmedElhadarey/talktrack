@@ -31,9 +31,16 @@ def main() -> int:
     for f in ref_root.rglob("*"):
         if f.is_file() and f.suffix in REF_TYPES and f.stat().st_size < 5_000_000:
             ref |= shingles(f.read_text(errors="ignore"))
-    ours = [*repo.glob("src/showntell/text/*"), *repo.glob("docs/*.md"), repo / "README.md", repo / "GEMINI.md",
-            *repo.glob("claude-plugin/skills/*/SKILL.md"), *repo.glob("src/showntell/static/**/*.js"),
-            *repo.glob("src/showntell/static/*.html"), *repo.glob("src/showntell/static/*.css")]
+    ours = [
+        *repo.glob("src/showntell/text/*"),
+        *repo.glob("docs/*.md"),
+        repo / "README.md",
+        repo / "GEMINI.md",
+        *repo.glob("claude-plugin/skills/*/SKILL.md"),
+        *repo.glob("src/showntell/static/**/*.js"),
+        *repo.glob("src/showntell/static/*.html"),
+        *repo.glob("src/showntell/static/*.css"),
+    ]
     ours = [f for f in ours if f.is_file() and "vendor" not in f.parts]
     hits = 0
     for f in ours:
@@ -41,8 +48,9 @@ def main() -> int:
         if common:
             hits += 1
             print(f.relative_to(repo), sorted(common)[:8])
-    print(f"{len(ours)} files checked against {len(ref)} reference runs: "
-          + ("clean" if not hits else f"{hits} file(s) share {N}-word runs"))
+    print(
+        f"{len(ours)} files checked against {len(ref)} reference runs: " + ("clean" if not hits else f"{hits} file(s) share {N}-word runs")
+    )
     return 1 if hits else 0
 
 

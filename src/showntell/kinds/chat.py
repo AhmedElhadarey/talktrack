@@ -42,10 +42,14 @@ def parse_chat(body: str, attrs: dict) -> tuple[dict, list[str]]:
 def _check(vis: dict, line: int, limits: dict) -> list[Finding]:
     if len(vis["items"]) <= CHAT_MAX:
         return []
-    return [("block_too_big", f"The exchange on line {line} has {len(vis['items'])} messages; a slide holds about {CHAT_MAX}.",
-             "Split it across slides, or trim the messages.")]
+    return [
+        (
+            "block_too_big",
+            f"The exchange on line {line} has {len(vis['items'])} messages; a slide holds about {CHAT_MAX}.",
+            "Split it across slides, or trim the messages.",
+        )
+    ]
 
 
 # Messages have no names to match in narration, so cues are never inferred for them.
-KIND = Kind("chat", CHAT_LANGS, parse_chat, check=_check, part=lambda vis: "message",
-            hint="Start each message with `name:`.", infer=False)
+KIND = Kind("chat", CHAT_LANGS, parse_chat, check=_check, part=lambda vis: "message", hint="Start each message with `name:`.", infer=False)

@@ -143,11 +143,14 @@ class OnnxBackend:
             if not ids:
                 continue
             style = pack[min(len(ids), len(pack)) - 1]  # one style vector per chunk, by phoneme count
-            wave, durations = self._session.run(None, {
-                "input_ids": np.array([[0, *ids, 0]], dtype=np.int64),
-                "style": style,
-                "speed": np.array([speed], dtype=np.float32),
-            })
+            wave, durations = self._session.run(
+                None,
+                {
+                    "input_ids": np.array([[0, *ids, 0]], dtype=np.int64),
+                    "style": style,
+                    "speed": np.array([speed], dtype=np.float32),
+                },
+            )
             audio = np.asarray(wave, dtype=np.float32).reshape(-1)
             frames = np.maximum(1, np.round(np.asarray(durations).reshape(-1)))  # the model's own rounding
             tokens += word_times(chunk, spans, frames, offset / SAMPLE_RATE)

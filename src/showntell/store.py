@@ -66,8 +66,11 @@ class Session:
         b.issues, b.new_says, b.changed = [], [], set()
         b.add(markdown)
         if len(self.w.slides) > MAX_SLIDES:
-            b._issue("too_many_slides", f"This walkthrough has {len(self.w.slides)} slides; keep it under {MAX_SLIDES}.",
-                     "Split it into a series.")
+            b._issue(
+                "too_many_slides",
+                f"This walkthrough has {len(self.w.slides)} slides; keep it under {MAX_SLIDES}.",
+                "Split it into a series.",
+            )
         for slide, say in b.new_says:
             self._voice(slide, say)
         self._changed(b.changed)
@@ -83,16 +86,31 @@ class Session:
             attrs = [f"#{old.id}"] + [f".{c}" for c in old.classes]
             attrs += [f'{k}="{v}"' for k, v in old.attrs.items() if isinstance(v, str)]
             text = f"## {old.title} {{{' '.join(attrs)}}}\n\n{text}"
-        scratch = Walkthrough(id=self.w.id, key="", report_key="", title=self.w.title, frame=self.w.frame,
-                              voice=self.w.voice, speed=self.w.speed, root=self.w.root, sha=self.w.sha)
+        scratch = Walkthrough(
+            id=self.w.id,
+            key="",
+            report_key="",
+            title=self.w.title,
+            frame=self.w.frame,
+            voice=self.w.voice,
+            speed=self.w.speed,
+            root=self.w.root,
+            sha=self.w.sha,
+        )
         b = Builder(scratch, self.store.walk_dir(self.w.id) / "assets")
         b.add(text + "\n", check_last=False)
         issues = list(b.issues)
         if not scratch.slides:
             raise ValueError("the Markdown has no slide in it")
         if len(scratch.slides) > 1:
-            issues.append(Issue("revise_kept_first", f"revise_slide replaces one slide; kept the first of {len(scratch.slides)}.",
-                                "Send one heading per call.", slide=slide_id))
+            issues.append(
+                Issue(
+                    "revise_kept_first",
+                    f"revise_slide replaces one slide; kept the first of {len(scratch.slides)}.",
+                    "Send one heading per call.",
+                    slide=slide_id,
+                )
+            )
             text = "\n".join(text.split("\n")[: max(1, scratch.slides[1].line) - 1]).rstrip()
         new = scratch.slides[0]
         new.id, new.rev, new.line = old.id, old.rev + 1, old.line
@@ -119,8 +137,14 @@ class Session:
         if not stage:
             self._changed({new.id})
         self._promote(new.id)
-        return {"slide": new.id, "rev": new.rev, "says": len(new.says), "revoiced": voiced, "issues": issues,
-                "staged": stage and new.id in self.staged}
+        return {
+            "slide": new.id,
+            "rev": new.rev,
+            "says": len(new.says),
+            "revoiced": voiced,
+            "issues": issues,
+            "staged": stage and new.id in self.staged,
+        }
 
     def _rewrite_source(self, old: Slide, text: str) -> int:
         """Put a revised slide's Markdown where the old slide's was, so the source reads as the
@@ -162,16 +186,22 @@ class Session:
             b._issue("block_dropped", "A code block was never closed; it was dropped.", "Close it and send the slide with revise_slide.")
             b.parser.pending = ""
         if unchecked:
-            b._issue("not_checked", f"Render and layout checks could not run: {unchecked}.",
-                     "Open the link to run them in your browser; what it finds arrives with your next call to this walkthrough.",
-                     slide="")
+            b._issue(
+                "not_checked",
+                f"Render and layout checks could not run: {unchecked}.",
+                "Open the link to run them in your browser; what it finds arrives with your next call to this walkthrough.",
+                slide="",
+            )
         elif unchecked is None and not self.viewed:
-            b._issue("not_checked", "No player has opened this walkthrough yet, so render and layout checks have not run.",
-                     "Open the link; problems the player finds arrive with your next call to this walkthrough.", slide="")
+            b._issue(
+                "not_checked",
+                "No player has opened this walkthrough yet, so render and layout checks have not run.",
+                "Open the link; problems the player finds arrive with your next call to this walkthrough.",
+                slide="",
+            )
         waiting = sum(1 for sl in self.w.slides for x in sl.says if x.text and x.status == "pending")
         if waiting:
-            b._issue("not_checked", f"{waiting} paragraph(s) are still being voiced, so timing checks have not run on them.",
-                     slide="")
+            b._issue("not_checked", f"{waiting} paragraph(s) are still being voiced, so timing checks have not run on them.", slide="")
         if questions:
             self.w.questions = [q.strip() for q in questions if q and q.strip()][:4]
         self.w.status = "finished"
@@ -211,8 +241,9 @@ class Session:
 
     def _audio(self, slide_id: str, say_id: str, result: dict) -> None:
         staged = self.staged.get(slide_id)
-        slide = staged if staged and any(x.id == say_id for x in staged.says) else next(
-            (s for s in self.w.slides if s.id == slide_id), None)
+        slide = (
+            staged if staged and any(x.id == say_id for x in staged.says) else next((s for s in self.w.slides if s.id == slide_id), None)
+        )
         say = next((x for x in slide.says if x.id == say_id), None) if slide else None
         if say is None:
             return  # revised away meanwhile
@@ -248,9 +279,15 @@ class Session:
         key = f"still:{slide.id}:{slide.rev}"
         if gap > STILL_S and key not in self.reported:
             self.reported.add(key)
-            self.late_issues.append(Issue(
-                "still_slide", f"Slide `{slide.id}` holds still for {gap:.0f} s (from {at:.0f} s into the slide) while the narration goes on.",
-                "Add a cue on what the narration is talking about, split the slide, or say less.", slide=slide.id, line=slide.line))
+            self.late_issues.append(
+                Issue(
+                    "still_slide",
+                    f"Slide `{slide.id}` holds still for {gap:.0f} s (from {at:.0f} s into the slide) while the narration goes on.",
+                    "Add a cue on what the narration is talking about, split the slide, or say less.",
+                    slide=slide.id,
+                    line=slide.line,
+                )
+            )
 
     def take_late_issues(self) -> list[Issue]:
         out, self.late_issues = self.late_issues, []
@@ -349,8 +386,15 @@ def _on_loop(loop: asyncio.AbstractEventLoop) -> bool:
 
 
 class Store:
-    def __init__(self, data_dir: Path, base_url: str, narrator: Narrator, default_voice: str = "af_heart",
-                 open_browser: bool = False, link_suffix: str = "") -> None:
+    def __init__(
+        self,
+        data_dir: Path,
+        base_url: str,
+        narrator: Narrator,
+        default_voice: str = "af_heart",
+        open_browser: bool = False,
+        link_suffix: str = "",
+    ) -> None:
         self.data_dir = data_dir
         self.base_url = base_url.rstrip("/")
         self.narrator = narrator
@@ -365,8 +409,9 @@ class Store:
     def walk_dir(self, wid: str) -> Path:
         return self.data_dir / "walkthroughs" / wid
 
-    def create(self, title: str, frame: str = "landscape", voice: str = "", speed: float = 1.0,
-               root: str | None = None, theme: str = "") -> Session:
+    def create(
+        self, title: str, frame: str = "landscape", voice: str = "", speed: float = 1.0, root: str | None = None, theme: str = ""
+    ) -> Session:
         if frame not in FRAMES:
             raise ValueError(f"frame must be one of {', '.join(FRAMES)}")
         if theme and theme not in THEMES:
@@ -448,18 +493,20 @@ class Store:
                 data = json.loads(st.read_text())
             except json.JSONDecodeError:
                 continue
-            out.append({
-                "id": data["id"],
-                "title": data.get("title", ""),
-                "handle": f"{data['id']}.{data.get('key', '')}",
-                "created": data.get("created", 0),
-                "updated": data.get("updated", 0),
-                "status": data.get("status", ""),
-                "frame": data.get("frame", "landscape"),
-                "slides": len(data.get("slides", [])),
-                "duration": timeline_total(Walkthrough.from_state(data)),
-                "url": f"{self.base_url}/w/{data['id']}{self.link_suffix}",
-            })
+            out.append(
+                {
+                    "id": data["id"],
+                    "title": data.get("title", ""),
+                    "handle": f"{data['id']}.{data.get('key', '')}",
+                    "created": data.get("created", 0),
+                    "updated": data.get("updated", 0),
+                    "status": data.get("status", ""),
+                    "frame": data.get("frame", "landscape"),
+                    "slides": len(data.get("slides", [])),
+                    "duration": timeline_total(Walkthrough.from_state(data)),
+                    "url": f"{self.base_url}/w/{data['id']}{self.link_suffix}",
+                }
+            )
         out.sort(key=lambda r: r["updated"], reverse=True)
         return out[:limit]
 

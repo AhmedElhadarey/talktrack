@@ -31,8 +31,7 @@ class CueResolver:
 
     def _resolve_cues(self, s: Slide, say: Say, reresolve: bool = False) -> None:
         raw: list[Cue] = getattr(say, "_cues", None) or [
-            Cue(c["at"], c["end"], c.get("label", ""), c.get("target", ""), c.get("text", ""), c.get("inferred", False),
-                c.get("style", ""))
+            Cue(c["at"], c["end"], c.get("label", ""), c.get("target", ""), c.get("text", ""), c.get("inferred", False), c.get("style", ""))
             for c in say.cues
             if not c.get("inferred")
         ]
@@ -84,8 +83,12 @@ class CueResolver:
             if steps and 1 <= n <= len(steps):
                 return {**base, "kind": "step", "n": n}
             have = f"{len(steps)} steps" if steps else "no steps"
-            self._issue("cue_no_target", f"[{c.label}](#{t}): slide `{s.id}` has {have}.",
-                        "Mark each version of the code with `step` in its info string.", slide=s.id)
+            self._issue(
+                "cue_no_target",
+                f"[{c.label}](#{t}): slide `{s.id}` has {have}.",
+                "Mark each version of the code with `step` in its info string.",
+                slide=s.id,
+            )
             return None
         if t.startswith("@"):
             box = _region(t[1:])
@@ -93,11 +96,17 @@ class CueResolver:
             if regions and box:
                 return {**base, "kind": "region", "box": box}
             if not regions:
-                self._issue("cue_wrong_kind", f"[{c.label}](#{t}): regions point into images and drawings; slide `{s.id}` shows a {s.kind}.",
-                            slide=s.id)
+                self._issue(
+                    "cue_wrong_kind",
+                    f"[{c.label}](#{t}): regions point into images and drawings; slide `{s.id}` shows a {s.kind}.",
+                    slide=s.id,
+                )
             else:
-                self._issue("cue_no_target", f"[{c.label}](#{t}): a region is `@left,top,width,height` in percent of the {s.kind}, "
-                            "each from 0 to 100.", slide=s.id)
+                self._issue(
+                    "cue_no_target",
+                    f"[{c.label}](#{t}): a region is `@left,top,width,height` in percent of the {s.kind}, each from 0 to 100.",
+                    slide=s.id,
+                )
             return {**base, "kind": "visual"}
         seq = re.fullmatch(r"([\w-]+?)\s*(?:<<)?-{1,2}(?:>>|>|x|\))\s*([\w-]+)", t)
         if seq and s.kind == "diagram" and s.visual.get("type") == "sequencediagram":
@@ -108,8 +117,12 @@ class CueResolver:
             if msgs:
                 return {**base, "kind": "text", "text": c.text or msgs[0][2]}
             pairs = ", ".join(sorted({f"{a}->>{b}" for a, b, _ in sequence_messages(s.visual["source"])})[:12])
-            self._issue("cue_no_target", f"[{c.label}](#{t}): no message from `{seq.group(1)}` to `{seq.group(2)}` in the diagram on slide `{s.id}`. "
-                        f"Messages: {pairs}.", slide=s.id)
+            self._issue(
+                "cue_no_target",
+                f"[{c.label}](#{t}): no message from `{seq.group(1)}` to `{seq.group(2)}` in the diagram on slide `{s.id}`. "
+                f"Messages: {pairs}.",
+                slide=s.id,
+            )
             return None
         if "->" in t:
             path = [p.strip() for p in t.split("->")]
@@ -117,18 +130,30 @@ class CueResolver:
             if s.kind != "diagram" or s.visual.get("type") not in ("flowchart", "graph"):
                 kind = s.visual.get("type", "") if s.kind == "diagram" else ""
                 what = DIAGRAM_NAMES.get(kind, "diagram") if s.kind == "diagram" else s.kind
-                self._issue("cue_wrong_kind", f"[{c.label}](#{t}): a path along edges needs a flowchart; slide `{s.id}` shows a {what}.",
-                            "Name one message as `#Sender->>Receiver`." if kind == "sequencediagram" else "", slide=s.id)
+                self._issue(
+                    "cue_wrong_kind",
+                    f"[{c.label}](#{t}): a path along edges needs a flowchart; slide `{s.id}` shows a {what}.",
+                    "Name one message as `#Sender->>Receiver`." if kind == "sequencediagram" else "",
+                    slide=s.id,
+                )
                 return {**base, "kind": "visual"}
             missing = [p for p in path if p not in nodes]
             if missing or len(path) < 2:
-                self._issue("cue_no_target", f"[{c.label}](#{t}): no node {', '.join(f'`{x}`' for x in missing) or 'pair'} in the diagram on slide `{s.id}`. "
-                            f"Nodes: {', '.join(list(nodes)[:12])}.", slide=s.id)
+                self._issue(
+                    "cue_no_target",
+                    f"[{c.label}](#{t}): no node {', '.join(f'`{x}`' for x in missing) or 'pair'} in the diagram on slide `{s.id}`. "
+                    f"Nodes: {', '.join(list(nodes)[:12])}.",
+                    slide=s.id,
+                )
                 return None
             gaps = [f"{a}->{b}" for a, b in zip(path, path[1:], strict=False) if not has_edge(s.visual["source"], a, b)]
             if gaps:
-                self._issue("cue_no_target", f"[{c.label}](#{t}): the diagram on slide `{s.id}` has no edge {', '.join(gaps)}.",
-                            "Follow edges in the direction they are drawn.", slide=s.id)
+                self._issue(
+                    "cue_no_target",
+                    f"[{c.label}](#{t}): the diagram on slide `{s.id}` has no edge {', '.join(gaps)}.",
+                    "Follow edges in the direction they are drawn.",
+                    slide=s.id,
+                )
                 return None
             return {**base, "kind": "edge", "path": path}
         m = re.fullmatch(r"([+-])?L(\d+)(?:-L?(\d+))?", t, re.I)
@@ -148,11 +173,19 @@ class CueResolver:
                 if c.text:
                     hit = _find_line(lines, c.text, first, a)
                     if hit:
-                        self._issue("cue_moved", f"[{c.label}](#{t}): line {a} is outside lines {first}-{last} on {where}; "
-                                    f"pointed at line {hit}, where the quoted text is.", slide=s.id)
+                        self._issue(
+                            "cue_moved",
+                            f"[{c.label}](#{t}): line {a} is outside lines {first}-{last} on {where}; "
+                            f"pointed at line {hit}, where the quoted text is.",
+                            slide=s.id,
+                        )
                         return {**base, "kind": "lines", "side": side, "l0": hit, "l1": hit}
-                self._issue("cue_off_code", f"[{c.label}](#{t}) points past the code on {where}, which shows lines {first}-{last}.",
-                            "Use the gutter numbers.", slide=s.id)
+                self._issue(
+                    "cue_off_code",
+                    f"[{c.label}](#{t}) points past the code on {where}, which shows lines {first}-{last}.",
+                    "Use the gutter numbers.",
+                    slide=s.id,
+                )
                 return None
             a, b = max(a, first), min(b, last)
             if c.text:
@@ -160,12 +193,20 @@ class CueResolver:
                 if _norm(c.text) not in _norm(span):
                     hit = _find_line(lines, c.text, first, a)
                     if hit:
-                        self._issue("cue_moved", f"[{c.label}](#{t}): the quoted text is not on line {a}; pointed at line {hit}, where it is.",
-                                    "Count lines with the gutter numbers.", slide=s.id)
+                        self._issue(
+                            "cue_moved",
+                            f"[{c.label}](#{t}): the quoted text is not on line {a}; pointed at line {hit}, where it is.",
+                            "Count lines with the gutter numbers.",
+                            slide=s.id,
+                        )
                         a = b = hit
                     else:
-                        self._issue("cue_text_missing", f"[{c.label}](#{t}): \"{c.text}\" does not occur in the code on {where}; pointed at the whole line.",
-                                    "Quote the code exactly, spaces included.", slide=s.id)
+                        self._issue(
+                            "cue_text_missing",
+                            f'[{c.label}](#{t}): "{c.text}" does not occur in the code on {where}; pointed at the whole line.',
+                            "Quote the code exactly, spaces included.",
+                            slide=s.id,
+                        )
                         return {**base, "kind": "lines", "side": side, "l0": a, "l1": b, "text": ""}
             return {**base, "kind": "lines", "side": side, "l0": a, "l1": b}
         if m:
@@ -178,7 +219,9 @@ class CueResolver:
             hit = _match_title(t, s.visual["items"])
             if hit:
                 return {**base, "kind": "item", "id": hit}
-            self._issue("cue_no_target", f"[{c.label}](#{t}): no item `{t}` on slide `{s.id}`. Items: {', '.join(sorted(ids))}.", slide=s.id)
+            self._issue(
+                "cue_no_target", f"[{c.label}](#{t}): no item `{t}` on slide `{s.id}`. Items: {', '.join(sorted(ids))}.", slide=s.id
+            )
             return None
         if kinds.part_kind(s.kind):
             pid = kinds.get(s.kind).find(s.visual, t)
@@ -186,8 +229,11 @@ class CueResolver:
                 outer = s.visual.get("part_of", {}).get(pid)  # a part inside another reveals with it
                 return {**base, "kind": "item", "id": pid, **({"part": outer} if outer else {})}
             what = kinds.get(s.kind).part(s.visual)
-            self._issue("cue_no_target", f"[{c.label}](#{t}): no {what} `{t}` on slide `{s.id}`. "
-                        f"Ids: {', '.join(s.visual.get('ids', [])[:12])}.", slide=s.id)
+            self._issue(
+                "cue_no_target",
+                f"[{c.label}](#{t}): no {what} `{t}` on slide `{s.id}`. Ids: {', '.join(s.visual.get('ids', [])[:12])}.",
+                slide=s.id,
+            )
             return None
         if s.kind == "table":
             ids = s.visual.get("ids", [])
@@ -203,8 +249,11 @@ class CueResolver:
             if t in nodes:
                 return {**base, "kind": "node", "id": t, "text": c.text or nodes[t]}
             if nodes and s.visual.get("type") in ("flowchart", "graph"):
-                self._issue("cue_no_target", f"[{c.label}](#{t}): no node `{t}` in the diagram on slide `{s.id}`. Nodes: {', '.join(list(nodes)[:12])}.",
-                            slide=s.id)
+                self._issue(
+                    "cue_no_target",
+                    f"[{c.label}](#{t}): no node `{t}` in the diagram on slide `{s.id}`. Nodes: {', '.join(list(nodes)[:12])}.",
+                    slide=s.id,
+                )
             return {**base, "kind": "node", "id": t, "text": c.text}
         self._issue("cue_wrong_kind", f"[{c.label}](#{t}): slide `{s.id}` shows a {s.kind}.", "Point at it with `#`.", slide=s.id)
         return {**base, "kind": "visual"}
@@ -223,8 +272,15 @@ def _region(spec: str) -> list[float] | None:
     return box
 
 
-DIAGRAM_NAMES = {"sequencediagram": "sequence diagram", "statediagram": "state diagram", "statediagram-v2": "state diagram",
-                 "classdiagram": "class diagram", "erdiagram": "entity-relationship diagram", "gantt": "Gantt chart", "pie": "pie chart"}
+DIAGRAM_NAMES = {
+    "sequencediagram": "sequence diagram",
+    "statediagram": "state diagram",
+    "statediagram-v2": "state diagram",
+    "classdiagram": "class diagram",
+    "erdiagram": "entity-relationship diagram",
+    "gantt": "Gantt chart",
+    "pie": "pie chart",
+}
 
 
 def _norm(s: str) -> str:

@@ -108,8 +108,7 @@ class Capturer:
     ratio, so text stays sharp at any output size.
     """
 
-    def __init__(self, url: str, *, short: int = 1080, captions: bool = False, image: str = "png",
-                 browser=None) -> None:
+    def __init__(self, url: str, *, short: int = 1080, captions: bool = False, image: str = "png", browser=None) -> None:
         self.url = url
         self.short = short
         self.captions = captions
@@ -130,8 +129,9 @@ class Capturer:
         self.frame_name = await _frame_of(self.url)
         native = FRAMES.get(self.frame_name, FRAMES["landscape"])
         self.size = output_size(self.frame_name, self.short)
-        ctx = await self._browser.new_context(viewport={"width": native[0], "height": native[1]},
-                                              device_scale_factor=self.size[0] / native[0])
+        ctx = await self._browser.new_context(
+            viewport={"width": native[0], "height": native[1]}, device_scale_factor=self.size[0] / native[0]
+        )
         self._own.append(ctx.close)
         self.page = await ctx.new_page()
         problems: list[str] = []
@@ -193,8 +193,9 @@ async def _frame_of(url: str) -> str:
         return json.loads(r.content).get("frame", "landscape")
 
 
-async def capture_frames_async(source: str | Path, times: Sequence[float], *, short: int = 1080,
-                               captions: bool = False, measure: bool = False) -> list[bytes]:
+async def capture_frames_async(
+    source: str | Path, times: Sequence[float], *, short: int = 1080, captions: bool = False, measure: bool = False
+) -> list[bytes]:
     """PNG bytes of the player at each time (seconds), for a player link or an exported folder.
     `measure` waits for the player's layout checks on each slide, which report to a live link."""
     with player_url(source) as url:
