@@ -81,7 +81,7 @@ While a player is connected, a revised slide replaces the old one only once all 
 
 ## Player
 
-- **Data:** the full walkthrough on connect, then only changed slides over server-sent events. A static export reads the same JSON from a file.
+- **Data:** the full walkthrough on connect, then only changed slides over server-sent events. A static export reads the same JSON from a file; a single-page export carries it in the page, with narration as data, the player's modules in an import map of `data:` URLs, and Mermaid, KaTeX (with its fonts) and highlight.js only when its slides use them, the large ones gzipped.
 - **Time-driven:** every narration has a start time on one timeline, and the visible state (slide, revealed parts, pointer, highlighted entry, caption word) is computed from the current time. Playback, seeking and export all use that one function.
 - **Waiting:** when playback reaches narration without audio yet, it pauses and shows that the next slide is being written.
 - **Reports:** render errors are posted back to the server with the per-walkthrough report key and reach the agent, marked as player reports, on its next call.

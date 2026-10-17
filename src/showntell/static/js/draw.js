@@ -7,9 +7,27 @@ export const READABLE_PX = 15; // smallest comfortable text on the 1280-wide sta
 export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const loaded = {};
 
+// A single-file export carries the libraries it needs in the page (export_html in export.py),
+// keyed by their path under static/, the large ones gzipped; elsewhere they load from the server.
+function inline(src) {
+  const files = window.__showntellFiles;
+  return files && src.startsWith(`${STATIC}/`) ? files[src.slice(STATIC.length + 1)] : undefined;
+}
+
+async function unpack(entry) {
+  if (typeof entry === "string") return entry;
+  const bytes = Uint8Array.from(atob(entry.gzip), (c) => c.charCodeAt(0));
+  return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+}
+
 export function loadScript(src) {
   if (!loaded[src]) {
-    loaded[src] = new Promise((res, rej) => {
+    const entry = inline(src);
+    loaded[src] = entry !== undefined ? unpack(entry).then((code) => {
+      const s = document.createElement("script");
+      s.textContent = code; // runs as it is added
+      document.head.append(s);
+    }) : new Promise((res, rej) => {
       const s = document.createElement("script");
       s.src = src;
       s.onload = res;
@@ -22,7 +40,12 @@ export function loadScript(src) {
 
 export function loadCss(href) {
   if (!loaded[href]) {
-    loaded[href] = new Promise((res) => {
+    const entry = inline(href);
+    loaded[href] = entry !== undefined ? unpack(entry).then((css) => {
+      const st = document.createElement("style");
+      st.textContent = css;
+      document.head.append(st);
+    }) : new Promise((res) => {
       const l = document.createElement("link");
       l.rel = "stylesheet";
       l.href = href;

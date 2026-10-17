@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **One-file export:** `showntell export ID talk.html` writes a single page that plays offline from a double-click, with the player, slides, MP3 narration and only the libraries its slides use (a four-minute walkthrough with code comes to about 3 MB, mostly narration; diagrams add about 1 MB and formulas 0.7 MB). It makes no network requests.
 - **Drawings:** an ```` ```svg ```` block, inline or read with `file=`, draws what code and boxes can't: light, orbits, lenses, layouts. Elements with ids take cues and reveal in steps, strokes draw themselves in, and theme colours are available as `var(--fg)` and friends. The builder keeps only drawing elements and attributes; anything that could run or fetch is removed and reported (`svg_removed`).
 - **Chart callouts:** a note on the tallest bar no longer crowds the title and the value label.
 

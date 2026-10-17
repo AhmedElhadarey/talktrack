@@ -9,7 +9,8 @@
     out/source.md       the Markdown the walkthrough was written in
     out/poster.png      the title slide, for link previews (only when Playwright is installed)
 
-An output path ending in `.mp4` renders a video instead (video.py).
+An output path ending in `.mp4` renders a video instead (video.py), and one ending in `.html`
+writes a single self-contained page (export_html) that plays offline from a double-click.
 """
 
 from __future__ import annotations
@@ -173,6 +174,152 @@ def export(data_dir: Path, wid: str, out: Path, mp3: bool = False, static_href: 
     return out
 
 
+# -- one self-contained page ----------------------------------------------------------------------
+
+# Libraries a walkthrough loads only when a slide needs them, by slide kind (paths under static/).
+LIBRARIES = {
+    "diagram": ["vendor/mermaid.min.js"],
+    "math": ["vendor/katex/katex.min.js", "vendor/katex/katex.min.css"],
+    "code": ["vendor/hljs/highlight.min.js"],
+    "diff": ["vendor/hljs/highlight.min.js"],
+    "terminal": ["vendor/hljs/highlight.min.js"],
+}
+MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp",
+        ".svg": "image/svg+xml", ".avif": "image/avif", ".mp3": "audio/mpeg", ".wav": "audio/wav", ".woff2": "font/woff2"}
+GZIP_OVER = 100_000  # characters; smaller libraries are not worth unpacking
+_IMPORT_RE = re.compile(r"""(\bfrom\s*|\bimport\s*)(["'])(\.{1,2}/[^"']+)\2""")
+
+
+def _data_uri(path: Path) -> str:
+    import base64
+
+    return f"data:{MIME.get(path.suffix.lower(), 'application/octet-stream')};base64,{base64.b64encode(path.read_bytes()).decode()}"
+
+
+def _script_json(value) -> str:
+    """JSON safe inside a <script> element: no `</script`, no `<!--`."""
+    return json.dumps(value, separators=(",", ":")).replace("<", "\\u003c")
+
+
+def _modules() -> dict[str, str]:
+    """The player's ES modules as data: URLs under bare specifiers (`showntell/js/...`), their
+    relative imports rewritten to match, for an import map: a page opened from disk cannot
+    fetch module files, but it can import data: URLs."""
+    import base64
+    import posixpath
+
+    root = STATIC / "js"
+    out = {}
+    for f in sorted(root.rglob("*.js")):
+        here = posixpath.dirname(f.relative_to(root).as_posix())
+
+        def bare(m: re.Match, here: str = here) -> str:
+            target = posixpath.normpath(posixpath.join(here, m.group(3)))
+            return f"{m.group(1)}{m.group(2)}showntell/js/{target}{m.group(2)}"
+
+        code = _IMPORT_RE.sub(bare, f.read_text())
+        out[f"showntell/js/{f.relative_to(root).as_posix()}"] = "data:text/javascript;base64," + base64.b64encode(code.encode()).decode()
+    return out
+
+
+def _katex_css() -> str:
+    """KaTeX's stylesheet with its fonts inside it (woff2 only, which every current browser reads)."""
+    css = (STATIC / "vendor" / "katex" / "katex.min.css").read_text()
+    fonts = STATIC / "vendor" / "katex" / "fonts"
+
+    def src(m: re.Match) -> str:
+        woff2 = re.search(r"url\((fonts/[^)]+\.woff2)\)", m.group(0))
+        return f'src:url({_data_uri(fonts / Path(woff2.group(1)).name)}) format("woff2")' if woff2 else m.group(0)
+
+    return re.sub(r"src:[^;}]*", src, css)
+
+
+def _library(rel: str) -> str | dict:
+    """A library's text, or {"gzip": base64} for the ones loaded on demand (Mermaid shrinks from
+    2.6 MB to 1 MB). highlight.js starts with the page, so it stays plain text."""
+    import base64
+    import gzip
+
+    text = (STATIC / rel).read_text()
+    if rel.endswith("highlight.min.js") or len(text) < GZIP_OVER:
+        return text
+    return {"gzip": base64.b64encode(gzip.compress(text.encode(), 9, mtime=0)).decode()}
+
+
+def _swap(page: str, old: str, new: str) -> str:
+    if page.count(old) != 1:
+        raise RuntimeError(f"player.html changed: expected {old!r} once")
+    return page.replace(old, new)
+
+
+# Runs at the end of the page, before the player's modules (which wait for the whole page): the
+# walkthrough's narration becomes blob: URLs so the audio elements hold short addresses, and
+# highlight.js, which the code slides call as they are drawn, is started.
+_BOOT = """<script>
+(function () {
+  var read = function (id) { var e = document.getElementById(id); return e ? JSON.parse(e.textContent) : {}; };
+  var blob = function (uri) {
+    var i = uri.indexOf(","), bytes = atob(uri.slice(i + 1)), a = new Uint8Array(bytes.length);
+    for (var k = 0; k < bytes.length; k++) a[k] = bytes.charCodeAt(k);
+    return URL.createObjectURL(new Blob([a], { type: uri.slice(5, uri.indexOf(";")) }));
+  };
+  var data = read("showntell-data");
+  data.slides.forEach(function (s) { s.says.forEach(function (x) { if (x.audio) x.audio = blob(x.audio); }); });
+  window.__showntellData = data;
+  var files = window.__showntellFiles = read("showntell-files");
+  var hl = files["vendor/hljs/highlight.min.js"];
+  if (hl) { var s = document.createElement("script"); s.textContent = hl; document.head.append(s); }
+})();
+</script>"""
+
+
+def export_html(data_dir: Path, wid: str, out: Path) -> Path:
+    """One HTML file holding the player, the walkthrough, its narration (MP3) and images, and only
+    the libraries its slides use. It plays offline and makes no network requests."""
+    import tempfile
+
+    from .server import render_player
+
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = export(data_dir, wid, Path(tmp) / "w", mp3=True, copy_static=False)
+        data = json.loads((folder / "data.json").read_text())
+        for slide in data["slides"]:
+            for say in slide["says"]:
+                if say.get("audio"):
+                    say["audio"] = _data_uri(folder / say["audio"])
+            v = slide.get("visual") or {}
+            if slide["kind"] == "image" and str(v.get("src", "")).startswith("assets/"):
+                v["src"] = _data_uri(folder / v["src"])
+    w = Walkthrough.from_state(json.loads((data_dir / "walkthroughs" / wid / "state.json").read_text()))
+    files: dict[str, str | dict] = {}
+    for kind in sorted({s["kind"] for s in data["slides"]}):
+        for rel in LIBRARIES.get(kind, []):
+            files[rel] = _katex_css() if rel.endswith("katex.min.css") else _library(rel)
+
+    page = render_player(w.title, w.frame, "", "__STATIC__", live=False, theme=w.theme, tokens=w.tokens)
+    css = "\n".join((STATIC / n).read_text() for n in ("themes.css", "player.css"))
+    if "</style" in css:
+        raise RuntimeError("the player's CSS cannot be inlined")
+    page = _swap(page, '<link rel="icon" href="__STATIC__/icon.svg" type="image/svg+xml">',
+                 f'<link rel="icon" href="{_data_uri(STATIC / "icon.svg")}" type="image/svg+xml">')
+    page = _swap(page, '<link rel="stylesheet" href="__STATIC__/themes.css">\n<link rel="stylesheet" href="__STATIC__/player.css">',
+                 f"<style>\n{css}\n</style>")
+    page = _swap(page, '<script src="__STATIC__/vendor/hljs/highlight.min.js"></script>\n', "")
+    page = _swap(page, '<script type="module" src="__STATIC__/js/main.js"></script>',
+                 f'<script type="importmap">{_script_json({"imports": _modules()})}</script>\n'
+                 '<script type="module">import "showntell/js/main.js";</script>')
+    page = _swap(page, 'data-static="__STATIC__"', 'data-static="static"')
+    # The walkthrough and the libraries come last, so the page draws before they are parsed.
+    tail = (f'<script type="application/json" id="showntell-data">{_script_json(data)}</script>\n'
+            f'<script type="application/json" id="showntell-files">{_script_json(files)}</script>\n{_BOOT}\n')
+    page = _swap(page, "</body>", tail + "</body>")
+    if "__STATIC__" in page:
+        raise RuntimeError("player.html references a file the single page does not carry")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(page)
+    return out
+
+
 def write_poster(folder: Path) -> bool:
     """poster.png: the title slide's settled frame. False, silently, without Playwright or its
     browser; a warning for any other failure."""
@@ -212,6 +359,12 @@ def export_cli(cfg: Config, args) -> None:
     dest = Path(args.out).expanduser()
     if dest.suffix.lower() == ".mp4":
         return _export_mp4(cfg, wid, dest, args)
+    if dest.suffix.lower() in (".html", ".htm"):
+        if args.mp3:
+            raise SystemExit("--mp3 applies to folder exports; a single page always carries MP3 audio")
+        export_html(cfg.data_dir, wid, dest)
+        print(f"Exported to {dest} ({dest.stat().st_size / 1e6:.1f} MB): one file that plays offline in a browser.")
+        return
     out = export(cfg.data_dir, wid, dest, mp3=args.mp3, poster=True)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"Exported to {out} ({size / 1e6:.1f} MB). Serve the folder with any web server, for example:")

@@ -115,6 +115,17 @@ graph TB
 
 The same module writes `poster.png` for folder exports and returns PNG frames at any times for other callers (`capture_frames`).
 
+## Single-page export
+
+`export_html` in `export.py` writes the folder export to a temporary directory, then folds it into one HTML file that opens from disk with no server:
+
+| Part | How it travels |
+|---|---|
+| **Player modules** | each `static/js` module as a `data:` URL in an import map, its relative imports rewritten to bare `showntell/js/...` specifiers; a page opened from `file://` cannot fetch module files but can import `data:` URLs |
+| **CSS** | `themes.css` and `player.css` inline; KaTeX's stylesheet carries its woff2 fonts as `data:` URLs |
+| **Walkthrough** | `data.json` in a `<script type="application/json">` at the end of the page; narration MP3s and images inside it as `data:` URLs, turned into `blob:` URLs before the player starts |
+| **Libraries** | only those the slide kinds need (Mermaid for diagrams, KaTeX for formulas, highlight.js for code), in a registry `loadScript` and `loadCss` read before the network; scripts over 100 KB gzipped and unpacked with `DecompressionStream` |
+
 ## Data
 
 | Path in the data folder | Contents |
