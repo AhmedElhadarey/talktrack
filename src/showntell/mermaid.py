@@ -18,6 +18,19 @@ def has_edge(source: str, a: str, b: str) -> bool:
     return any(pat.search(line) for line in source.split("\n"))
 
 
+SEQ_MESSAGE_RE = re.compile(r"(\w+(?:-\w+)*)\s*(?:<<)?-{1,2}(?:>>|>|x|\))[+-]?\s*(\w+(?:-\w+)*)\s*:\s*(.+)$")
+
+
+def sequence_messages(src: str) -> list[tuple[str, str, str]]:
+    """(from, to, text) of each message in a sequence diagram, in source order."""
+    out = []
+    for raw in src.split("\n"):
+        m = SEQ_MESSAGE_RE.match(raw.split("%%", 1)[0].strip())
+        if m:
+            out.append((m.group(1), m.group(2), m.group(3).strip()))
+    return out
+
+
 def parse_mermaid(src: str) -> tuple[dict, list, list]:
     """Node ids with labels (in source order), plus edge and message labels. Best effort."""
     nodes: dict[str, str] = {}
@@ -63,7 +76,7 @@ def parse_mermaid(src: str) -> tuple[dict, list, list]:
                     order.append(m.group(1))
                 nodes[m.group(1)] = (m.group(2) or m.group(1)).strip()
                 continue
-            m = re.match(r"(\w+(?:-\w+)*)\s*(?:<<)?-{1,2}(?:>>|>|x|\))[+-]?\s*(\w+(?:-\w+)*)\s*:\s*(.+)$", line)
+            m = SEQ_MESSAGE_RE.match(line)
             if m:
                 for nid in (m.group(1), m.group(2)):
                     if nid not in nodes:

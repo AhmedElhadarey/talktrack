@@ -11,7 +11,7 @@ import re
 
 from . import kinds
 from .format import Cue, inline_plain
-from .mermaid import has_edge
+from .mermaid import has_edge, sequence_messages
 from .model import Say, Slide
 
 # Words too common to take for an identifier when inferring cues from narration.
@@ -97,11 +97,26 @@ class CueResolver:
                 self._issue("cue_no_target", f"[{c.label}](#{t}): a region is `@left,top,width,height` in percent of the image, "
                             "each from 0 to 100.", slide=s.id)
             return {**base, "kind": "visual"}
+        seq = re.fullmatch(r"([\w-]+?)\s*(?:<<)?-{1,2}(?:>>|>|x|\))\s*([\w-]+)", t)
+        if seq and s.kind == "diagram" and s.visual.get("type") == "sequencediagram":
+            # A message in a sequence diagram, named by its sender and receiver: point at its text.
+            msgs = [m for m in sequence_messages(s.visual["source"]) if m[:2] == seq.groups()]
+            if c.text:
+                msgs = [m for m in msgs if _norm(c.text) in _norm(m[2])] or msgs
+            if msgs:
+                return {**base, "kind": "text", "text": c.text or msgs[0][2]}
+            pairs = ", ".join(sorted({f"{a}->>{b}" for a, b, _ in sequence_messages(s.visual["source"])})[:12])
+            self._issue("cue_no_target", f"[{c.label}](#{t}): no message from `{seq.group(1)}` to `{seq.group(2)}` in the diagram on slide `{s.id}`. "
+                        f"Messages: {pairs}.", slide=s.id)
+            return None
         if "->" in t:
             path = [p.strip() for p in t.split("->")]
             nodes = s.visual.get("nodes", {}) if s.kind == "diagram" else {}
             if s.kind != "diagram" or s.visual.get("type") not in ("flowchart", "graph"):
-                self._issue("cue_wrong_kind", f"[{c.label}](#{t}): a path along edges needs a flowchart; slide `{s.id}` shows a {s.kind}.", slide=s.id)
+                kind = s.visual.get("type", "") if s.kind == "diagram" else ""
+                what = DIAGRAM_NAMES.get(kind, "diagram") if s.kind == "diagram" else s.kind
+                self._issue("cue_wrong_kind", f"[{c.label}](#{t}): a path along edges needs a flowchart; slide `{s.id}` shows a {what}.",
+                            "Name one message as `#Sender->>Receiver`." if kind == "sequencediagram" else "", slide=s.id)
                 return {**base, "kind": "visual"}
             missing = [p for p in path if p not in nodes]
             if missing or len(path) < 2:
@@ -172,8 +187,12 @@ class CueResolver:
                         f"Ids: {', '.join(s.visual.get('ids', [])[:12])}.", slide=s.id)
             return None
         if s.kind == "table":
-            if t in s.visual.get("ids", []):
+            ids = s.visual.get("ids", [])
+            if t in ids:
                 return {**base, "kind": "row", "id": t}
+            n = re.fullmatch(r"row-(\d+)", t)
+            if n and 1 <= int(n.group(1)) <= len(ids):  # by position, also when rows have their own ids
+                return {**base, "kind": "row", "id": ids[int(n.group(1)) - 1]}
             self._issue("cue_no_target", f"[{c.label}](#{t}): no row `{t}` on slide `{s.id}`.", slide=s.id)
             return None
         if s.kind == "diagram":
@@ -199,6 +218,10 @@ def _region(spec: str) -> list[float] | None:
     if box[0] + box[2] > 100.5 or box[1] + box[3] > 100.5:
         return None
     return box
+
+
+DIAGRAM_NAMES = {"sequencediagram": "sequence diagram", "statediagram": "state diagram", "statediagram-v2": "state diagram",
+                 "classdiagram": "class diagram", "erdiagram": "entity-relationship diagram", "gantt": "Gantt chart", "pie": "pie chart"}
 
 
 def _norm(s: str) -> str:

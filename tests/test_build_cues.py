@@ -231,3 +231,27 @@ def test_at_most_four_inferred_cues(build):
 def test_no_inference_without_a_visual(build):
     w, _ = build("# T\n\nMemory and disk.\n")
     assert w.slides[0].says[0].cues == []
+
+
+SEQUENCE = "## S {#s}\n\n```mermaid\nsequenceDiagram\n  participant U as User\n  participant B as Bank\n  U->>B: POST /transfer\n  B-->>U: 200 OK\n```\n\n"
+
+
+def test_sequence_message_cue_points_at_its_text(cues):
+    (a, b), issues = cues(SEQUENCE, "The user [posts the form](#U->>B), and the bank [answers](#B-->>U).")
+    assert (a["kind"], a["text"]) == ("text", "POST /transfer") and (b["kind"], b["text"]) == ("text", "200 OK")
+    assert not issues
+
+
+def test_unknown_sequence_message_lists_the_messages(cues):
+    _, issues = cues(SEQUENCE, "The bank [never calls](#B->>X).")
+    assert [i.code for i in issues] == ["cue_no_target"] and "U->>B" in issues[0]
+
+
+def test_edge_path_on_a_sequence_diagram_names_the_message_form(cues):
+    _, issues = cues(SEQUENCE, "A [round trip](#U->B->U).")
+    assert issues[0].code == "cue_wrong_kind" and "sequence diagram" in issues[0] and "#Sender->>Receiver" in issues[0]
+
+
+def test_row_number_works_when_rows_have_ids(cues):
+    (c,), issues = cues(TABLE, "The [first row](#row-1) is memory.")
+    assert (c["kind"], c["id"]) == ("row", "m") and not issues
