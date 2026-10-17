@@ -29,7 +29,7 @@ Run a daemon without a voice model with `uv run showntell serve --speech fake --
 | `src/showntell/app.py` | the daemon: wiring and the request guard |
 | `src/showntell/speech/` | speech backends (MLX, ONNX, fake), the worker queue and audio cache |
 | `src/showntell/pronounce.py` | turning code and units into speakable text |
-| `src/showntell/static/` | the player; `js/timeline.js` is the pure core |
+| `src/showntell/static/` | the player; `js/timeline.js` is the pure core, `js/kinds/` has one module per slide kind (module map in `docs/architecture.md`) |
 | `src/showntell/text/` | everything the agent reads: instructions, tool descriptions, guide |
 | `docs/` | format reference, functional spec, architecture |
 | `scripts/eval.py` | end-to-end evaluation with real agents |
