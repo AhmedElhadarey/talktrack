@@ -23,10 +23,10 @@ You need [uv](https://docs.astral.sh/uv/). It installs Python 3.12 or newer for 
 Every agent runs the same command, which starts showntell as a stdio MCP server:
 
 ```zsh
-uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
+uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp
 ```
 
-Once showntell is on PyPI this shortens to `uvx showntell mcp`. Pick your agent below, then ask it something like *"walk me through how a request gets retried in this codebase"*. The agent replies with a link; open it and press play.
+`@v0.1.0` installs that release; leave it off for the latest commit. Once showntell is on PyPI this shortens to `uvx showntell mcp`. Pick your agent below, then ask it something like *"walk me through how a request gets retried in this codebase"*. The agent replies with a link; open it and press play.
 
 The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model. The first walkthrough takes a few seconds longer while they load. After that, everything works offline.
 
@@ -35,7 +35,7 @@ The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB el
 1. Add the server for all your projects:
 
    ```zsh
-   claude mcp add --scope user showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
+   claude mcp add --scope user showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp
    ```
 
 2. Start a new `claude` session and run `/mcp`; `showntell` should be listed as connected.
@@ -55,7 +55,7 @@ Claude Code 2.1.275 or later does both in one step: `claude plugin install shown
 1. Add the server (this writes `~/.codex/config.toml`):
 
    ```zsh
-   codex mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
+   codex mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp
    ```
 
 2. Check it with `codex mcp list`, or run `/mcp` inside a `codex` session.
@@ -66,7 +66,7 @@ If you prefer to edit the config file yourself, add:
 ```toml
 [mcp_servers.showntell]
 command = "uvx"
-args = ["--from", "git+https://github.com/rahimnathwani/showntell", "showntell", "mcp"]
+args = ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.0", "showntell", "mcp"]
 ```
 
 ### Antigravity CLI (agy)
@@ -74,7 +74,7 @@ args = ["--from", "git+https://github.com/rahimnathwani/showntell", "showntell",
 1. Add the server (this writes `~/.gemini/config/mcp_config.json`, which the Antigravity IDE shares). Flags go before the name, and the `--` keeps `--from` from being read as an agy flag:
 
    ```zsh
-   agy mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
+   agy mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp
    ```
 
 2. Check it with `agy mcp list`.
@@ -98,7 +98,7 @@ Recent Pi (checked with 1.3.0) has MCP built in.
 1. Add the server (this writes `~/.pi/agent/mcp.json`; add `-l` to write `.pi/mcp.json` in the current project instead):
 
    ```zsh
-   pi mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp
+   pi mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp
    ```
 
 2. Check it with `pi mcp list`. It should say `showntell: connected, 5 tools`.
@@ -111,7 +111,7 @@ Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobail
   "mcpServers": {
     "showntell": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/rahimnathwani/showntell", "showntell", "mcp"]
+      "args": ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.0", "showntell", "mcp"]
     }
   }
 }
@@ -122,19 +122,19 @@ Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobail
 - **VS Code:** add the server to your user profile from a terminal, then pick `showntell` under **MCP: List Servers**:
 
   ```zsh
-  code --add-mcp '{"name":"showntell","command":"uvx","args":["--from","git+https://github.com/rahimnathwani/showntell","showntell","mcp"]}'
+  code --add-mcp '{"name":"showntell","command":"uvx","args":["--from","git+https://github.com/rahimnathwani/showntell@v0.1.0","showntell","mcp"]}'
   ```
 
 - **GitHub Copilot CLI:** its plugin system reads the same marketplace file as Claude Code: `copilot plugin marketplace add rahimnathwani/showntell`, then `copilot plugin install showntell@showntell`.
-- **Cursor, Claude Desktop and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell showntell mcp`. Most use the same `mcpServers` JSON as the older-Pi example.
-- **Over HTTP:** run `uvx --from git+https://github.com/rahimnathwani/showntell showntell serve` and connect the client to `http://localhost:4747/mcp`.
+- **Cursor, Claude Desktop and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp`. Most use the same `mcpServers` JSON as the older-Pi example.
+- **Over HTTP:** run `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell serve` and connect the client to `http://localhost:4747/mcp`.
 
 ### Good to know
 
 - **One shared daemon:** the first `showntell mcp` starts a background daemon, and later ones reuse it. The voice model stays loaded and every agent shares one port. A newer copy of showntell replaces an idle daemon running older code; an older copy uses the newer daemon as it is. `showntell stop` stops it, and the next client starts its own.
-- **Checking the setup:** `uvx --from git+https://github.com/rahimnathwani/showntell showntell doctor` checks the models, speech speed, port and daemon.
-- **Your walkthroughs:** http://localhost:4747/ lists them; the daemon log is `~/.local/share/showntell/daemon.log`.
-- **Faster mornings on a Mac:** `uvx --from git+https://github.com/rahimnathwani/showntell showntell autostart on` starts the daemon at login, so even the first walkthrough of the day comes back as fast as the rest.
+- **Checking the setup:** `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell doctor` checks the models, speech speed, port and daemon.
+- **Your walkthroughs:** http://localhost:4747/ lists them. They and their audio stay until you delete them, or run `showntell prune --older-than 60d`. The daemon log is `~/.local/share/showntell/daemon.log`, kept under 5 MB with the part before in `daemon.log.1`.
+- **Faster mornings on a Mac:** `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell autostart on` starts the daemon at login, so even the first walkthrough of the day comes back as fast as the rest.
 
 ## How it works
 
@@ -214,6 +214,7 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **`showntell export ID\|LINK\|FILE.md OUT.mp4`** | an MP4 video; `--fps`, `--workers`, `--burn-captions` |
 | **`showntell list`** | recent walkthroughs |
 | **`showntell doctor`** | check models, speech speed, port and daemon |
+| **`showntell prune --older-than 60d`** | delete walkthroughs unchanged for that long and cached audio nothing uses; `--dry-run` lists them first |
 | **`showntell stop`** | stop the daemon; the next client starts one from its own copy |
 | **`showntell autostart on\|off\|status`** | macOS: keep the daemon running from login |
 
@@ -222,8 +223,8 @@ After [the final attempt](#L55) the error goes back to the caller.
 An output path ending in `.mp4` renders a video. Each frame is captured by seeking the player in headless Chromium, so rendering runs faster than real time and never drops a frame: a 4.4-minute walkthrough renders in 16 to 20 s on an M-series Mac.
 
 ```zsh
-uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell' playwright install chromium   # once
-uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell' showntell export <id> talk.mp4
+uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.0' playwright install chromium   # once
+uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.0' showntell export <id> talk.mp4
 ```
 
 | Part | What you get |
@@ -267,7 +268,7 @@ Environment variables, also listed in [.env.example](.env.example). Command-line
 | **`SHOWNTELL_HOST`** | 127.0.0.1 | interface; anything else requires an access token, which is generated and added to links |
 | **`SHOWNTELL_DATA`** | `~/.local/share/showntell` | walkthroughs, audio cache, models, lockfile and log |
 | **`SHOWNTELL_VOICE`** | `af_heart` | default voice; any English Kokoro voice, such as `am_michael` or `bf_emma` |
-| **`SHOWNTELL_SPEECH`** | `auto` | `mlx` on Apple silicon, `onnx` elsewhere, or `fake` for tests |
+| **`SHOWNTELL_SPEECH`** | `auto` | `mlx` on Apple silicon (`onnx` if MLX fails to load), `onnx` elsewhere, or `fake` for tests |
 | **`SHOWNTELL_PUBLIC_URL`** | | base URL for links when viewing from another device, such as a Tailscale name; links then carry an access token |
 | **`SHOWNTELL_ONNX_MODEL`** | `model_quantized` | ONNX variant; `model` (fp32) can be faster on CPUs without AVX2 |
 | **`SHOWNTELL_THREADS`** | up to 6 | CPU threads for ONNX speech |
@@ -278,9 +279,9 @@ Pronunciations: put `word = spoken form` lines in `~/.local/share/showntell/lexi
 ## Privacy and security
 
 - **Network:** showntell listens on localhost only, checks the Host and Origin of every request, and accepts only JSON POSTs.
-- **Links:** walkthrough ids are 128-bit random values; writing needs a separate key that only the agent holds.
-- **Files:** code and images are read only from the project folder, and git runs only plumbing commands with repository hooks and diff drivers disabled.
-- **Downloads:** the only network traffic is the first-run model download.
+- **Links:** walkthrough ids are 128-bit random values; writing needs a separate key, which the agent gets and any MCP client on this machine can list.
+- **Files:** code and images are read only from the project folder. When the MCP client shares its folders, the project folder must be inside one of them, so an agent cannot show files from elsewhere on the machine. Git runs only plumbing commands with repository hooks and diff drivers disabled.
+- **Downloads:** the only network traffic is the first-run model download (and the ONNX model, if MLX ever fails on Apple silicon).
 
 See [SECURITY.md](SECURITY.md) to report a problem.
 
@@ -288,8 +289,9 @@ See [SECURITY.md](SECURITY.md) to report a problem.
 
 | Platform | Speech | Status |
 |---|---|---|
-| **macOS, Apple silicon** | Kokoro on MLX | primary |
-| **Linux, Windows, Intel Mac** | Kokoro on ONNX Runtime (CPU) | supported |
+| **macOS, Apple silicon** | Kokoro on MLX; ONNX Runtime if MLX fails to load | primary |
+| **Linux, Intel Mac** | Kokoro on ONNX Runtime (CPU) | supported |
+| **Windows** | Kokoro on ONNX Runtime (CPU) | untested, best effort; reports welcome |
 
 English voices only for now. Kokoro's other languages are on the [roadmap](ROADMAP.md).
 

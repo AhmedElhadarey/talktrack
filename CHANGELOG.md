@@ -24,6 +24,12 @@ First public release.
 - **Exporting a Markdown file** waits for its audio without drawing every slide in a browser on each check.
 - **Theme switch keeps your place** in the walkthrough.
 - **Clearer daemon errors:** a plain-text refusal from the daemon reaches the agent as a message, not a JSON error.
+- **Pinned installs:** README, plugin and Gemini extension install `@v0.1.0` from GitHub; `scripts/sync_version.py` keeps the pins on the current version. Pushing a tag no longer publishes to PyPI; publishing a GitHub release does, after lint, format and tests pass.
+- **Pruning:** `showntell prune --older-than 60d` deletes walkthroughs unchanged for that long and cached audio nothing uses (`--dry-run` lists them); the daemon log stays under 5 MB.
+- **Shared folders only:** when the MCP client shares its folders, `project_dir` must be inside one of them.
+- **Speech fallback:** on Apple silicon, speech switches to ONNX when MLX fails to load or speak, instead of failing.
+- **Windows:** marked untested, best effort.
+- **Formatting:** the code is formatted with `ruff format` (line length 140), checked in CI.
 
 - **Drawings that move:** consecutive ```` ```svg step ```` blocks are versions of one drawing; at `#step-2`, elements that keep their id glide to their new place, size, angle and colour on the narration's clock, so seeking and video show the motion exactly.
 - **Hand-drawn drawings:** ```` ```svg sketch ```` redraws shapes with Rough.js and text in the Virgil face, as on a whiteboard.

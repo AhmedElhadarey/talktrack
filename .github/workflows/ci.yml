@@ -22,6 +22,7 @@ jobs:
           node-version: "22"
       - run: uv sync --locked
       - run: uv run ruff check src tests scripts
+      - run: uv run ruff format --check src tests scripts
       - run: uv run pytest -m "not mlx and not onnx and not browser"
       - run: node --test tests/js/*.test.js
       - run: uv run playwright install --with-deps chromium

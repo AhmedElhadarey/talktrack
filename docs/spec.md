@@ -55,6 +55,8 @@ Code blocks with `file=` and images with a path read from the project root, whic
 2. **MCP roots:** the first root the client reports.
 3. **Shim directory:** the stdio shim's working directory. Claude Code starts stdio servers in the project folder.
 
+When the client reports roots, `project_dir` must be one of them or inside one; otherwise `start_walkthrough` refuses it and names the roots. Roots are asked for mid-call on protocol versions up to 2025-11-25 and through an input-required round trip from 2026-07-28. Clients that report none keep the rules above.
+
 Paths must stay inside the root after resolving symbolic links. Git runs only plumbing commands (`rev-parse`, `cat-file`) with fsmonitor disabled, and diffs are computed in Python, so a repository's diff drivers, filters and hooks never run.
 
 ## Document model
@@ -74,7 +76,7 @@ While a player is connected, a revised slide replaces the old one only once all 
 
 ## Speech
 
-- **Backends:** one interface, two implementations. MLX (mlx-audio) on Apple silicon, ONNX Runtime elsewhere. Both use Kokoro-82M with misaki for English phonemes and return per-token timings.
+- **Backends:** one interface, two implementations. MLX (mlx-audio) on Apple silicon, ONNX Runtime elsewhere. Both use Kokoro-82M with misaki for English phonemes and return per-token timings. On Apple silicon with `auto`, a failure to load MLX or voice a first sentence switches to ONNX; `/health` and `doctor` say why.
 - **Queue:** one worker. Jobs are ordered by their position in their walkthrough, so the opening narration of a new walkthrough jumps ahead of a backlog.
 - **Pronunciation:** narration is rewritten into speakable text before synthesis: identifiers are split, symbols, units, versions and paths are read aloud, and a user word list applies. A character map ties spoken words back to the display text, so captions and cues use what the agent wrote.
 - **Timings:** each spoken token is located in the spoken text, then mapped to display offsets. A cue fires at the start time of the first word at or after its position.
@@ -164,7 +166,7 @@ Findings from the open player, measured after a slide has settled. Their message
 
 ## Install and daemon
 
-- **Commands:** `showntell mcp` (stdio server for MCP clients), `showntell serve` (the daemon), `showntell play FILE.md`, `showntell export`, `showntell doctor`, `showntell list`, `showntell stop`.
+- **Commands:** `showntell mcp` (stdio server for MCP clients), `showntell serve` (the daemon), `showntell play FILE.md`, `showntell export`, `showntell doctor`, `showntell list`, `showntell prune`, `showntell stop`.
 - **Shared daemon:** `showntell mcp` reads the lockfile in the data folder (pid, port, version, build id, build time, token). If the daemon is not running, it starts one in the background and waits for `/health`. If the daemon runs other code, it is replaced once idle when this copy is newer (a later version, or the same version with files written later); otherwise the newer daemon is used as it is, so two installs never replace each other in turn. `showntell stop` stops it.
 - **Port:** 4747 by default; the next free port if that one is taken.
 - **Direct HTTP:** MCP clients can also connect straight to `http://localhost:4747/mcp`.

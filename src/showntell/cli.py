@@ -66,6 +66,10 @@ def main(argv: list[str] | None = None) -> None:
     d = sub.add_parser("doctor", help="check models, speech speed, port and daemon")
     _common(d)
     d.add_argument("--speech", choices=["auto", "mlx", "onnx", "fake"])
+    pr = sub.add_parser("prune", help="delete walkthroughs unchanged for a while, and audio nothing uses")
+    _common(pr)
+    pr.add_argument("--older-than", required=True, metavar="AGE", help="unchanged for at least this long: 60d, 8w or 12h")
+    pr.add_argument("--dry-run", action="store_true", help="list what would go, delete nothing")
     st = sub.add_parser("stop", help="stop the background daemon; the next client starts this copy's")
     _common(st)
     au = sub.add_parser("autostart", help="macOS: start the daemon at login and keep it running")
@@ -104,6 +108,8 @@ def main(argv: list[str] | None = None) -> None:
         from .doctor import doctor
 
         doctor(cfg, args)
+    elif args.cmd == "prune":
+        prune_cmd(cfg, args)
     elif args.cmd == "stop":
         from . import daemon
 
@@ -215,6 +221,22 @@ def list_cmd(cfg: Config) -> None:
             rows.append((data.get("updated", 0), data["id"], data.get("title", ""), len(data.get("slides", [])), dur))
     for _, wid, title, n, dur in sorted(rows, reverse=True)[:30]:
         print(f"{wid}  {mmss(dur):>5}  {n:>2} slides  {title}")
+
+
+def prune_cmd(cfg: Config, args) -> None:
+    import time
+
+    from .prune import parse_age, prune
+
+    try:
+        age = parse_age(args.older_than)
+    except ValueError as e:
+        raise SystemExit(str(e)) from None
+    r = prune(cfg.data_dir, age, dry_run=args.dry_run)
+    verb = "Would remove" if args.dry_run else "Removed"
+    for w in r["walkthroughs"]:
+        print(f"{w['id']}  {time.strftime('%Y-%m-%d', time.localtime(w['updated']))}  {w['title']}")
+    print(f"{verb} {len(r['walkthroughs'])} walkthrough(s) and {r['audio_files']} audio file(s), {r['audio_bytes'] / 1e6:.1f} MB.")
 
 
 LABEL = "dev.showntell.daemon"

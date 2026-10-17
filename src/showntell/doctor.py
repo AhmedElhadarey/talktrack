@@ -12,7 +12,7 @@ from . import __version__, daemon
 from .config import Config
 
 # Until showntell is on PyPI, where this becomes `uvx showntell mcp`.
-INSTALL = "uvx --from git+https://github.com/rahimnathwani/showntell showntell mcp"
+INSTALL = "uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.0 showntell mcp"
 
 OK, WARN, FAIL = "ok", "warn", "fail"
 
@@ -52,9 +52,20 @@ def doctor(cfg: Config, args) -> None:
     backend = make_backend(kind, cfg.data_dir, status)
     t0 = time.time()
     try:
-        backend.load()
-        load_s = time.time() - t0
-        backend.synth("Warming up.", "af_heart", 1.0)
+        try:
+            backend.load()
+            load_s = time.time() - t0
+            backend.synth("Warming up.", "af_heart", 1.0)
+        except Exception as e:
+            if kind != "mlx" or (getattr(args, "speech", None) or cfg.speech) != "auto":
+                raise
+            # The daemon does the same: it falls back to ONNX when MLX cannot speak.
+            _row(WARN, "speech backend", f"MLX failed ({type(e).__name__}: {e}); the daemon speaks with ONNX instead")
+            backend = make_backend("onnx", cfg.data_dir, status)
+            t0 = time.time()
+            backend.load()
+            load_s = time.time() - t0
+            backend.synth("Warming up.", "af_heart", 1.0)
         t1 = time.time()
         audio, tokens = backend.synth("showntell checks that the voice model works and how fast it speaks.", "af_heart", 1.0)
         compute = time.time() - t1

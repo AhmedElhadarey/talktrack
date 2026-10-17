@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -184,6 +185,7 @@ def _ensure(cfg: Config, log) -> dict:
     if lock:
         return lock
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
+    cap_log(cfg.data_dir / "daemon.log")
     logfile = open(cfg.data_dir / "daemon.log", "ab")
     args = [sys.executable, "-m", "showntell", "serve", "--port", str(cfg.port), "--host", cfg.host, "--data", str(cfg.data_dir)]
     detach: dict = {"start_new_session": True}
@@ -244,6 +246,28 @@ def build_id() -> str:
 def built_at() -> float:
     """When this copy's newest file was written: when it was installed, or last edited."""
     return max((p.stat().st_mtime for p in _own_files()), default=0.0)
+
+
+LOG_CAP = 5_000_000
+
+
+def cap_log(path: Path) -> None:
+    """Keep the daemon log under LOG_CAP bytes, the part before in daemon.log.1. The running daemon
+    writes it through its stdout and stderr, so it is copied and emptied in place, not renamed."""
+    try:
+        if path.stat().st_size <= LOG_CAP:
+            return
+        shutil.copyfile(path, path.with_name(path.name + ".1"))
+        os.truncate(path, 0)
+        ino = path.stat().st_ino
+        for fd in (1, 2):  # a stream opened without O_APPEND would otherwise write at its old offset
+            try:
+                if os.fstat(fd).st_ino == ino:
+                    os.lseek(fd, 0, os.SEEK_SET)
+            except OSError:
+                pass
+    except OSError:
+        pass
 
 
 def stop(cfg: Config) -> dict | None:

@@ -165,6 +165,13 @@ def serve(cfg: Config) -> None:
         server = uvicorn.Server(config)
         holder["server"] = server
         daemon.write_lock(cfg, rpc_token)
+
+        async def keep_log_small() -> None:
+            while True:
+                daemon.cap_log(cfg.data_dir / "daemon.log")
+                await asyncio.sleep(3600)
+
+        holder["log"] = asyncio.create_task(keep_log_small())
         log.info(
             "showntell %s at %s (MCP: http://localhost:%d/mcp, speech: %s)",
             _version(),

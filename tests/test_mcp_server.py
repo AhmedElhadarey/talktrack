@@ -92,6 +92,28 @@ async def test_start_says_which_project_folder_files_are_read_from(mcp, tmp_path
         assert str(tmp_path.resolve()) in text(r)
 
 
+@pytest.mark.parametrize("mode", ["auto", "legacy"])  # roots in a round trip (2026-07-28), or asked mid-call
+async def test_project_dir_must_be_inside_a_folder_the_client_shares(service, tmp_path, mode):
+    from mcp_types import ListRootsResult, Root
+
+    shared, other = tmp_path / "shared", tmp_path / "other"
+    (shared / "sub").mkdir(parents=True)
+    other.mkdir()
+
+    async def roots(ctx):
+        return ListRootsResult(roots=[Root(uri=shared.as_uri())])
+
+    async with Client(create_mcp(service), list_roots_callback=roots, mode=mode) as client:
+        (tool,) = [t for t in (await client.list_tools()).tools if t.name == "start_walkthrough"]
+        assert "shared" not in tool.input_schema["properties"]
+        r = await client.call_tool("start_walkthrough", {"title": "T", "project_dir": str(other)})
+        assert r.is_error and "outside the folders this client shares" in text(r)
+        r = await client.call_tool("start_walkthrough", {"title": "T", "project_dir": str(shared / "sub")})
+        assert not r.is_error and str((shared / "sub").resolve()) in text(r)
+        r = await client.call_tool("start_walkthrough", {"title": "T"})
+        assert str(shared) in text(r)  # the first shared folder, when none is given
+
+
 async def test_start_with_opening_returns_the_playable_link(mcp):
     """The opening can ride along with the start call, saving a model round trip."""
     async with mcp as client:

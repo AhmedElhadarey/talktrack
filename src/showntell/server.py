@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import Context, MCPServer
-from mcp_types import CallToolResult, ImageContent, TextContent, ToolAnnotations
+from mcp.server.mcpserver.resolve import ListRoots, Resolve
+from mcp_types import CallToolResult, ImageContent, ListRootsResult, TextContent, ToolAnnotations
 from pydantic import Field
 from starlette.requests import Request
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
@@ -80,6 +81,13 @@ def guide(frame: str) -> str:
     return g
 
 
+def _shared_folders(ctx: Context) -> ListRoots | None:
+    """Ask for the folders the client shares (MCP roots), when it says it can list them. The SDK
+    asks mid-call on older protocol versions and through an input-required round trip on newer."""
+    caps = ctx.client_capabilities
+    return ListRoots() if caps is not None and caps.roots is not None else None
+
+
 def _result(text: str, data: dict) -> CallToolResult:
     # Some clients (Claude Code among them) give the model only the structured content when there is
     # any, so it carries the full reply text too: the guide and instructions live there.
@@ -120,24 +128,23 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
         "showntell", instructions=texts()["instructions"], version=__version__, website_url="https://github.com/rahimnathwani/showntell"
     )
 
-    async def _root(ctx: Context | None, given: str) -> str | None:
-        if given:
-            return given
-        try:
-            import warnings
+    def _root(shared: ListRootsResult | None, given: str) -> str | None:
+        """The project folder: `project_dir`, else the client's first root, else the default. When
+        the client shares folders, `project_dir` must be inside one, so an agent cannot put files
+        from elsewhere on the machine (keys, other projects) on a slide."""
+        from urllib.parse import unquote, urlparse
 
-            with warnings.catch_warnings():  # roots are deprecated as of protocol 2026-07-28
-                warnings.simplefilter("ignore")
-                roots = await asyncio.wait_for(ctx.session.list_roots(), 2.0)  # type: ignore[union-attr]
-            for r in roots.roots:
-                uri = str(r.uri)
-                if uri.startswith("file://"):
-                    from urllib.parse import unquote, urlparse
-
-                    return unquote(urlparse(uri).path)
-        except Exception:
-            pass
-        return project_dir_default
+        roots = [unquote(urlparse(str(r.uri)).path) for r in (shared.roots if shared else []) if str(r.uri).startswith("file://")]
+        if not given:
+            return roots[0] if roots else project_dir_default
+        if roots:
+            p = Path(given).expanduser().resolve()
+            if not any(p.is_relative_to(Path(r).resolve()) for r in roots):
+                raise ValueError(
+                    f"project_dir {given} is outside the folders this client shares ({', '.join(roots)}); "
+                    "use one of them or a folder inside one"
+                )
+        return given
 
     async def _append(handle: str, markdown: str, ctx: Context | None) -> CallToolResult:
         """Add Markdown; until the link is shared, wait for the opening audio and return the link."""
@@ -216,10 +223,11 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
         project_dir: Annotated[str, Field(description=arg_text("start_walkthrough", "project_dir"))] = "",
         opening: Annotated[str, Field(description=arg_text("start_walkthrough", "opening"))] = "",
         theme: Annotated[Literal["", "dark", "light", "paper", "contrast"], Field(description=arg_text("start_walkthrough", "theme"))] = "",
+        shared: Annotated[ListRootsResult | None, Resolve(_shared_folders)] = None,
         ctx: Context = None,  # type: ignore[assignment]
     ) -> CallToolResult:
         try:
-            r = await service.start(title, frame, voice, speed, await _root(ctx, project_dir), theme)
+            r = await service.start(title, frame, voice, speed, _root(shared, project_dir), theme)
         except ValueError as e:
             return _error(str(e))
         head = reply(
@@ -542,6 +550,7 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
                 "version": __version__,
                 "speech": {
                     "backend": n.backend.name,
+                    "fallback": getattr(n.backend, "fell_back", ""),  # why MLX was given up, if it was
                     "state": n.status.state,
                     "detail": n.status.describe(),
                     "queue": n.backlog(),

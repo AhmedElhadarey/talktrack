@@ -12,8 +12,12 @@ from .narrator import Narrator
 def make_backend(kind: str, data_dir: Path, status: Status) -> Backend:
     from . import mlx_backend
 
+    if kind == "auto" and mlx_backend.available():
+        from .fallback import Fallback
+
+        return Fallback(mlx_backend.MlxBackend(data_dir, status), lambda: make_backend("onnx", data_dir, status))
     if kind == "auto":
-        kind = "mlx" if mlx_backend.available() else "onnx"
+        kind = "onnx"
     if kind == "mlx":
         return mlx_backend.MlxBackend(data_dir, status)
     if kind == "onnx":
