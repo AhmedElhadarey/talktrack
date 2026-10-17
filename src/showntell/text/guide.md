@@ -29,7 +29,7 @@ Pick the visual that carries the idea; only the title and brief transitions go w
 |---|---|
 | **Specific code** | `file=` and `lines=` |
 | **One long function** | add `scroll`: reading size, scrolls to each cued range |
-| **Small fix, before → after** | consecutive `step` blocks, one per version |
+| **Small fix, before → after** | one ```` ```python step ```` block per version, back to back; without `step` the second block becomes a new slide |
 | **A change** | `old`/`new` blocks, a `diff` block, or `diff file=... rev=...` |
 | **Flow, structure, states** | Mermaid: short node ids (`api`, `db`), labels of one to four words without parentheses or quotes, `alt="..."` on the heading |
 | **Comparison** | table: a few rows, short cells |
@@ -87,7 +87,7 @@ Targets by visual; a slug is lowercase with hyphens:
 | Visual | Targets |
 |---|---|
 | **Code, terminal** | `#L12`, `#L12-18`, `[label](#L12 "exact text")`. Inline code and terminals count from 1 (or `start=`) at the first line inside the fence, blank and output lines included |
-| **`step` blocks** | `#step-2` morphs to version 2; later line cues count in it. Only on a slide of consecutive `step` blocks |
+| **Code versions** | `#step-2` morphs to version 2; later line cues count in it. Only when each block's info string has `step` |
 | **Diff** | `#-L5` old side, `#+L7` or `#L7` new; a `diff` block counts from its `@@` header |
 | **List, cards** | `#id` from `{#id}`, else the bold title's slug: `**Disk cache**` is `#disk-cache` |
 | **Table** | `#row-2`, or the `{#id}` ending a row's last cell |
