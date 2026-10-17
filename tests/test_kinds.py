@@ -98,9 +98,9 @@ def test_terminal_cues_are_lines(build):
 def test_too_many_bars_and_bad_charts_are_reported(build):
     bars = "\n".join(f"b{i}: {i}" for i in range(15))
     _, b = slide(build, f"```chart bar\n{bars}\n```", "Many bars.")
-    assert any(i.code == "chart_too_big" for i in b.issues)
+    assert any(i.code == "block_too_big" for i in b.issues)
     _, b = slide(build, "```chart line\nfast: 1, 2\n```", "A line.")
-    assert any(i.code == "chart_error" for i in b.issues)
+    assert any(i.code == "block_error" for i in b.issues)
 
 
 def test_build_order_check_covers_new_kinds(build):

@@ -186,26 +186,26 @@ class Builder:
         if b.kind == "code" and b.lang == "chart":
             vis, problems = kinds.parse_chart(b.text, b.attrs)
             for p in problems:
-                self._issue("chart_error", f"Line {b.line}: {p}.", "See the chart format in the resource showntell://slide-kinds.", line=b.line)
+                self._issue("block_error", f"Line {b.line}: {p}.", "See the chart format in the resource showntell://slide-kinds.", line=b.line)
             n = len(vis["ids"])
             if n > CHART_MAX:
-                self._issue("chart_too_big", f"The chart on line {b.line} has {n} {'series' if vis['type'] == 'line' else 'bars'}; "
+                self._issue("block_too_big", f"The chart on line {b.line} has {n} {'series' if vis['type'] == 'line' else 'bars'}; "
                             f"charts read well up to {CHART_MAX}.", "Group the small ones, or split the chart.", line=b.line)
             return self._set(self._slide_for_visual("chart"), "chart", vis)
         if b.kind == "code" and b.lang == "stat":
             vis, problems = kinds.parse_stat(b.text, b.attrs)
             for p in problems:
-                self._issue("chart_error", f"Line {b.line}: {p}.", "See the stat format in the resource showntell://slide-kinds.", line=b.line)
+                self._issue("block_error", f"Line {b.line}: {p}.", "See the stat format in the resource showntell://slide-kinds.", line=b.line)
             if len(vis["items"]) > STAT_MAX:
-                self._issue("chart_too_big", f"The stat block on line {b.line} has {len(vis['items'])} numbers; a slide holds {STAT_MAX} at a glance.",
+                self._issue("block_too_big", f"The stat block on line {b.line} has {len(vis['items'])} numbers; a slide holds {STAT_MAX} at a glance.",
                             "Keep the ones that matter, or use a chart.", line=b.line)
             return self._set(self._slide_for_visual("stat"), "stat", vis)
         if b.kind == "code" and b.lang in kinds.CHAT_LANGS:
             vis, problems = kinds.parse_chat(b.text, b.attrs)
             for p in problems:
-                self._issue("chart_error", f"Line {b.line}: {p}.", "Start each message with `name:`.", line=b.line)
+                self._issue("block_error", f"Line {b.line}: {p}.", "Start each message with `name:`.", line=b.line)
             if len(vis["items"]) > CHAT_MAX:
-                self._issue("chart_too_big", f"The exchange on line {b.line} has {len(vis['items'])} messages; a slide holds about {CHAT_MAX}.",
+                self._issue("block_too_big", f"The exchange on line {b.line} has {len(vis['items'])} messages; a slide holds about {CHAT_MAX}.",
                             "Split it across slides, or trim the messages.", line=b.line)
             return self._set(self._slide_for_visual("chat"), "chat", vis)
         if b.kind == "code" and b.lang in kinds.TERMINAL_LANGS:

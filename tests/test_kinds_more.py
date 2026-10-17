@@ -137,7 +137,7 @@ def test_chat_slide_cues_and_size(build):
     assert s.kind == "chat" and [c["id"] for c in s.says[0].cues] == ["m1", "m2"]
     many = "\n".join(f"u{i % 2}: message {i}" for i in range(12))
     _, codes, _ = last(build, f"## C\n\n```chat\n{many}\n```\n\nA lot.\n")
-    assert "chart_too_big" in codes
+    assert "block_too_big" in codes
 
 
 def test_chart_notes_are_targets():

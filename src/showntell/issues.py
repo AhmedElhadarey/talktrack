@@ -33,8 +33,8 @@ CODES: dict[str, tuple[str, str]] = {
     "diff_hunks": ("warning", "a pasted diff has several hunks"),
     "diagram_too_big": ("warning", "a diagram has more nodes than the frame shows comfortably"),
     "generated_file": ("info", "a diff shows a lockfile or generated file"),
-    "chart_error": ("error", "a chart block could not be read as written"),
-    "chart_too_big": ("warning", "a chart has more bars or series than the frame shows comfortably"),
+    "block_error": ("error", "a line in a chart, stat or chat block could not be read and was left out"),
+    "block_too_big": ("warning", "a chart, stat or chat block has more parts than the frame shows comfortably"),
     "tree_error": ("warning", "a file tree's nesting is inconsistent"),
     # cues
     "cue_off_code": ("error", "a cue points at lines the slide does not show"),

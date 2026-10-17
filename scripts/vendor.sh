@@ -24,6 +24,5 @@ cp "$TMP/katex/package/dist/fonts/"*.woff2 "$V/katex/fonts/"
 cp "$TMP/katex/package/LICENSE" "$V/LICENSES/katex.txt"
 fetch @highlightjs/cdn-assets 11.10.0 5df5f63aad9acb3660d0d008cd68bdf5a6b7121816f517e2434d1e2f027b220f
 cp "$TMP/@highlightjs/cdn-assets/package/highlight.min.js" "$V/hljs/"
-cp "$TMP/@highlightjs/cdn-assets/package/styles/github-dark.min.css" "$TMP/@highlightjs/cdn-assets/package/styles/github.min.css" "$V/hljs/"
 cp "$TMP/@highlightjs/cdn-assets/package/LICENSE" "$V/LICENSES/highlight.js.txt"
 du -sh "$V"
