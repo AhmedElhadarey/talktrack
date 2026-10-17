@@ -409,6 +409,18 @@ def test_finish_draws_every_slide_and_reports_layout(daemon):
     assert not any(i["code"] == "not_checked" and "player" in i["message"] for i in f["issues"])
 
 
+def test_long_code_steps_that_scroll_fit_the_slide(daemon):
+    call = _rpc(daemon)
+    r = call("start", title="Long steps", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    one = "\n".join(f"step_{i} = compute(step_{i - 1})" for i in range(1, 45))
+    two = one.replace("compute(", "compute_faster(")
+    md = f"# Long steps\n\nOpening words.\n\n## Faster {{#faster}}\n\n```python step scroll\n{one}\n```\n```python step scroll\n{two}\n```\n\nIt [gets faster](#step-2) at [the end](#L40).\n"
+    call("add", handle=r["handle"], markdown=md)
+    call("playable", handle=r["handle"], timeout=10)
+    f = call("finish", handle=r["handle"], questions=None)
+    assert not [i for i in f["player_issues"] if i["code"] == "overflow"], f["player_issues"]
+
+
 def test_preview_returns_pictures_of_slides(daemon, browser):
     import base64
 

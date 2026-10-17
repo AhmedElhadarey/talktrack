@@ -55,7 +55,7 @@ export default {
         h = Math.max(h, box.offsetHeight);
       }
       box.style.minWidth = `${w}px`;
-      box.style.minHeight = `${h}px`;
+      if (!box.classList.contains("scroll")) box.style.minHeight = `${h}px`; // scrolling code takes the slide's height
       parts.setStep(was, false);
     }
     fit(body);
