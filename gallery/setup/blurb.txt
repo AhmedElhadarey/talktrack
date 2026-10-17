@@ -1,0 +1,1 @@
+Asked to show a new contributor how to set up this repo and run its tests: the commands from the README and CONTRIBUTING, real output from the test collector and the command-line help, and where the tests live.

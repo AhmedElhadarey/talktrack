@@ -1,0 +1,221 @@
+WEBVTT
+
+1
+00:00:00.195 --> 00:00:03.675
+An MCP client and server talk in JSON-RPC
+
+2
+00:00:03.675 --> 00:00:04.695
+messages.
+
+3
+00:00:04.695 --> 00:00:06.250
+We'll follow three exchanges,
+
+4
+00:00:06.250 --> 00:00:09.575
+in order, until a tool actually runs.
+
+5
+00:00:09.995 --> 00:00:12.433
+The client is the app hosting the model.
+
+6
+00:00:12.433 --> 00:00:14.458
+The server owns the tools.
+
+7
+00:00:14.458 --> 00:00:17.650
+Messages travel as JSON-RPC over standard
+
+8
+00:00:17.650 --> 00:00:21.400
+input and output, or over HTTP.
+
+9
+00:00:21.545 --> 00:00:23.045
+First comes the handshake,
+
+10
+00:00:23.045 --> 00:00:25.525
+where both sides agree on a protocol version
+
+11
+00:00:25.525 --> 00:00:26.932
+and what they support.
+
+12
+00:00:26.932 --> 00:00:29.645
+Then the client asks what tools exist.
+
+13
+00:00:29.645 --> 00:00:32.000
+Last, it calls one and gets a result
+
+14
+00:00:32.000 --> 00:00:33.200
+back.
+
+15
+00:00:33.620 --> 00:00:35.295
+The client speaks first.
+
+16
+00:00:35.295 --> 00:00:38.012
+Its request carries a protocol version and its
+
+17
+00:00:38.012 --> 00:00:39.900
+own capabilities.
+
+18
+00:00:40.020 --> 00:00:42.162
+The server replies with the version it will
+
+19
+00:00:42.162 --> 00:00:44.120
+use and what it offers.
+
+20
+00:00:44.120 --> 00:00:45.795
+Here it says it has tools,
+
+21
+00:00:45.795 --> 00:00:47.225
+and that it will tell the client when
+
+22
+00:00:47.225 --> 00:00:49.075
+that list changes.
+
+23
+00:00:49.220 --> 00:00:51.370
+Then the client sends a notification.
+
+24
+00:00:51.370 --> 00:00:52.450
+It has no id,
+
+25
+00:00:52.450 --> 00:00:54.320
+so no reply is expected.
+
+26
+00:00:54.320 --> 00:00:56.700
+It just means: ready.
+
+27
+00:00:57.120 --> 00:00:59.495
+The list request has no parameters.
+
+28
+00:00:59.495 --> 00:01:00.970
+Its id is two,
+
+29
+00:01:00.970 --> 00:01:02.520
+and the reply will echo it,
+
+30
+00:01:02.520 --> 00:01:05.775
+so the client can match answers to questions.
+
+31
+00:01:05.895 --> 00:01:08.395
+The reply describes each tool with a name,
+
+32
+00:01:08.395 --> 00:01:10.750
+a description and a JSON Schema for its
+
+33
+00:01:10.750 --> 00:01:11.632
+input.
+
+34
+00:01:11.632 --> 00:01:14.032
+The client passes these to the model.
+
+35
+00:01:14.032 --> 00:01:16.395
+The model never sees the wire format,
+
+36
+00:01:16.395 --> 00:01:18.625
+only these definitions.
+
+37
+00:01:19.045 --> 00:01:21.370
+The model decides to use a tool.
+
+38
+00:01:21.370 --> 00:01:23.362
+The client turns that into a call with
+
+39
+00:01:23.362 --> 00:01:26.975
+the tool name and arguments matching the schema.
+
+40
+00:01:27.120 --> 00:01:29.638
+The server runs the code and returns content
+
+41
+00:01:29.638 --> 00:01:30.482
+blocks.
+
+42
+00:01:30.482 --> 00:01:33.675
+Text is common, but images and resources also
+
+43
+00:01:33.675 --> 00:01:34.825
+work.
+
+44
+00:01:34.970 --> 00:01:37.670
+A failing tool still gets a normal result,
+
+45
+00:01:37.670 --> 00:01:39.807
+with the error flag set to true,
+
+46
+00:01:39.807 --> 00:01:41.600
+so the model can read the failure and
+
+47
+00:01:41.600 --> 00:01:42.607
+react.
+
+48
+00:01:42.607 --> 00:01:45.883
+Protocol-level problems, like an unknown tool name,
+
+49
+00:01:45.883 --> 00:01:49.575
+come back as a JSON-RPC error instead.
+
+50
+00:01:50.045 --> 00:01:52.625
+Four things carry the whole exchange.
+
+51
+00:01:52.770 --> 00:01:55.145
+The handshake happens once per connection.
+
+52
+00:01:55.145 --> 00:01:57.807
+Discovery tells the model what it can do.
+
+53
+00:01:57.807 --> 00:02:01.500
+Execution is the only step with side effects.
+
+54
+00:02:01.620 --> 00:02:03.912
+And the ids let many requests be in
+
+55
+00:02:03.912 --> 00:02:06.600
+flight at once without confusion.

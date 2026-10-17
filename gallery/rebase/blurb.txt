@@ -1,1 +1,1 @@
-Asked to explain git rebase versus merge, with diagrams of the commit graph..
+Asked to explain git rebase versus merge, with diagrams of the commit graph.

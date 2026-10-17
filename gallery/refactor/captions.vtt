@@ -1,0 +1,193 @@
+WEBVTT
+
+1
+00:00:00.170 --> 00:00:02.413
+The tree parser does three jobs in one
+
+2
+00:00:02.413 --> 00:00:04.195
+45-line function.
+
+3
+00:00:04.195 --> 00:00:05.358
+We'll pull them apart,
+
+4
+00:00:05.358 --> 00:00:07.800
+one small edit at a time.
+
+5
+00:00:08.270 --> 00:00:10.537
+First, the scan loop turns each line into
+
+6
+00:00:10.537 --> 00:00:12.770
+a depth, a name and a note.
+
+7
+00:00:12.770 --> 00:00:15.375
+It also guesses the indent unit.
+
+8
+00:00:15.545 --> 00:00:18.350
+Second, the rebase shifts depths so the shallowest
+
+9
+00:00:18.350 --> 00:00:20.025
+entry is zero.
+
+10
+00:00:20.220 --> 00:00:22.663
+Third, the second loop decides which entries are
+
+11
+00:00:22.663 --> 00:00:26.150
+folders, repairs bad indents and builds ids
+
+12
+00:00:26.150 --> 00:00:27.925
+from the parent path.
+
+13
+00:00:28.145 --> 00:00:30.900
+Last, a dedupe pass appends tildes to repeated
+
+14
+00:00:30.900 --> 00:00:32.300
+ids.
+
+15
+00:00:32.720 --> 00:00:35.207
+The first loop has two small knots.
+
+16
+00:00:35.207 --> 00:00:37.337
+The note handling tests for a hash and
+
+17
+00:00:37.337 --> 00:00:40.100
+then partitions, but partition already copes with a
+
+18
+00:00:40.100 --> 00:00:41.395
+missing separator.
+
+19
+00:00:41.395 --> 00:00:43.525
+So one line does it.
+
+20
+00:00:43.645 --> 00:00:46.170
+The indent unit is set only once.
+
+21
+00:00:46.170 --> 00:00:48.475
+Writing it as an or expression gives the
+
+22
+00:00:48.475 --> 00:00:50.720
+same result with half the lines.
+
+23
+00:00:50.720 --> 00:00:52.620
+Rows also become tuples,
+
+24
+00:00:52.620 --> 00:00:55.000
+since nothing mutates them yet.
+
+25
+00:00:55.145 --> 00:00:57.500
+That frees the rebase step to be absorbed
+
+26
+00:00:57.500 --> 00:00:58.900
+elsewhere.
+
+27
+00:00:59.345 --> 00:01:01.345
+The tail has three passes.
+
+28
+00:01:01.345 --> 00:01:04.113
+The rebase mutates every row just to subtract
+
+29
+00:01:04.113 --> 00:01:05.058
+the minimum.
+
+30
+00:01:05.058 --> 00:01:08.500
+The dedupe walks every item a second time.
+
+31
+00:01:08.645 --> 00:01:10.620
+Both fold into the main loop.
+
+32
+00:01:10.620 --> 00:01:13.300
+The base is computed once and subtracted as
+
+33
+00:01:13.300 --> 00:01:14.333
+we go.
+
+34
+00:01:14.333 --> 00:01:17.138
+The dedupe becomes a local id checked against
+
+35
+00:01:17.138 --> 00:01:19.800
+a set before the item is built.
+
+36
+00:01:19.945 --> 00:01:21.420
+Behaviour is the same,
+
+37
+00:01:21.420 --> 00:01:23.525
+with two fewer loops and no mutation of
+
+38
+00:01:23.525 --> 00:01:24.800
+rows.
+
+39
+00:01:25.245 --> 00:01:26.770
+Two passes are gone,
+
+40
+00:01:26.770 --> 00:01:29.433
+and the note and indent-unit logic shrank.
+
+41
+00:01:29.433 --> 00:01:31.488
+The output is the same dicts and the
+
+42
+00:01:31.488 --> 00:01:33.675
+same problem messages.
+
+43
+00:01:33.845 --> 00:01:35.495
+Next step, if you want it:
+
+44
+00:01:35.495 --> 00:01:38.070
+move the depth rules into their own helper,
+
+45
+00:01:38.070 --> 00:01:40.945
+so the scan loop only reads lines.
+
+46
+00:01:40.945 --> 00:01:43.920
+Run the existing tree tests before and after,
+
+47
+00:01:43.920 --> 00:01:46.937
+since the dedupe order and the indent-error messages
+
+48
+00:01:46.937 --> 00:01:49.450
+are the parts most likely to slip.

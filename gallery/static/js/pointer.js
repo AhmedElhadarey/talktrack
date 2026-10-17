@@ -1,0 +1,197 @@
+// The pointer and the camera: where a cue points, the mark drawn around it, scrolling long code
+// to the cued lines, and zooming onto a target.
+
+import { stateAt } from "./timeline.js";
+import { textRange } from "./draw.js";
+import { kindOf } from "./render.js";
+import { body, FRAMES, now, pointer, reducedMotion, report, S, scale, stage } from "./state.js";
+import { render } from "./view.js";
+import { norm } from "./util.js";
+
+// Long code (`scroll`) scrolls so the latest cued lines sit in the middle; other lines dim.
+// Returns true while it is moving; the pointer is placed when it lands.
+export function scrollCode(st, cueKey) {
+  const { view } = S;
+  const box = view.parts.visual;
+  if (!box?.classList?.contains("scroll")) return false;
+  const code = box.querySelector(".code");
+  const last = [...st.cues].reverse().find((c) => c.kind === "lines");
+  box.classList.toggle("focusing", !!last);
+  let y = 0;
+  if (last) {
+    const lines = [];
+    for (let n = last.l0; n <= last.l1; n++) if (view.parts.lines.new.get(n)) lines.push(view.parts.lines.new.get(n));
+    if (lines.length) {
+      const top = lines[0].offsetTop, bottom = lines[lines.length - 1].offsetTop + lines[lines.length - 1].offsetHeight;
+      const room = box.clientHeight - (code.offsetTop || 0);
+      y = Math.max(0, Math.min(code.scrollHeight - room, (top + bottom) / 2 - room / 2));
+    }
+  }
+  return move(code, `translateY(${-Math.round(y)}px)`, cueKey);
+}
+
+// Zoom the slide onto the cue's target (cue style `zoom`), or back out. Returns true while moving.
+export function camera(rects, cueKey) {
+  const { W, TL, shown } = S;
+  const bodyEl = S.view.body;
+  if (!bodyEl) return false;
+  if (!rects) {
+    S.zoomFor = "";
+    return move(bodyEl, "", cueKey);
+  }
+  if (S.zoomFor === cueKey) return false; // already there
+  S.zoomFor = cueKey;
+  // Measure the target unzoomed, then fit it to about 60% of the slide body.
+  const was = bodyEl.style.transform;
+  bodyEl.style.transition = "none";
+  bodyEl.style.transform = "";
+  const b = bodyEl.getBoundingClientRect();
+  const live = cueTarget(W.slides[shown.slide] && stateAt(W, TL, now()).cue, W.slides[shown.slide]);
+  const rs = (live?.rects || rects).filter((r) => r && (r.width || r.height));
+  bodyEl.style.transform = was;
+  void bodyEl.offsetWidth;
+  bodyEl.style.transition = "";
+  if (!rs.length) return false;
+  const k = scale();
+  const l = Math.min(...rs.map((r) => r.left)), t = Math.min(...rs.map((r) => r.top));
+  const r = Math.max(...rs.map((r) => r.right)), bt = Math.max(...rs.map((r) => r.bottom));
+  const w = (r - l) / k, h = (bt - t) / k, bw = b.width / k, bh = b.height / k;
+  const z = Math.max(1, Math.min(2.6, (0.6 * bw) / Math.max(w, 1), (0.6 * bh) / Math.max(h, 1)));
+  const cx = ((l + r) / 2 - b.left) / k, cy = ((t + bt) / 2 - b.top) / k;
+  return move(bodyEl, `translate(${bw / 2 - cx * z}px, ${bh / 2 - cy * z}px) scale(${z})`, cueKey);
+}
+
+// Apply a transform; animate it while playing, jump when seeking or capturing.
+function move(el, transform, cueKey) {
+  if (el.style.transform === transform) return false;
+  const animate = S.playing && !body.classList.contains("capture") && !reducedMotion();
+  if (!animate) {
+    el.style.transition = "none";
+    el.style.transform = transform;
+    void el.offsetWidth;
+    el.style.transition = "";
+    return false;
+  }
+  el.style.transform = transform;
+  pointer.hidden = true;
+  const done = (e) => {
+    if (e.target !== el) return;
+    el.removeEventListener("transitionend", done);
+    if (S.lastCueKey === cueKey) { S.lastCueKey = ""; render(true); }
+  };
+  el.addEventListener("transitionend", done);
+  return true;
+}
+
+// Where a cue points: a list of DOMRect-like boxes, plus side effects (active classes, highlights).
+// The slide's kind answers first (image regions, diagram nodes); then lines, items, rows and text.
+export function cueTarget(cue, slide) {
+  const p = S.view.parts;
+  if (!cue) return null;
+  if (cue.kind === "step" || cue.kind === "edge") return null; // the code's change, or the moving dot, is the pointer
+  const own = kindOf(slide).target?.(cue, p, { wholeVisual });
+  if (own !== undefined) return own;
+  const range = (r) => { if (window.CSS?.highlights) CSS.highlights.set("ptr", new Highlight(r)); };
+  if (cue.kind === "lines") {
+    const map = p.lines[cue.side || "new"] || p.lines.new;
+    const els = [];
+    for (let n = cue.l0; n <= cue.l1; n++) if (map.get(n)) els.push(map.get(n));
+    if (!els.length) return null;
+    if (cue.text) {
+      for (const ln of els) {
+        const r = findText(ln.querySelector(".tx"), cue.text);
+        if (r) { ln.classList.add("hl"); range(r); return { rects: [...r.getClientRects()] }; }
+      }
+    }
+    els.forEach((e) => e.classList.add("hl"));
+    return { rects: els.map((e) => e.querySelector(".tx").getBoundingClientRect()) };
+  }
+  if (cue.kind === "item" || cue.kind === "row") {
+    const e = p.items.get(cue.id) || p.rows.get(cue.id);
+    if (!e) return null;
+    e.classList.add("active");
+    e.parentElement.classList.add("has-active");
+    if (cue.kind === "item") return { rects: e instanceof SVGElement ? [e.getBoundingClientRect()] : [] }; // a card's own highlight is the pointer
+    return { rects: [e.getBoundingClientRect()] };
+  }
+  if (cue.kind === "text" && cue.text) {
+    for (const side of ["new", "old"]) {
+      for (const ln of p.lines[side].values()) {
+        const r = findText(ln.querySelector(".tx"), cue.text);
+        if (r) { ln.classList.add("hl"); range(r); return { rects: [...r.getClientRects()] }; }
+      }
+    }
+    for (const e of [...p.items.values(), ...p.rows.values()]) {
+      if (norm(e.textContent).includes(norm(cue.text))) {
+        e.classList.add("active");
+        e.parentElement.classList.add("has-active");
+        return { rects: [e.getBoundingClientRect()] };
+      }
+    }
+    // KaTeX keeps an invisible MathML copy first; search only what is drawn.
+    const drawn = p.visual?.querySelector?.(".katex-html") || p.visual;
+    const r = drawn && findText(drawn, cue.text);
+    if (r) { range(r); return { rects: [...r.getClientRects()] }; }
+  }
+  return wholeVisual();
+}
+
+function wholeVisual() {
+  const v = S.view.parts.visual;
+  if (!v || S.shown.slide < 0 || kindOf(S.W.slides[S.shown.slide]).bare) return null;
+  const t = v.querySelector?.(".katex-display") || S.view.parts.svg || v;
+  return { rects: [t.getBoundingClientRect()], wide: true };
+}
+
+function findText(container, text) {
+  if (!container || !text) return null;
+  const hay = container.textContent;
+  const i = hay.indexOf(text);
+  if (i >= 0) return textRange(container, i, i + text.length);
+  // Tolerate differences in spacing: search a collapsed copy, keeping a map back to offsets.
+  let flat = "";
+  const map = [];
+  for (let k = 0; k < hay.length; k++) {
+    const space = /\s/.test(hay[k]);
+    if (space && (flat.endsWith(" ") || !flat)) continue;
+    flat += space ? " " : hay[k];
+    map.push(k);
+  }
+  const want = text.replace(/\s+/g, " ").trim();
+  const j = flat.indexOf(want);
+  if (j < 0 || !want) return null;
+  return textRange(container, map[j], map[j + want.length - 1] + 1);
+}
+
+// Pointer styles from a cue's {.circle}, {.underline}, {.arrow} or {.highlight}; drawn as SVG
+// that inks itself in, so a new cue draws a new mark.
+const MARKS = {
+  circle: '<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path pathLength="1" d="M52 4 C80 3 97 22 96 50 C95 78 74 97 48 96 C22 95 3 76 4 49 C5 24 26 5 56 7"/></svg>',
+  underline: '<svg viewBox="0 0 100 10" preserveAspectRatio="none"><path pathLength="1" d="M2 6 C20 2 34 9 52 5 S84 3 98 6"/></svg>',
+  arrow: '<svg viewBox="0 0 100 60"><path pathLength="1" d="M4 8 C30 10 58 22 84 44 M70 46 L86 46 L84 30"/></svg>',
+};
+export function placePointer(rects, wide, style = "") {
+  rects = rects.filter((r) => r && (r.width || r.height));
+  if (!rects.length) { pointer.hidden = true; return; }
+  const kind = ["circle", "underline", "arrow", "highlight"].find((s) => style.includes(s)) || "box";
+  if (pointer.dataset.kind !== kind || kind !== "box") {
+    pointer.dataset.kind = kind;
+    pointer.innerHTML = MARKS[kind] || "";
+  }
+  const l = Math.min(...rects.map((r) => r.left)), t = Math.min(...rects.map((r) => r.top));
+  const r = Math.max(...rects.map((r) => r.right)), b = Math.max(...rects.map((r) => r.bottom));
+  const sr = stage.getBoundingClientRect(), k = scale(), pad = wide ? 12 : 6;
+  pointer.style.left = `${(l - sr.left) / k - pad}px`;
+  pointer.style.top = `${(t - sr.top) / k - pad}px`;
+  pointer.style.width = `${(r - l) / k + pad * 2}px`;
+  pointer.style.height = `${(b - t) / k + pad * 2}px`;
+  pointer.classList.toggle("wide", !!wide && kind === "box");
+  pointer.hidden = false;
+  if (S.view?.body?.style.transform) return; // zoomed in: the target may be cropped on purpose
+  const [w, h] = FRAMES[S.W.frame] || FRAMES.landscape;
+  const x = (l - sr.left) / k, y = (t - sr.top) / k;
+  if (x < -4 || y < -4 || x + (r - l) / k > w + 4 || y + (b - t) / k > h + 4) {
+    const id = S.W.slides[S.shown.slide]?.id || "";
+    report(`Slide ${id}: a cue points at something partly outside the visible slide.`, "pointer_offstage", id);
+  }
+}

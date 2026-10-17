@@ -1,0 +1,1 @@
+Asked to explain what an MCP client and server say to each other when a tool is called: initialize, tools/list and tools/call, with the messages they exchange.

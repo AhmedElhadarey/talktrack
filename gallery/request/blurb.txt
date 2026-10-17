@@ -1,0 +1,1 @@
+Asked to show how one add_slides call travels from the coding agent through the stdio shim, the daemon, the builder and the narrator, and into the browser player.

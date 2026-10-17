@@ -1,0 +1,1 @@
+Asked to explain how MP4 export got faster: the first version rendered at 3.6 times real time, skipping unchanged frames reached 8.3, a faster x264 preset 10.2, and JPEG frames 16.

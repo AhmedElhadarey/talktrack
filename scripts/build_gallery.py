@@ -8,7 +8,8 @@ gallery.json lists entries: [{"slug": "...", "id": "<walkthrough id>", "blurb": 
 from the data folder in SHOWNTELL_DATA (default ~/.local/share/showntell). With
 --from-results, the entries come from an eval run made with --keep, using each prompt as
 the blurb. --add keeps the walkthroughs already in gallery/ (their data folders may be gone),
-refreshes the shared player, and lists every exported folder on the index page.
+refreshes the shared player, and lists every exported folder on the index page, in the order of
+gallery/order.txt when it exists.
 """
 
 from __future__ import annotations
@@ -54,7 +55,7 @@ def _entries() -> tuple[list[dict], Config]:
         for r in json.loads(Path(args.from_results).read_text()):
             if not r.get("url"):
                 continue
-            blurb = prompts.get(r["id"], "").removeprefix("Use showntell to ").split(". ")[0]
+            blurb = prompts.get(r["id"], "").removeprefix("Use showntell to ").split(". ")[0].rstrip(".")
             entries.append({"slug": r["id"], "id": r["url"].rstrip("/").rsplit("/", 1)[-1],
                             "blurb": f"Asked to {blurb}." if blurb else ""})
     else:
@@ -88,12 +89,17 @@ def main() -> None:
         out = export(cfg.data_dir, e["id"], OUT / e["slug"], mp3=True, static_href="../static", copy_static=False)
         (out / "blurb.txt").write_text(e.get("blurb", ""))
         print(f"exported {e['slug']}: {out}")
-    order = [e["slug"] for e in entries]
+    listed = OUT / "order.txt"  # optional: one slug per line, the order of the index page
+    order = listed.read_text().split() if listed.is_file() else [e["slug"] for e in entries]
     folders = sorted((d for d in OUT.iterdir() if (d / "data.json").is_file()),
                      key=lambda d: (order.index(d.name) if d.name in order else -1, d.name))
     cards = []
+    from showntell.server import render_player
+
     for d in folders:
         w = _exported(d)
+        # Every page is rendered again, so walkthroughs exported earlier match the player in static/.
+        (d / "index.html").write_text(render_player(w.title, w.frame, "", "../static", live=False, theme=w.theme, tokens=w.tokens))
         tl = timeline(w)
         end = tl[-1][0] + (tl[-1][2].duration or tl[-1][2].pause) if tl else 0
         blurb = (d / "blurb.txt").read_text() if (d / "blurb.txt").is_file() else ""

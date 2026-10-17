@@ -1,0 +1,105 @@
+WEBVTT
+
+1
+00:00:00.170 --> 00:00:03.325
+The first version rendered at 3.6 times real
+
+2
+00:00:03.325 --> 00:00:04.195
+time.
+
+3
+00:00:04.195 --> 00:00:06.320
+Three changes took it to 16,
+
+4
+00:00:06.320 --> 00:00:08.725
+and we'll look at the numbers for each.
+
+5
+00:00:09.170 --> 00:00:11.625
+The first version rendered at three point six
+
+6
+00:00:11.625 --> 00:00:13.058
+times real time.
+
+7
+00:00:13.058 --> 00:00:15.400
+Ten minutes of slides took almost three minutes
+
+8
+00:00:15.400 --> 00:00:16.900
+to export.
+
+9
+00:00:17.045 --> 00:00:19.570
+Skipping unchanged frames more than doubled that,
+
+10
+00:00:19.570 --> 00:00:21.475
+to eight point three.
+
+11
+00:00:21.620 --> 00:00:24.725
+A faster x264 preset brought it to ten
+
+12
+00:00:24.725 --> 00:00:26.125
+point two.
+
+13
+00:00:26.320 --> 00:00:29.350
+JPEG frames finished the job at sixteen.
+
+14
+00:00:29.820 --> 00:00:31.995
+Slides spend most of their time still,
+
+15
+00:00:31.995 --> 00:00:35.483
+so skipping unchanged frames gave the biggest jump.
+
+16
+00:00:35.483 --> 00:00:38.150
+A frame identical to the last is reused
+
+17
+00:00:38.150 --> 00:00:40.250
+instead of captured again.
+
+18
+00:00:40.370 --> 00:00:43.500
+The x264 preset trades a little compression
+
+19
+00:00:43.500 --> 00:00:45.045
+for encoder speed.
+
+20
+00:00:45.045 --> 00:00:46.745
+It gave the smallest gain,
+
+21
+00:00:46.745 --> 00:00:48.700
+about twenty percent.
+
+22
+00:00:48.870 --> 00:00:51.413
+JPEG frames are cheaper to produce and to
+
+23
+00:00:51.413 --> 00:00:54.525
+decode than PNG, which gave another sixty
+
+24
+00:00:54.525 --> 00:00:55.458
+percent.
+
+25
+00:00:55.458 --> 00:00:58.062
+Together the changes make export about four and
+
+26
+00:00:58.062 --> 00:01:00.150
+a half times faster.

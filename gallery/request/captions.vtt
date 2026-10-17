@@ -1,0 +1,257 @@
+WEBVTT
+
+1
+00:00:00.170 --> 00:00:02.575
+The agent sends Markdown and a few seconds
+
+2
+00:00:02.575 --> 00:00:05.295
+later the browser shows narrated slides.
+
+3
+00:00:05.295 --> 00:00:08.025
+We'll follow that one call through the stdio
+
+4
+00:00:08.025 --> 00:00:11.825
+shim, the daemon, the builder and the narrator.
+
+5
+00:00:12.245 --> 00:00:15.150
+The agent speaks MCP over stdio to a
+
+6
+00:00:15.150 --> 00:00:16.650
+small shim.
+
+7
+00:00:16.770 --> 00:00:18.995
+The shim forwards the call to the daemon,
+
+8
+00:00:18.995 --> 00:00:22.350
+which is one long-lived process per machine.
+
+9
+00:00:22.545 --> 00:00:25.770
+Inside it, the builder turns Markdown into slides,
+
+10
+00:00:25.770 --> 00:00:28.950
+and the narrator turns their text into speech.
+
+11
+00:00:29.120 --> 00:00:31.525
+Finally the daemon pushes the result to the
+
+12
+00:00:31.525 --> 00:00:32.875
+browser.
+
+13
+00:00:33.295 --> 00:00:35.945
+The agent's tool call lands in the shim,
+
+14
+00:00:35.945 --> 00:00:39.295
+which looks for daemon.json in the data folder.
+
+15
+00:00:39.295 --> 00:00:41.200
+If no daemon of the same version is
+
+16
+00:00:41.200 --> 00:00:45.750
+healthy, it starts showntell serve and waits for /health.
+
+17
+00:00:45.895 --> 00:00:48.113
+Then the shim's service forwards the call as
+
+18
+00:00:48.113 --> 00:00:53.095
+an HTTP post to /api/rpc/add,
+
+19
+00:00:53.095 --> 00:00:55.550
+with the arguments as JSON.
+
+20
+00:00:55.670 --> 00:00:57.237
+The bearer token
+
+21
+00:01:02.170 --> 00:01:04.895
+The route compares the token in constant time,
+
+22
+00:01:04.895 --> 00:01:07.075
+then checks the method name against an allow
+
+23
+00:01:07.075 --> 00:01:08.250
+list.
+
+24
+00:01:08.370 --> 00:01:11.312
+It then calls the same method on LocalService
+
+25
+00:01:11.312 --> 00:01:14.883
+that the HTTP MCP route would call.
+
+26
+00:01:14.883 --> 00:01:17.895
+A ValueError becomes a 400 with the message,
+
+27
+00:01:17.895 --> 00:01:20.675
+so the agent sees a plain error.
+
+28
+00:01:21.145 --> 00:01:23.900
+Session.add first appends the Markdown to the stored
+
+29
+00:01:23.900 --> 00:01:24.807
+source.
+
+30
+00:01:24.807 --> 00:01:27.207
+Then the builder parses it into slides,
+
+31
+00:01:27.207 --> 00:01:28.820
+reads code from disk,
+
+32
+00:01:28.820 --> 00:01:32.000
+resolves cues and records problems.
+
+33
+00:01:32.145 --> 00:01:34.957
+Every narration paragraph becomes a new say.
+
+34
+00:01:34.957 --> 00:01:37.583
+Each one asks the narrator for audio.
+
+35
+00:01:37.583 --> 00:01:39.633
+The job key is a hash of model,
+
+36
+00:01:39.633 --> 00:01:41.995
+voice, speed and spoken text,
+
+37
+00:01:41.995 --> 00:01:44.700
+so a cache hit returns at once.
+
+38
+00:01:44.845 --> 00:01:46.962
+On a miss, the job joins a queue
+
+39
+00:01:46.962 --> 00:01:48.920
+ordered by position in the walkthrough,
+
+40
+00:01:48.920 --> 00:01:51.795
+and one worker thread voices them in turn.
+
+41
+00:01:51.795 --> 00:01:54.400
+Finally the change is announced.
+
+42
+00:01:54.845 --> 00:01:57.145
+The daemon sends the reply back at once,
+
+43
+00:01:57.145 --> 00:01:58.620
+listing problems.
+
+44
+00:01:58.620 --> 00:02:00.345
+It does not wait for the audio,
+
+45
+00:02:00.345 --> 00:02:02.800
+so the agent can keep writing.
+
+46
+00:02:02.970 --> 00:02:05.070
+Voice jobs go to the narrator.
+
+47
+00:02:05.070 --> 00:02:06.920
+As it finishes each paragraph,
+
+48
+00:02:06.920 --> 00:02:09.100
+the audio comes back and the daemon marks
+
+49
+00:02:09.100 --> 00:02:11.025
+that slide changed.
+
+50
+00:02:11.145 --> 00:02:14.775
+The event stream coalesces changes for fifty milliseconds
+
+51
+00:02:14.775 --> 00:02:17.125
+and sends only the changed slides plus the
+
+52
+00:02:17.125 --> 00:02:18.675
+slide order.
+
+53
+00:02:18.795 --> 00:02:21.187
+The player then fetches the audio and plays
+
+54
+00:02:21.187 --> 00:02:22.707
+it against its timeline,
+
+55
+00:02:22.707 --> 00:02:24.662
+so you see a slide appear while the
+
+56
+00:02:24.662 --> 00:02:27.375
+agent is still writing the next one.
+
+57
+00:02:27.795 --> 00:02:30.683
+The call returns before the audio exists.
+
+58
+00:02:30.683 --> 00:02:32.070
+That is the design:
+
+59
+00:02:32.070 --> 00:02:33.475
+the shim stays thin,
+
+60
+00:02:33.475 --> 00:02:35.120
+the daemon holds the state,
+
+61
+00:02:35.120 --> 00:02:38.075
+and the builder gives feedback straight away.
+
+62
+00:02:38.195 --> 00:02:40.270
+The narrator works in the background,
+
+63
+00:02:40.270 --> 00:02:42.788
+and the browser receives each slide as soon
+
+64
+00:02:42.788 --> 00:02:44.775
+as its voice is ready.
