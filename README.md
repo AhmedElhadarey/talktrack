@@ -12,7 +12,7 @@ Ask your agent to walk you through a pull request, a module or a concept. It wri
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
 - **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the player, diagrams that failed to render or text shrunk too small to read; with Playwright installed, `finish_walkthrough` draws every slide to find them. The agent can also look at pictures of its slides with `preview_slides`.
-- **Shareable:** export a walkthrough as a static folder with captions or as an MP4, embed it with `<showntell-player>`, link to a range of slides, or present it yourself with speaker notes.
+- **Shareable:** export a walkthrough as one HTML file that plays offline (send it in Slack or by email), a static folder with captions, or an MP4; embed it with `<showntell-player>`, link to a range of slides, or present it yourself with speaker notes.
 
 How it compares with a screen recording, a written PR description and a rendered MP4 explainer, including where those win: [docs/comparison.md](docs/comparison.md).
 
@@ -208,6 +208,7 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **`showntell mcp`** | stdio MCP server; starts or reuses the daemon |
 | **`showntell serve`** | the daemon in the foreground: MCP over HTTP at `/mcp`, the player, and the list of walkthroughs at `/` |
 | **`showntell play FILE.md`** | voice a Markdown walkthrough and open it |
+| **`showntell export ID\|LINK\|FILE.md OUT.html`** | one self-contained page: player, slides, MP3 narration and only the libraries its slides use; plays offline from a double-click and makes no network requests |
 | **`showntell export ID\|LINK\|FILE.md OUT [--mp3]`** | a static folder that plays from any web server, with WebVTT captions and a `poster.png` |
 | **`showntell export ID\|LINK\|FILE.md OUT.mp4`** | an MP4 video; `--fps`, `--workers`, `--burn-captions` |
 | **`showntell list`** | recent walkthroughs |

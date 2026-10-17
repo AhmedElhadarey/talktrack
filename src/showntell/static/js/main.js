@@ -58,8 +58,8 @@ function mergeDelta(d) {
 }
 
 async function load() {
-  const r = await fetch("data.json", { cache: "no-store" });
-  setData(await r.json());
+  // A single-file export carries its walkthrough in the page; everything else reads data.json.
+  setData(window.__showntellData || await (await fetch("data.json", { cache: "no-store" })).json());
   if (LIVE) connect();
   if (params.get("from") || params.get("to")) setRange(params.get("from"), params.get("to"));
   const t = parseFloat(params.get("t"));

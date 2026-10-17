@@ -2,7 +2,7 @@
 // <style> rules stay inside it. Elements with ids are what cues point at; the outermost ones are
 // the parts a step reveal shows in source order, strokes drawing themselves in.
 
-import { el, loadScript, READABLE_PX, reducedMotion, STATIC } from "../draw.js";
+import { assetUrl, el, loadScript, READABLE_PX, reducedMotion, STATIC } from "../draw.js";
 import { norm } from "../util.js";
 
 const SHADOW_CSS = `
@@ -271,7 +271,7 @@ let roughLoaded = null;
 function sketchReady() {
   if (!roughLoaded) {
     const face = document.createElement("style");
-    face.textContent = `@font-face { font-family: "Virgil"; src: url("${STATIC}/vendor/fonts/Virgil.woff2") format("woff2"); font-display: block; }`;
+    face.textContent = `@font-face { font-family: "Virgil"; src: url("${assetUrl("vendor/fonts/Virgil.woff2")}") format("woff2"); font-display: block; }`;
     document.head.append(face);
     roughLoaded = loadScript(`${STATIC}/vendor/rough/rough.js`)
       .then(() => document.fonts?.load('24px "Virgil"'))
