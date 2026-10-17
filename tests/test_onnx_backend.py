@@ -20,8 +20,9 @@ import pytest
 from showntell.pronounce import Spoken
 from showntell.speech import onnx_backend
 from showntell.speech.base import SAMPLE_RATE
+from showntell.speech.kokoro import MAX_PHONEMES, chunks, word_times
 from showntell.speech.narrator import timed_words
-from showntell.speech.onnx_backend import MAX_PHONEMES, OnnxBackend, chunks, word_times
+from showntell.speech.onnx_backend import OnnxBackend
 
 SENTENCE = "The cache answers most requests in a few microseconds."
 PARAGRAPH = (

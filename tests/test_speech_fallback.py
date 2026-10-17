@@ -17,11 +17,11 @@ class Broken(FakeBackend):
 
     def load(self) -> None:
         if self.fail_in == "load":
-            raise ImportError("mlx_audio moved _get_pipeline")
+            raise ImportError("mlx_audio moved load_model")
 
     def synth(self, text, voice, speed):
         if self.fail_in == "synth":
-            raise AttributeError("no _get_pipeline")
+            raise TypeError("unexpected keyword argument return_output")
         return super().synth(text, voice, speed)
 
 
@@ -30,7 +30,7 @@ def test_a_broken_mlx_hands_over_to_onnx(fail_in):
     b = fallback.Fallback(Broken(fail_in), FakeBackend)
     b.load()
     audio, _ = b.synth("Hello there.", "af_heart", 1.0)
-    assert b.name == FakeBackend.name and "_get_pipeline" in b.fell_back and len(audio)
+    assert b.name == FakeBackend.name and b.fell_back and len(audio)
 
 
 def test_a_working_mlx_stays():
@@ -43,7 +43,7 @@ def test_when_both_fail_the_error_names_both():
     def onnx():
         raise RuntimeError("no onnxruntime")
 
-    with pytest.raises(RuntimeError, match="MLX failed.*_get_pipeline.*ONNX.*no onnxruntime"):
+    with pytest.raises(RuntimeError, match="MLX failed.*load_model.*ONNX.*no onnxruntime"):
         fallback.Fallback(Broken("load"), onnx).load()
 
 

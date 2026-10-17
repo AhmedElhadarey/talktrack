@@ -1,8 +1,9 @@
 """Early warning for mlx-audio upgrades.
 
-The MLX adapter calls mlx-audio's private `_get_pipeline` to get per-token timings. These tests
-load the real Kokoro model and fail loudly when an mlx-audio release moves or changes that API.
-They run only on Apple silicon with `mlx-community/Kokoro-82M-bf16` and the spaCy model cached.
+The MLX adapter uses two mlx-audio calls: `load_model` and the model's forward pass with
+`return_output=True`. These tests load the real Kokoro model and fail loudly when an mlx-audio
+release changes either. They run only on Apple silicon with `mlx-community/Kokoro-82M-bf16` and
+the spaCy model cached.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ import numpy as np
 import pytest
 
 from showntell.speech.base import SAMPLE_RATE
+from showntell.speech.kokoro import FRAME_SAMPLES
 
 pytestmark = pytest.mark.mlx
 
@@ -67,20 +69,13 @@ def backend():
         yield b
 
 
-def test_private_get_pipeline_still_exists(backend):
-    assert callable(getattr(backend._model, "_get_pipeline", None)), "mlx-audio removed Model._get_pipeline"
-
-
-def test_pipeline_results_still_carry_audio_and_timed_tokens(backend):
-    pipe = backend._pipeline("af_heart")
-    results = list(pipe("Hello there.", voice="af_heart", speed=1.0, split_pattern=None))
-    assert results, "the pipeline yielded nothing"
-    r = results[0]
-    assert hasattr(r, "audio") and hasattr(r, "tokens"), f"pipeline result changed shape: {type(r)}"
-    assert r.tokens, "the pipeline no longer returns tokens"
-    tk = r.tokens[0]
-    for attr in ("text", "start_ts", "end_ts"):
-        assert hasattr(tk, attr), f"token lost `{attr}`: {type(tk)}"
+def test_forward_pass_returns_audio_and_a_duration_per_input(backend):
+    phonemes = "hə lˈO"
+    ids = [backend._vocab[c] for c in phonemes]
+    out = backend._model(phonemes, backend._voice("af_heart")[len(ids) - 1], 1.0, return_output=True)
+    frames = np.asarray(out.pred_dur).reshape(-1)
+    assert len(frames) == len(ids) + 2 and frames.min() >= 1  # one per phoneme, plus the pads
+    assert np.asarray(out.audio).size == frames.sum() * FRAME_SAMPLES  # word timings count in these frames
 
 
 def test_synth_returns_audio_and_tokens_with_increasing_start_times(backend):
@@ -98,5 +93,14 @@ def test_synth_returns_audio_and_tokens_with_increasing_start_times(backend):
 
 def test_british_voice_uses_its_own_pipeline(backend):
     audio, tokens = backend.synth("Hello from London.", "bf_emma", 1.0)
-    assert len(audio) > SAMPLE_RATE // 2 and tokens
-    assert set(backend._pipelines) >= {"a", "b"}
+    assert len(audio) > SAMPLE_RATE // 2 and [t.text for t in tokens] == ["Hello", "from", "London"]
+    assert set(backend._g2ps) == {False, True}
+    with pytest.raises(ValueError, match="unknown voice"):
+        backend.synth("Hello.", "xx_nobody", 1.0)
+
+
+def test_a_word_misaki_cannot_say_does_not_shift_the_rest(backend):
+    _, tokens = backend.synth("Say zxqvbn now, then stop.", "af_heart", 1.0)
+    assert [t.text for t in tokens] == ["Say", "now", "then", "stop"]  # the unknown word is skipped
+    starts = [t.start for t in tokens]
+    assert all(b > a for a, b in zip(starts, starts[1:], strict=False)), starts

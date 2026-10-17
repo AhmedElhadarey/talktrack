@@ -47,7 +47,7 @@ Phases 0 to 2 are built, every launch criterion is met, and the repository is pu
 
 Evaluation cost on Sonnet: $0.09 to $0.24 per walkthrough, $1.40 for the ten.
 
-**Owner steps left:** add a PyPI trusted publisher for `release.yml` and tag `v0.1.0` (until then the README installs from GitHub); post the mlx-audio issue asking for a public word-timestamp API; announce.
+**Owner steps left:** add a PyPI trusted publisher for `release.yml`, then publish a GitHub release for the `v0.1.0` tag (until then the README installs from the tag on GitHub); announce.
 
 ## Phase 0: Foundations
 
@@ -96,7 +96,7 @@ A short functional spec in our own words, written before any rewrite. It covers:
 ### Packaging
 
 - **spaCy model:** downloaded on first run instead of coming from a URL dependency, which PyPI rejects.
-- **MLX:** `mlx-audio` is limited to macOS on Apple silicon and pinned exactly. Its private pipeline call sits in one adapter with a test that fails loudly when it breaks; an upstream issue asks for a public API.
+- **MLX:** `mlx-audio` is limited to macOS on Apple silicon and pinned exactly. showntell uses two of its calls, `load_model` and the model's forward pass; phonemes, chunking, voices and word timings are its own, shared with the ONNX engine. A test fails loudly when an mlx-audio release changes either call, and at runtime speech falls back to ONNX.
 - **No GPL in the default install:** misaki's English path runs without the espeak-ng fallback.
 - **Vendored libraries:** sha256 pins in the vendor script.
 

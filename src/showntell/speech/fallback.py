@@ -1,6 +1,6 @@
 """MLX first, ONNX when MLX cannot speak.
 
-mlx-audio is driven through a private API (see mlx_backend.py), so one of its releases can break
+showntell calls mlx-audio's model directly (see mlx_backend.py), so one of its releases can break
 it. On Apple silicon the ONNX engine is installed as well; when MLX fails to load or to voice a
 first sentence, speech moves to ONNX instead of failing. Audio requested before the switch is
 cached under the MLX model's key; both run the same Kokoro weights.
