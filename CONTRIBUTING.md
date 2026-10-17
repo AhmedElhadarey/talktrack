@@ -19,7 +19,11 @@ Run a daemon without a voice model with `uv run showntell serve --speech fake --
 | Path | What |
 |---|---|
 | `src/showntell/format.py` | the incremental Markdown parser |
-| `src/showntell/build.py` | slides from parsed blocks: visuals, code from disk, cues, checks |
+| `src/showntell/build.py` | slides from parsed blocks: visuals, code from disk, diffs, images |
+| `src/showntell/cues.py` | resolving cues against a slide's visual, and inferring them when narration has none |
+| `src/showntell/checks.py` | findings on sizes, finished slides and the whole walkthrough |
+| `src/showntell/mermaid.py` | node ids, labels and edges read from Mermaid source |
+| `src/showntell/kinds/` | bundled kinds (chart, stat, chat, terminal, tree), one module each, and their registry |
 | `src/showntell/store.py` | walkthrough sessions, speech requests, events, persistence |
 | `src/showntell/server.py` | MCP tools, prompts, resources and web routes |
 | `src/showntell/app.py` | the daemon: wiring and the request guard |
@@ -35,8 +39,25 @@ Run a daemon without a voice model with `uv run showntell serve --speech fake --
 - **Format changes** go into `docs/format.md` first, keep the "any split at block boundaries" parser property, and must not break existing walkthroughs. The format version lives in `model.py`.
 - **Agent-facing text** in `src/showntell/text/` is tuned against the evaluation in `scripts/eval.py`. Re-run the affected prompts and include the before and after table in the pull request.
 - **Player changes** need a screenshot of each affected slide kind, and `timeline.js` changes need a `node --test` case.
-- **New slide kinds** need a parser test, a builder test, validation messages, a renderer, a screenshot test, and a section in `docs/format.md`.
+- **New slide kinds:** see below.
 - **Dependencies:** nothing GPL in the default install. Optional extras may be.
+
+## Adding a slide kind
+
+A kind made from a fenced block (```` ```name ````) touches these files:
+
+| File | What goes there |
+|---|---|
+| `src/showntell/kinds/<name>.py` | `parse(body, attrs)` returning the visual and problems, a size `check`, the noun for a missing cue target, and `KIND`; add it to the registry in `kinds/__init__.py` |
+| `src/showntell/static/js/kinds/<name>.js` | drawing, step reveal and any per-frame animation |
+| `src/showntell/static/player.css` | its styles, with colours only from the theme tokens |
+| `src/showntell/text/kinds.json` | the catalogue entry; its `format` is also the fix sent with the kind's `block_error` findings |
+| `docs/format.md` | the syntax |
+
+- **Parts:** give every part a cue can point at an id in `visual["ids"]`, in source order. Cue lookup, the reveal-order check and inferred cues then work without builder changes. A kind whose parts are code lines sets `lines=True` and gets `#L` cues and the code size checks instead.
+- **Findings:** reuse `block_error` and `block_too_big` unless the kind needs a code of its own; a new code goes in `issues.CODES` and `docs/spec.md`.
+- **Agent text:** a line in the guide's visual table and in the `add_slides` description, changed as **Agent-facing text** above says.
+- **Tests:** a parser test, a builder test with cues, a golden walkthrough in `tests/js/golden/`, and a browser test.
 
 ## Releasing
 

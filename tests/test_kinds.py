@@ -103,6 +103,13 @@ def test_too_many_bars_and_bad_charts_are_reported(build):
     assert any(i.code == "block_error" for i in b.issues)
 
 
+def test_block_problems_carry_the_catalogue_format_once(build):
+    fmt = next(k["format"] for k in KINDS if k["kind"] == "stat")
+    _, b = slide(build, "```stat\nf nothing\ng: lots\n```", "Two bad lines.")
+    errors = [i for i in b.issues if i.code == "block_error"]
+    assert len(errors) == 2 and errors[0].fix == f"Format: {fmt}" and not errors[1].fix
+
+
 def test_build_order_check_covers_new_kinds(build):
     w, b = build(f"# T\n\nOpening.\n\n## S {{#s .build}}\n\n{CHART}\n\nFirst [list](#list).\n\nThen [read](#read).\n")
     b.check_all()
