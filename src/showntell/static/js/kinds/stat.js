@@ -5,6 +5,9 @@ import { esc, inline } from "../util.js";
 
 const STAT_COUNT_S = 1.2;
 
+// `label: 5 -> 5` is a number that holds still: no "from" line, nothing to count.
+const changed = (it) => it.before !== undefined && it.before !== it.after;
+
 export function statValue(it, x) {
   const s = Number(x).toLocaleString("en", { minimumFractionDigits: it.decimals, maximumFractionDigits: it.decimals });
   return it.unit === "%" ? `${s}%` : it.unit ? `${s} ${it.unit}` : s;
@@ -25,8 +28,8 @@ export default {
     v.items.forEach((it, i) => {
       const card = el("div", "entry stat",
         `<div class="label">${inline(it.label)}</div><div class="num" aria-hidden="true">${esc(statText(it, 1))}</div>`
-        + (it.before !== undefined ? `<div class="was">from ${esc(statValue(it, it.before))}</div>` : ""));
-      card.setAttribute("aria-label", `${it.label}: ${it.before !== undefined ? `from ${statValue(it, it.before)} to ` : ""}${statValue(it, it.after)}`);
+        + (changed(it) ? `<div class="was">from ${esc(statValue(it, it.before))}</div>` : ""));
+      card.setAttribute("aria-label", `${it.label}: ${changed(it) ? `from ${statValue(it, it.before)} to ` : ""}${statValue(it, it.after)}`);
       card.dataset.id = it.id;
       card.dataset.idx = i;
       parts.items.set(it.id, card);

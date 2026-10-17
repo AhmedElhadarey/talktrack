@@ -173,3 +173,9 @@ def test_checklist_items_and_style(build):
 def test_stack_style(build):
     s, _, _ = last(build, "## L {.stack}\n\n- **App**: code\n- **TCP**: transport\n\nDown [the app](#app).\n")
     assert s.visual["style"] == "stack"
+
+
+def test_stat_units_may_be_any_short_text():
+    v, problems = parse_stat("Lens area: 1 cm² -> 20 cm²\nDistance: 147.1 million km\nTemperature: 21.5 °C", {})
+    assert not problems and [i["unit"] for i in v["items"]] == ["cm²", "million km", "°C"]
+    assert v["items"][0]["before"] == 1 and v["items"][1]["after"] == 147.1

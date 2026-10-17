@@ -35,7 +35,8 @@ def parse_stat(body: str, attrs: dict) -> tuple[dict, list[str]]:
 
 
 def _value(text: str) -> tuple[float, str, int] | None:
-    m = re.fullmatch(r"([-+]?[\d,_]*\.?\d+)\s*([a-zA-Z%µ/]+)?", text.strip())
+    # A unit is any short run of non-digits after the number: ms, %, °C, cm², million km.
+    m = re.fullmatch(r"([-+]?[\d,_]*\.?\d+)\s*([^\d\s][^\d]{0,15}?|[^\d\s]*[²³])?\s*", text.strip())
     if not m:
         return None
     num = m.group(1).replace(",", "").replace("_", "")
