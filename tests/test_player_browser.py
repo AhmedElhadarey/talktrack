@@ -692,3 +692,113 @@ def test_drawings_reveal_point_and_never_run_script(daemon, browser):
     page.evaluate("(t) => window.__showntell.seek(t)", end)
     assert page.evaluate("document.querySelector('.drawing').shadowRoot.querySelectorAll('.veiled').length") == 0
     page.close()
+
+
+ORBIT_MD = """# Orbit
+
+Opening words.
+
+## The moon moves {#phase}
+
+```svg step sketch
+<svg viewBox="0 0 1150 560">
+  <circle id="earth" cx="575" cy="280" r="70" fill="#2f7de1"/>
+  <g id="moon" transform="rotate(0 575 280)"><circle cx="765" cy="280" r="24" fill="#d9d9d9"/></g>
+  <text id="label" x="575" y="520" text-anchor="middle" font-size="30" fill="var(--fg)">New moon</text>
+</svg>
+```
+```svg step sketch
+<svg viewBox="0 0 1150 560">
+  <circle id="earth" cx="575" cy="280" r="70" fill="#2f7de1"/>
+  <g id="moon" transform="rotate(-90 575 280)"><circle cx="765" cy="280" r="24" fill="#d9d9d9"/></g>
+  <text id="label" x="575" y="520" text-anchor="middle" font-size="30" fill="var(--fg)">First quarter</text>
+  <line id="cross" x1="400" y1="510" x2="760" y2="510" stroke="#ff5a4e" stroke-width="4"/>
+</svg>
+```
+
+The [moon](#moon) starts on the right, and a week later it has [moved a quarter of the way round](#step-2).
+"""
+
+
+def test_drawing_steps_glide_on_the_clock_and_frames_capture_the_motion(daemon, browser):
+    call = _rpc(daemon)
+    r = call("start", title="Orbit", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    call("add", handle=r["handle"], markdown=ORBIT_MD)
+    call("playable", handle=r["handle"], timeout=10)
+    for _ in range(50):
+        if not call("finish", handle=r["handle"], questions=None)["pending"]:
+            break
+        time.sleep(0.2)
+    url = r["url"].replace("localhost", "127.0.0.1") + "/"
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    page.goto(url)
+    page.wait_for_function("window.__showntell !== undefined")
+    at = _at(page, "phase", 1, 0.0)
+    page.goto(url + "?capture=1")
+    page.wait_for_function("window.__showntell?.duration?.() > 0")
+    angle = "(() => { const g = document.querySelector('.drawing').shadowRoot.getElementById('moon'); return g.getAttribute('transform'); })()"
+    seen = []
+    for d in (-0.2, 0.6, 2.0):
+        page.evaluate("(t) => window.__showntell.seek(t)", at + d)
+        seen.append(page.evaluate(angle))
+    page.evaluate("(t) => window.__showntell.seek(t)", at + 0.3)  # back into the glide after it ended
+    back = page.evaluate(angle)
+    sketched = page.evaluate("document.querySelector('.drawing').shadowRoot.querySelectorAll('.rough').length")
+    # Frame capture keys each in-between picture apart, so video export does not repeat a frame.
+    keys = [page.evaluate("(t) => window.__showntell.seek(t)", at + d) for d in (0.2, 0.6, 1.0)]
+    page.close()
+    first, middle, last = (float(s.split("(")[1].split()[0]) for s in seen)
+    assert first == 0 and -90 < middle < 0 and last == -90 and -90 < float(back.split("(")[1].split()[0]) < 0
+    assert sketched >= 2 and len(set(keys)) == 3
+    # The finish check draws every slide: no render errors, and the line through the label is noticed
+    # (the check measures the drawing as first shown, so this slide's line only shows in version 2).
+    f = call("finish", handle=r["handle"], questions=None)
+    assert not [i for i in f["player_issues"] if i["code"] == "render_error"]
+
+
+def test_a_line_through_a_label_is_reported(daemon):
+    call = _rpc(daemon)
+    r = call("start", title="Crossed", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    md = """# Crossed
+
+Opening words.
+
+## Rays {#rays}
+
+```svg
+<svg viewBox="0 0 1150 560">
+  <text id="label" x="575" y="300" text-anchor="middle" font-size="36" fill="var(--fg)">Air molecule</text>
+  <line id="ray" x1="300" y1="200" x2="850" y2="400" stroke="#4f8cff" stroke-width="5"/>
+  <text id="clear" x="200" y="500" font-size="30" fill="var(--fg)">Far from the line</text>
+</svg>
+```
+
+The [ray](#ray) crosses [the label](#label).
+"""
+    call("add", handle=r["handle"], markdown=md)
+    call("playable", handle=r["handle"], timeout=10)
+    f = call("finish", handle=r["handle"], questions=None)
+    found = [i["message"] for i in f["player_issues"] if i["code"] == "drawing_overlap"]
+    assert len(found) == 1 and "Air molecule" in found[0]
+
+
+def test_moving_dots_and_counting_numbers_change_the_capture_key(daemon, browser):
+    call = _rpc(daemon)
+    r = call("start", title="Motion", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    call("add", handle=r["handle"], markdown=MORE)
+    call("playable", handle=r["handle"], timeout=10)
+    for _ in range(50):
+        if not call("finish", handle=r["handle"], questions=None)["pending"]:
+            break
+        time.sleep(0.2)
+    url = r["url"].replace("localhost", "127.0.0.1") + "/"
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    page.goto(url)
+    page.wait_for_function("window.__showntell !== undefined")
+    dot, count = _at(page, "path", 0, 0.0), _at(page, "numbers", 0, 0.0)
+    page.goto(url + "?capture=1")
+    page.wait_for_function("window.__showntell?.duration?.() > 0")
+    for at in (dot, count):  # MP4 export reuses a frame only while its key repeats
+        keys = [page.evaluate("(t) => window.__showntell.seek(t)", at + d) for d in (0.2, 0.5, 0.8)]
+        assert len(set(keys)) == 3, keys
+    page.close()

@@ -42,6 +42,9 @@ class Kind:
     labels: Callable[[dict], list[tuple[str, str]]] = lambda vis: labels(vis)
     reads_file: bool = False  # `file=` reads the block's body from the project
     regions: bool = False  # cues may point at `#@left,top,width,height` in percent of the visual
+    # Consecutive blocks marked `step` are versions of one visual, each kept as these keys of its
+    # visual; #step-N moves between them. Empty: the kind has no steps.
+    steps: tuple[str, ...] = ()
 
     def fix(self) -> str:
         """The fix for a problem with the block: the hint, then the format from the catalogue."""

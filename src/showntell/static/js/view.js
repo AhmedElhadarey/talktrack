@@ -149,8 +149,9 @@ function applyReveal(reveal, slide) {
 }
 
 // Every frame: whatever the slide's kind animates with time (a dot travelling along diagram
-// edges, numbers counting, checklist ticks).
+// edges, numbers counting, checklist ticks, a drawing changing version). The kind returns a key
+// for what it drew, so frame capture knows when the picture moved.
 function liveFrame(st, slide) {
   if (!S.view?.done) return;
-  kindOf(slide).frame?.(st, slide, S.view.parts, now());
+  S.frameKey = kindOf(slide).frame?.(st, slide, S.view.parts, now()) || "";
 }

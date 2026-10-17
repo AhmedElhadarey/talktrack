@@ -252,6 +252,12 @@ The builder rebuilds the drawing from an allowlist of SVG elements and attribute
 
 Cues point at any element by its `id`, by its `<title>` or own text, or by that text's slug; at a region with `#@left,top,width,height` in percent of the drawing; or at drawn text with `[label](# "text")`. With `.build`, the outermost elements with ids are the parts that appear in source order; a cue at an element inside one reveals that part, and unfilled strokes in a part draw themselves in.
 
+**Drawings that change.** Consecutive ```` ```svg step ```` blocks are versions of one drawing. A `#step-2` cue moves to version 2: elements that keep their `id` glide from where they were over about 1.2 s (numbers in attributes move, also inside a `transform`, path or point list written the same way in both versions; colours blend; anything else switches halfway), elements new in this version fade in and those it dropped fade out. The glide follows the narration's clock, so seeking and MP4 export show the same in-between pictures. To move something along a circle, rotate a group around the centre (`transform="rotate(-90 575 280)"`) rather than changing its x and y.
+
+**Hand-drawn.** ```` ```svg sketch ```` redraws every shape with Rough.js, as on a whiteboard: wobbly outlines, hatched fills (solid for small shapes), dashes kept, and text in the Virgil hand-drawn face. Shapes with a gradient fill stay as drawn. It combines with `step`.
+
+**Checked.** The player reports text too small to read on the slide and labels that a line runs through or that sit on another label (`drawing_overlap`).
+
 ## Narration
 
 Narration is plain prose written to be heard. Markdown inside it is used like this:

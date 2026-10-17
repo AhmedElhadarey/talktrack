@@ -77,7 +77,7 @@ class CueResolver:
             if c.text:
                 return {**base, "kind": "text"}
             return {**base, "kind": "visual"}
-        steps = s.visual.get("steps") if s.kind == "code" else None
+        steps = s.visual.get("steps") if s.kind == "code" or (kinds.get(s.kind) and kinds.get(s.kind).steps) else None
         sm = re.fullmatch(r"step-?(\d+)", t, re.I)
         if sm:
             n = int(sm.group(1))

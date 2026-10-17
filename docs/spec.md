@@ -156,6 +156,7 @@ Findings from the open player, measured after a slide has settled. Their message
 | `text_too_small` | warning | the player shrank a visual below a comfortable reading size |
 | `overflow` | warning | a visual still overflows the slide after shrinking |
 | `pointer_offstage` | warning | a cue's target is outside the visible slide |
+| `drawing_overlap` | warning | a line runs through a label in a drawing, or two labels overlap |
 | `slow_render` | info | a slide took longer to draw than the player waits |
 | `viewer_waited` | info | the viewer caught up with the writer and waited |
 

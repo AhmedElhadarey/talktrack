@@ -274,6 +274,14 @@ class Builder(CueResolver, Checks):
             self._check_code(vis)
         for code, message, fix in k.check(vis, b.line, self.limits):
             self._issue(code, message, fix, line=b.line)
+        if k.steps and "step" in b.attrs.get("flags", []):
+            # Versions of one visual: each step block after the first joins the slide's list.
+            version = {key: vis[key] for key in k.steps if key in vis}
+            cur = self.w.slides[-1] if self.w.slides else None
+            if cur is not None and cur.kind == k.name and cur.visual.get("steps"):
+                cur.visual["steps"].append(version)
+                return self._set(cur, k.name, cur.visual)
+            vis["steps"] = [version]
         self._set(self._slide_for_visual(k.name), k.name, vis)
 
     def _set(self, s: Slide, kind: str, visual: dict) -> None:

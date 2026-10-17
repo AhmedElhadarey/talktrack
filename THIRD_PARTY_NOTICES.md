@@ -7,6 +7,8 @@ showntell bundles these libraries in `src/showntell/static/vendor/`, unmodified:
 | **Mermaid** | 11.4.1 | MIT | https://github.com/mermaid-js/mermaid |
 | **KaTeX** | 0.16.11 | MIT | https://github.com/KaTeX/KaTeX |
 | **highlight.js** | 11.10.0 | BSD-3-Clause | https://github.com/highlightjs/highlight.js |
+| **Rough.js** | 4.6.6 | MIT | https://github.com/rough-stuff/rough |
+| **Virgil** (font) | 3d4c829 | OFL-1.1 | https://github.com/excalidraw/virgil |
 
 showntell downloads these models on first run; they are not part of the package:
 

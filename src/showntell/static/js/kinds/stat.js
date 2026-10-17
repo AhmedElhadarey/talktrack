@@ -43,12 +43,15 @@ export default {
   frame(st, slide, parts, t) {
     const cued = new Map(st.cues.filter((c) => c.kind === "item").map((c) => [c.id, c._at]));
     const any = slide.says.some((x) => (x.cues || []).some((c) => c.kind === "item"));
+    const shown = [];
     for (const it of slide.visual.items) {
       const el = parts.items.get(it.id)?.querySelector(".num");
       if (!el) continue;
       const at = cued.has(it.id) ? cued.get(it.id) : any && !st.revealAll ? null : t - st.sinceSlide;
       const text = at === null ? statText(it, 0) : statText(it, reducedMotion() ? 1 : (t - at) / STAT_COUNT_S);
       if (el.textContent !== text) el.textContent = text;
+      shown.push(text);
     }
+    return shown.join("|");
   },
 };

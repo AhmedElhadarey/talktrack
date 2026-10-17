@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Drawings that move:** consecutive ```` ```svg step ```` blocks are versions of one drawing; at `#step-2`, elements that keep their id glide to their new place, size, angle and colour on the narration's clock, so seeking and video show the motion exactly.
+- **Hand-drawn drawings:** ```` ```svg sketch ```` redraws shapes with Rough.js and text in the Virgil face, as on a whiteboard.
+- **Overlap check:** the player reports labels a line runs through, or that sit on each other (`drawing_overlap`).
+- **Video keeps the motion:** MP4 export and posters now capture the travelling dot, counting numbers and checklist ticks frame by frame; before, a frame was reused while the slide's cue stayed the same.
 - **Drawings:** an ```` ```svg ```` block, inline or read with `file=`, draws what code and boxes can't: light, orbits, lenses, layouts. Elements with ids take cues and reveal in steps, strokes draw themselves in, and theme colours are available as `var(--fg)` and friends. The builder keeps only drawing elements and attributes; anything that could run or fetch is removed and reported (`svg_removed`).
 - **Chart callouts:** a note on the tallest bar no longer crowds the title and the value label.
 

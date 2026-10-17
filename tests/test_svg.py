@@ -105,3 +105,20 @@ def test_drawings_are_read_from_disk(build, project):
     assert s.kind == "svg" and s.visual["ids"] == ["sun", "beam", "eye"] and "source_error" not in codes
     _, codes, _ = last(build, "## D\n\n```svg file=../outside.svg\n```\n\nNo.\n", root=project)
     assert "source_error" in codes
+
+
+def test_step_drawings_are_versions_of_one_slide(build):
+    one = '<svg viewBox="0 0 100 100"><circle id="moon" cx="80" cy="50" r="5"/></svg>'
+    two = '<svg viewBox="0 0 100 100"><circle id="moon" cx="50" cy="20" r="5"/><text id="note">later</text></svg>'
+    s, codes, _ = last(build, f"## O {{#o}}\n\n```svg step\n{one}\n```\n```svg step\n{two}\n```\n\n"
+                              "The [moon](#moon) moves [a week later](#step-2), see [the note](#note).\n")
+    assert s.kind == "svg" and len(s.visual["steps"]) == 2 and s.visual["steps"][1]["ids"] == ["moon", "note"]
+    assert [c["kind"] for c in s.says[0].cues] == ["item", "step", "item"] and s.says[0].cues[1]["n"] == 2
+    assert "extra_visual" not in codes and not [c for c in codes if c.startswith("cue")]
+    _, codes, b = last(build, f"## O\n\n```svg\n{one}\n```\n\nNo [later version](#step-2).\n")
+    assert "cue_no_target" in codes
+
+
+def test_sketch_is_a_flag_on_the_fence(build):
+    s, _, _ = last(build, '## S\n\n```svg sketch\n<svg viewBox="0 0 10 10"><rect id="r" width="5" height="5"/></svg>\n```\n\nA [box](#r).\n')
+    assert s.visual.get("sketch") is True

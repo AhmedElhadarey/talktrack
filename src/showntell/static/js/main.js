@@ -169,7 +169,8 @@ if (params.get("capture") === "1") {
   const burn = params.get("captions") === "1";
   if (burn) body.classList.add("burn-captions");
   const painted = () => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
-  const stateKey = () => [S.shown.id, S.shown.rev, S.view?.done, S.lastReveal, S.lastCueKey, burn ? `${S.lastSay}:${S.lastWord}` : ""].join("|");
+  const stateKey = () => [S.shown.id, S.shown.rev, S.view?.done, S.lastReveal, S.lastCueKey, S.frameKey,
+    burn ? `${S.lastSay}:${S.lastWord}` : ""].join("|");
   let paintedKey = "";
   window.__showntell = Object.assign(window.__showntell || {}, {
     duration: () => (S.W && S.TL.segs.length ? S.TL.total : 0),

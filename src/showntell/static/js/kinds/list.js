@@ -36,8 +36,8 @@ export default {
     if (slide.visual.style !== "checklist") return;
     const cued = new Set(st.cues.filter((c) => c.kind === "item").map((c) => c.id));
     const any = slide.says.some((x) => (x.cues || []).some((c) => c.kind === "item"));
-    for (const it of slide.visual.items) {
-      parts.items.get(it.id)?.classList.toggle("ticked", !!it.check && (cued.has(it.id) || !any || st.revealAll));
-    }
+    const ticked = slide.visual.items.filter((it) => !!it.check && (cued.has(it.id) || !any || st.revealAll));
+    for (const it of slide.visual.items) parts.items.get(it.id)?.classList.toggle("ticked", ticked.includes(it));
+    return ticked.map((it) => it.id).join("|");
   },
 };

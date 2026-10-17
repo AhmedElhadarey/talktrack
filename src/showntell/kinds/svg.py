@@ -176,14 +176,17 @@ def _name_of(e: ET.Element) -> str:
 
 
 def parse_svg(body: str, attrs: dict) -> tuple[dict, list[str]]:
-    """```svg [title="..."] [background="white"]: an <svg> element with a viewBox (or a width and
-    height). Read with file=, it sits on white unless `background` says another colour or none."""
+    """```svg [sketch] [step] [title="..."] [background="white"]: an <svg> element with a viewBox (or
+    a width and height). Read with file=, it sits on white unless `background` says another colour
+    or none. `sketch` redraws its shapes by hand; `step` blocks in a row are versions of one drawing."""
     text = body.strip()
     vis: dict = {"svg": "", "ids": [], "items": [], "part_of": {}, "box": [0, 0, 1, 1], "title": attrs.get("title", "")}
     # Drawings from other tools usually assume a white page; they get one unless they say otherwise.
     background = attrs.get("background", "white" if attrs.get("file") else "")
     if background and background != "none" and BACKGROUND_RE.match(background):
         vis["background"] = background
+    if "sketch" in attrs.get("flags", []):
+        vis["sketch"] = True  # redrawn by hand in the player, as on a whiteboard
     if len(text.encode()) > MAX_BYTES:
         return vis, [f"the drawing is {len(text.encode()) // 1000} KB; the limit is {MAX_BYTES // 1000} KB"]
     if re.search(r"<!DOCTYPE|<!ENTITY", text, re.I):
@@ -245,19 +248,32 @@ def parse_svg(body: str, attrs: dict) -> tuple[dict, list[str]]:
     return vis, problems
 
 
+STEP_KEYS = ("svg", "ids", "items", "part_of", "box")
+
+
+def _items(vis: dict) -> list[dict]:
+    """Every named element, across all versions of a drawing that changes in steps."""
+    seen, out = set(), []
+    for it in vis.get("items", []) + [it for st in vis.get("steps", []) for it in st.get("items", [])]:
+        if it["id"] not in seen:
+            seen.add(it["id"])
+            out.append(it)
+    return out
+
+
 def find(vis: dict, target: str) -> str | None:
     """Id of the element a cue names: its id, or a unique name (its <title> or text) or slug of one."""
     t = target.strip()
-    every = [i["id"] for i in vis.get("items", [])]
-    if t in every:
+    items = _items(vis)
+    if t in {i["id"] for i in items}:
         return t
     low = t.lower()
-    hits = [i["id"] for i in vis.get("items", []) if i["label"] and (i["label"].lower() == low or slug(i["label"]) == low)]
+    hits = [i["id"] for i in items if i["label"] and (i["label"].lower() == low or slug(i["label"]) == low)]
     return hits[0] if len(set(hits)) == 1 else None
 
 
 def labels(vis: dict) -> list[tuple[str, str]]:
-    return [(i["id"], i["label"]) for i in vis.get("items", []) if i["label"]]
+    return [(i["id"], i["label"]) for i in _items(vis) if i["label"]]
 
 
 def _check(vis: dict, line: int, limits: dict) -> list[Finding]:
@@ -277,4 +293,4 @@ def _check(vis: dict, line: int, limits: dict) -> list[Finding]:
 
 
 KIND = Kind("svg", ("svg",), parse_svg, check=_check, part=lambda vis: "element", hint="", find=find, labels=labels,
-            reads_file=True, regions=True)
+            reads_file=True, regions=True, steps=STEP_KEYS)

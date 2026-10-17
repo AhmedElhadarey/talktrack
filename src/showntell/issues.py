@@ -63,6 +63,7 @@ CODES: dict[str, tuple[str, str]] = {
     "text_too_small": ("warning", "the player shrank a visual below a comfortable reading size"),
     "overflow": ("warning", "a visual still overflows the slide after shrinking"),
     "pointer_offstage": ("warning", "a cue's target is outside the visible slide"),
+    "drawing_overlap": ("warning", "a line runs through a label in a drawing, or two labels overlap"),
     "slow_render": ("info", "a slide took longer to draw than the player waits"),
     "viewer_waited": ("info", "the viewer caught up with the writer and waited"),
     # coverage
@@ -70,7 +71,7 @@ CODES: dict[str, tuple[str, str]] = {
 }
 
 PLAYER_CODES = {"render_error", "audio_error", "player_error", "text_too_small", "overflow", "pointer_offstage",
-                "slow_render", "viewer_waited"}
+                "slow_render", "viewer_waited", "drawing_overlap"}
 MAX_PER_REPLY = 12
 MAX_PER_CODE = 3
 
