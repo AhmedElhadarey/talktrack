@@ -4,14 +4,14 @@ Narrated slide walkthroughs for coding agents, voiced on your machine.
 
 Ask your agent to walk you through a pull request, a module or a concept. It writes slides and narration in Markdown; showntell voices them locally with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) and hands back a link that starts playing in about a second, while the rest is still being written. A pointer follows the narration through code, diagrams and lists, word by word.
 
-![A walkthrough playing: the pointer moves through a diagram and then through code as the narration names each part](docs/media/demo.gif)
+![Three moments from gallery walkthroughs: code changing from one version to the next, a dot travelling along a diagram's edges, and the pointer stepping through a bar chart as the narration names each bar](docs/media/demo.gif)
 
-**[Watch the gallery](https://rahimnathwani.github.io/showntell/)**: five walkthroughs written by Claude Opus and voiced on a laptop, unedited: a tour of this repository, a code review of one of its commits, the TLS 1.3 handshake, scaled dot-product attention, and git rebase versus merge on a phone-shaped frame.
+**[Watch the gallery](https://rahimnathwani.github.io/showntell/)**: ten walkthroughs written by Claude (Opus and Sonnet) and voiced on a laptop, unedited: a tour of this repository, one call's path through it, a refactor step by step, a code review, contributor setup, a speed-up told with a chart, the messages of an MCP tool call, the TLS 1.3 handshake, scaled dot-product attention, and git rebase versus merge on a phone-shaped frame.
 
 - **Local:** speech runs on your Mac or PC. No API keys, no hosted service, no telemetry. Code never leaves your machine except to the model you already use.
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
-- **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the open player, diagrams that failed to render or text shrunk too small to read. The agent can also look at pictures of its slides with `preview_slides`.
+- **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the player, diagrams that failed to render or text shrunk too small to read; with Playwright installed, `finish_walkthrough` draws every slide to find them. The agent can also look at pictures of its slides with `preview_slides`.
 - **Shareable:** export a walkthrough as a static folder with captions or as an MP4, embed it with `<showntell-player>`, link to a range of slides, or present it yourself with speaker notes.
 
 How it compares with a screen recording, a written PR description and a rendered MP4 explainer, including where those win: [docs/comparison.md](docs/comparison.md).
