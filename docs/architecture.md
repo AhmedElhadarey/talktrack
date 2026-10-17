@@ -30,9 +30,23 @@ graph TB
 
 1. **Shim:** `showntell mcp` reads `daemon.json` in the data folder. If no daemon of the same version is healthy, it starts `showntell serve` in the background and waits for `/health`. Its MCP tools forward to the daemon's RPC route with the token from the lockfile.
 2. **Service:** `LocalService` implements the tools. The MCP layer (`server.py`) formats replies, waits for the opening audio with progress notifications, and attaches the guide to the first playable reply.
-3. **Builder:** `format.Parser` turns each chunk into blocks; the chunk end closes open blocks except fences. `build.Builder` turns blocks into slides, reads code from disk or git (`sources.py`), resolves and infers cues, and records problems.
+3. **Builder:** `format.Parser` turns each chunk into blocks; the chunk end closes open blocks except fences. `build.Builder` turns blocks into slides, reads code from disk or git (`sources.py`), resolves and infers cues, and records problems (see **Builder** below).
 4. **Narrator:** every narration paragraph becomes a speech job. `pronounce.speakable` rewrites code and units into speakable text with a character map back to the display text; the job key is a hash of model, voice, speed and spoken text. One worker thread voices jobs in order of their position in their walkthrough.
 5. **Events:** each change marks slides as changed; the SSE route coalesces changes for 50 ms and sends only the changed slides plus the slide order.
+
+## Builder
+
+`build.Builder` holds the state of one walkthrough being written and mixes in two groups of methods kept in their own modules.
+
+| Module | Holds |
+|---|---|
+| `build.py` | blocks to slides: headings, narration, shown text, code from disk, diffs, diagrams, images, tables, lists; dispatch of bundled kinds |
+| `cues.py` | `CueResolver`: each cue target to a resolved cue (lines, item, row, node, edge path, image region, code step, whole visual), and cues inferred from names when narration has none |
+| `checks.py` | `Checks`: size findings on code and diffs, findings on each finished slide (narration, cues, reading the screen, reveal order) and on the whole walkthrough (code runs, openings) |
+| `mermaid.py` | node ids, labels and edges read from Mermaid source, for cues and edge paths |
+| `kinds/` | one module per bundled kind (chart, stat, chat, terminal, tree) and a registry by fence language and slide kind |
+
+Each bundled kind is a `kinds.base.Kind`: its fence languages, a parser that returns the visual and problems, a size check, and how a cue names its parts. The builder, cue resolver and checks ask the registry instead of naming kinds, so a new kind is one Python module plus its player module, styles and catalogue entry (CONTRIBUTING.md lists them). A problem with a block goes back with the kind's `format` text from `text/kinds.json` as the fix.
 
 ## Player
 
