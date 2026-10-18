@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 (2026-10-18)
 
 - **First run:** when the daemon and `showntell doctor` downloaded the spaCy model at the same time, one could pull the other's half-unpacked folder away (FileNotFoundError on `tok2vec/model`). Each now unpacks into its own folder.
 - **Speech recovers:** after the voice model fails to load, the next narration tries again (at most every 30 s) instead of failing until the daemon restarts.
