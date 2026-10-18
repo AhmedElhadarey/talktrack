@@ -5,7 +5,9 @@ from __future__ import annotations
 import io
 import logging
 import os
+import shutil
 import sys
+import tempfile
 import threading
 import urllib.request
 import zipfile
@@ -118,16 +120,25 @@ def ensure_spacy(data_dir: Path, status: Status | None = None) -> Path | None:
             if status and total:
                 status.set("downloading", "the spaCy English model", buf.tell() / total)
     prefix = f"{SPACY_NAME}/{SPACY_NAME}-{SPACY_VERSION}/"
-    tmp = target.with_name(target.name + ".part")
-    with zipfile.ZipFile(buf) as z:
-        for name in z.namelist():
-            if name.startswith(prefix) and not name.endswith("/"):
-                dest = tmp / name[len(prefix) :]
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_bytes(z.read(name))
-    if not (tmp / "config.cfg").is_file():
-        raise RuntimeError("the spaCy model archive had an unexpected layout")
-    tmp.rename(target)
+    # A folder of its own: the daemon and `showntell doctor` may both fetch the model at once.
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = Path(tempfile.mkdtemp(prefix=target.name + ".part-", dir=target.parent))
+    try:
+        with zipfile.ZipFile(buf) as z:
+            for name in z.namelist():
+                if name.startswith(prefix) and not name.endswith("/"):
+                    dest = tmp / name[len(prefix) :]
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_bytes(z.read(name))
+        if not (tmp / "config.cfg").is_file():
+            raise RuntimeError("the spaCy model archive had an unexpected layout")
+        try:
+            tmp.rename(target)
+        except OSError:
+            if not (target / "config.cfg").is_file():  # not another process finishing first
+                raise
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
     _redirect_spacy(target)
     return target
 

@@ -29,6 +29,7 @@ from .base import SAMPLE_RATE, Backend, Token
 log = logging.getLogger("showntell.speech")
 
 Done = Callable[[dict], None]
+RELOAD_AFTER_S = 30.0  # after a failed load, the next narration tries again once this long has passed
 
 
 @dataclass
@@ -50,6 +51,7 @@ class Narrator:
         self._lock = threading.Lock()
         self._ready = threading.Event()
         self.load_error: str | None = None
+        self._load_at = 0.0  # when loading was last tried
         self.stats = {"jobs": 0, "audio_s": 0.0, "compute_s": 0.0, "cache_hits": 0}
         self.lexicon: dict[str, str] = {}
         self._thread = threading.Thread(target=self._run, name="speech", daemon=True)
@@ -108,8 +110,9 @@ class Narrator:
 
     # -- worker -------------------------------------------------------------------------
 
-    def _run(self) -> None:
+    def _load(self) -> None:
         t0 = time.time()
+        self._load_at = t0
         try:
             from .. import pronounce
 
@@ -117,16 +120,23 @@ class Narrator:
             self.status.set("loading")
             self.backend.load()
             self.backend.synth("Ready.", "af_heart", 1.0)  # warms phonemes, spaCy and a voice
+            self.load_error = None
             self.status.set("ready")
             log.info("speech ready (%s) in %.1fs", self.backend.name, time.time() - t0)
         except Exception as e:  # surfaced to the agent, /health and doctor
             log.exception("speech backend failed to load")
             self.load_error = f"{type(e).__name__}: {e}"
             self.status.set("error", self.load_error)
+
+    def _run(self) -> None:
+        try:
+            self._load()
         finally:
             self._ready.set()
         while True:
             _, _, job = self._q.get()
+            if self.load_error and time.time() - self._load_at >= RELOAD_AFTER_S:
+                self._load()  # a failed download or a race with another process may since have cleared
             if self.load_error:
                 result = {"status": "error", "error": self.load_error}
             else:

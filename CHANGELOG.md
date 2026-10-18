@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **First run:** when the daemon and `showntell doctor` downloaded the spaCy model at the same time, one could pull the other's half-unpacked folder away (FileNotFoundError on `tok2vec/model`). Each now unpacks into its own folder.
+- **Speech recovers:** after the voice model fails to load, the next narration tries again (at most every 30 s) instead of failing until the daemon restarts.
+
 ## 0.1.3 (2026-10-18)
 
 - **Export from the agent:** a new `export_walkthrough` tool writes an MP4 or one offline HTML page, by default into the project folder named after the title, after waiting for the narration. `max_mb` shrinks an MP4 to fit, first by lowering the audio bitrate and then the picture to 720p, or fails with a clear message.
