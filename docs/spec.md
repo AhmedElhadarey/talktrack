@@ -39,7 +39,10 @@ graph TB
 | **revise_slide** | `handle`, `slide` (id), `markdown` (one slide) | `issues`; only changed narration is voiced again |
 | **finish_walkthrough** | `handle`, `questions` (optional list) | summary, `issues`; with Playwright, findings from drawing every slide headless |
 | **list_walkthroughs** | none | recent walkthroughs with handles, titles and links |
+| **export_walkthrough** | `handle`, `format` (mp4, html), `path` (optional), `max_mb` (optional) | `path`, `bytes`, `duration_s`, `shrunk`; waits for the narration, then writes an MP4 (needs ffmpeg and Playwright) or one offline HTML page, by default in the project folder named after the title |
 | **preview_slides** | `handle`, `slides` (optional ids) | a 640×360 picture of each slide fully revealed (up to twelve), plus layout findings from drawing them. Needs Playwright where showntell runs. |
+
+**Delivery modes:** `showntell mcp --deliver file` (or `SHOWNTELL_DELIVER=file`) is for users who cannot open links on the agent's machine. The instructions, `start_walkthrough` and `finish_walkthrough` descriptions and the link-bearing replies come from `text/file/`: none hands the agent the link, and the flow ends with `export_walkthrough`, whose `max_mb` then defaults to 16. The mode belongs to each MCP connection, not the daemon.
 
 All tools return structured content and a readable text version. Tools carry titles and annotations: `list_walkthroughs` is read-only, none destroy data, all work in a closed world.
 

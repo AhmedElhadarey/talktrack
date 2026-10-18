@@ -7,5 +7,10 @@
   "voice_error": "Slides saved, but voicing failed: {error}\nLink: {url}. Continue with the next add_slides call. If the error repeats, stop and ask the user to run `showntell doctor`.",
   "need_opening": "Nothing to play yet: no narration so far. Send one or two spoken sentences next, as plain paragraphs without a heading; they join the last slide you sent. A > line is shown, not spoken.",
   "finished": "Finished: {slides} slides, {duration}. {url}\nTell the user the walkthrough is finished and give them the link. Do not repeat the script.",
-  "loading": "The voice model is not ready yet: {status}. Send the opening with add_slides anyway; that reply may take longer, and it gives the link either way."
+  "loading": "The voice model is not ready yet: {status}. Send the opening with add_slides anyway; that reply may take longer, and it gives the link either way.",
+  "guide_send_link": "If the user lacks the link, send it now, then keep writing.",
+  "guide_tell_user": "**Tell the user** it is finished, with the link, in a line or two; don't repeat the script.",
+  "exported": "Saved {path} ({mb} MB, {duration}).\nSend this file to the user as an attachment, through the channel you talk to them on, with a line on what it covers. The path is not a link: give it as one only if the user works on this machine. Don't repeat the script.",
+  "export_shrunk": "Shrunk to fit {limit} MB: {what}. If the user's channel takes larger files and quality matters, export again with a higher max_mb.",
+  "export_silent": "{n} narration paragraph(s) failed to voice and are silent in this file. Revise those slides to voice them again, then export again before sending."
 }

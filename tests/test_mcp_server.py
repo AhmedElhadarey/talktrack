@@ -45,6 +45,7 @@ async def test_tools_are_listed_with_titles(mcp):
             "finish_walkthrough",
             "list_walkthroughs",
             "preview_slides",
+            "export_walkthrough",
         }
         assert all(t.title and t.description for t in tools.values())
 
@@ -52,7 +53,7 @@ async def test_tools_are_listed_with_titles(mcp):
 async def test_writing_tools_are_not_read_only_or_destructive(mcp):
     async with mcp as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        for name in ("start_walkthrough", "add_slides", "revise_slide", "finish_walkthrough"):
+        for name in ("start_walkthrough", "add_slides", "revise_slide", "finish_walkthrough", "export_walkthrough"):
             a = tools[name].annotations
             assert (a.read_only_hint, a.destructive_hint, a.open_world_hint) == (False, False, False), name
 
@@ -299,3 +300,121 @@ async def test_structured_content_carries_the_whole_reply(mcp):
         assert "Writing a showntell walkthrough" in msg and r.structured_content["url"] in msg
         a = await client.call_tool("add_slides", {"handle": r.structured_content["handle"], "markdown": "## Next\n\nMore words.\n"})
         assert a.structured_content["message"] == text(a)
+
+
+# -- export and file delivery ---------------------------------------------------------------------
+
+
+async def _written(client, project) -> dict:
+    h = await start(client, project_dir=str(project), opening=OPENING)
+    await client.call_tool("add_slides", {"handle": h["handle"], "markdown": BODY})
+    await client.call_tool("finish_walkthrough", {"handle": h["handle"]})
+    return h
+
+
+async def test_export_writes_one_page_in_the_project_folder(mcp, tmp_path):
+    async with mcp as client:
+        h = await _written(client, tmp_path)
+        r = await client.call_tool("export_walkthrough", {"handle": h["handle"], "format": "html"})
+        assert not r.is_error, text(r)
+        data = r.structured_content
+        out = tmp_path / "caching.html"
+        assert data["path"] == str(out.resolve()) and data["bytes"] == out.stat().st_size and data["format"] == "html"
+        assert str(out.resolve()) in text(r) and "<!doctype html>" in out.read_text().lower()[:200]
+        r = await client.call_tool("export_walkthrough", {"handle": h["handle"], "format": "html", "path": "out/w.html"})
+        assert r.is_error and "does not exist" in text(r)
+        (tmp_path / "out").mkdir()
+        r = await client.call_tool("export_walkthrough", {"handle": h["handle"], "format": "html", "path": "out/w.html"})
+        assert not r.is_error and (tmp_path / "out" / "w.html").is_file()
+
+
+async def test_export_checks_suffix_and_size(mcp, tmp_path):
+    async with mcp as client:
+        h = await _written(client, tmp_path)
+        r = await client.call_tool("export_walkthrough", {"handle": h["handle"], "format": "html", "path": "w.mp4"})
+        assert r.is_error and "must end in .html" in text(r)
+        r = await client.call_tool("export_walkthrough", {"handle": h["handle"], "format": "html", "max_mb": 0.001})
+        assert r.is_error and "over the 0.001 MB limit" in text(r)
+        assert not (tmp_path / "caching.html").exists()
+        r = await client.call_tool("export_walkthrough", {"handle": "nope.nope"})
+        assert r.is_error and "unknown handle" in text(r)
+
+
+async def test_export_path_must_be_inside_a_folder_the_client_shares(service, tmp_path):
+    from mcp_types import ListRootsResult, Root
+
+    shared, other = tmp_path / "shared", tmp_path / "other"
+    shared.mkdir()
+    other.mkdir()
+
+    async def roots(ctx):
+        return ListRootsResult(roots=[Root(uri=shared.as_uri())])
+
+    async with Client(create_mcp(service), list_roots_callback=roots) as client:
+        h = await _written(client, shared)
+        r = await client.call_tool("export_walkthrough", {"handle": h["handle"], "format": "html", "path": str(other / "w.html")})
+        assert r.is_error and "outside the folders this client shares" in text(r)
+        r = await client.call_tool("export_walkthrough", {"handle": h["handle"], "format": "html", "path": str(shared / "w.html")})
+        assert not r.is_error
+
+
+def test_export_path_names_the_file_after_the_title(tmp_path):
+    from showntell.service import export_path
+
+    assert export_path("Why TLS? A tour!", str(tmp_path), "", "mp4") == tmp_path.resolve() / "why-tls-a-tour.mp4"
+    assert export_path("???", str(tmp_path), "", "html") == tmp_path.resolve() / "walkthrough.html"
+    assert export_path("T", None, str(tmp_path / "x.htm"), "html") == (tmp_path / "x.htm").resolve()
+    for title, root, path, fmt, msg in [
+        ("T", None, "", "mp4", "no project folder"),
+        ("T", None, "x.mp4", "mp4", "relative path needs a project folder"),
+        ("T", str(tmp_path), "x.html", "mp4", "must end in .mp4"),
+        ("T", str(tmp_path), "nope/x.mp4", "mp4", "does not exist"),
+    ]:
+        with pytest.raises(ValueError, match=msg):
+            export_path(title, root, path, fmt)
+    (tmp_path / "d.mp4").mkdir()
+    with pytest.raises(ValueError, match="is a folder"):
+        export_path("T", str(tmp_path), "d.mp4", "mp4")
+
+
+async def test_file_delivery_never_offers_the_link(service, tmp_path):
+    """In file mode the user cannot open links on this machine: no reply hands the agent one."""
+    async with Client(create_mcp(service, deliver="file")) as client:
+        assert "export_walkthrough" in (client.instructions or "")
+        h = await start(client, project_dir=str(tmp_path), opening=OPENING)
+        url = h["url"]
+        assert url not in text_of(h) and "{{" not in text_of(h) and "# Writing a showntell walkthrough" in text_of(h)
+        r = await client.call_tool("add_slides", {"handle": h["handle"], "markdown": BODY})
+        assert url not in text(r)
+        r = await client.call_tool("revise_slide", {"handle": h["handle"], "slide": "lookup", "markdown": "New words."})
+        assert url not in text(r)
+        r = await client.call_tool("finish_walkthrough", {"handle": h["handle"]})
+        assert url not in text(r) and "export_walkthrough" in text(r)
+
+
+async def test_link_delivery_guide_still_says_to_send_the_link(mcp):
+    async with mcp as client:
+        h = await start(client, opening=OPENING)
+        assert "send it now" in text_of(h)
+
+
+def text_of(structured: dict) -> str:
+    return structured["message"]
+
+
+def test_unknown_delivery_mode_is_refused(service):
+    with pytest.raises(ValueError, match="deliver"):
+        create_mcp(service, deliver="pigeon")
+
+
+def test_file_texts_override_only_what_mentions_the_link():
+    from showntell.server import texts
+
+    base, file = texts("link"), texts("file")
+    assert file["guide"] == base["guide"] and file["prompts"] == base["prompts"]
+    assert set(file["tools"]) == set(base["tools"])
+    for name, t in base["tools"].items():
+        assert set(file["tools"][name]["args"]) == set(t.get("args", {})), name
+    changed = {k for k in base["replies"] if file["replies"][k] != base["replies"][k]}
+    assert changed >= {"playable", "finished", "guide_send_link", "guide_tell_user"}
+    assert all("{url}" not in file["replies"][k] for k in changed)

@@ -1,0 +1,11 @@
+{
+  "start_walkthrough": {
+    "description": "Create a narrated walkthrough that the user receives as a video file. Pass its opening in `opening`: the reply then comes once that is voiced, with the handle and the full authoring guide. Send the user no link; they cannot open it. Write the whole body with add_slides, then call finish_walkthrough and export_walkthrough. Without `opening`, the reply is short and your first add_slides call must carry the opening instead.",
+    "args": {
+      "frame": "Slide shape: landscape (default, 1280×720), square (960×960) or portrait (720×1280). The user likely watches on a phone: portrait fills the screen but fits only short code lines; square is the middle ground; landscape suits wide code and side-by-side diffs. Choose by content."
+    }
+  },
+  "finish_walkthrough": {
+    "description": "Close the walkthrough after its last slide. Records the end questions and returns a summary: remaining problems, slide start times and what could not be checked. With Playwright installed it first draws every slide, so the summary already reports render and layout problems (render errors, text_too_small, overflow, drawing_overlap); fix them with revise_slide before exporting. Call preview_slides only for slides it names, a drawing or diagram you want to see, or when the user asks. Then call export_walkthrough and send the user the file it saves; never the link."
+  }
+}

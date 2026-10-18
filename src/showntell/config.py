@@ -21,6 +21,7 @@ class Config:
     public_url: str = field(default_factory=lambda: _env("PUBLIC_URL", ""))
     open_browser: bool = field(default_factory=lambda: _env("OPEN") == "1")
     access_token: str = field(default_factory=lambda: _env("ACCESS_TOKEN", ""))
+    deliver: str = field(default_factory=lambda: _env("DELIVER", "link"))  # link, or file: the agent sends an export
     finish_check: bool = field(default_factory=lambda: _env("FINISH_CHECK", "1") != "0")  # layout check at finish
 
     @property

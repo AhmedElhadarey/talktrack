@@ -138,7 +138,7 @@ def serve(cfg: Config) -> None:
     suffix = f"?t={cfg.access_token}" if cfg.access_token else ""
     store = Store(cfg.data_dir, cfg.base_url, narrator, default_voice=cfg.voice, open_browser=cfg.open_browser, link_suffix=suffix)
     service = LocalService(store, layout_check=cfg.finish_check)
-    mcp = create_mcp(service)
+    mcp = create_mcp(service, deliver=cfg.deliver)
     rpc_token = secrets.token_urlsafe(24)
     holder: dict = {}
 

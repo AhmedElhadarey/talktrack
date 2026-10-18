@@ -171,6 +171,55 @@ class LocalService:
             "player_issues": _dicts(s.take_player_issues()),
         }
 
+    async def export(self, handle: str, path: str = "", format: str = "mp4", max_mb: float = 0, wait_s: float | None = None) -> dict:
+        """Write the walkthrough to a file the agent can attach: an MP4, or one HTML page that plays
+        offline. A relative or empty `path` is in the project folder. Waits for the narration first."""
+        import asyncio
+
+        from .export import export_html, timeline_total
+        from .video import render_mp4
+
+        wait_s = EXPORT_WAIT_S if wait_s is None else wait_s
+        s = self.store.by_handle(handle)
+        if format not in ("mp4", "html"):
+            raise ValueError("format must be mp4 or html")
+        out = export_path(s.w.title, s.w.root, path, format)
+        says = [x for sl in s.w.slides for x in sl.says if x.text]
+        if not says:
+            raise ValueError("nothing to export yet: the walkthrough has no narration")
+        t0 = time.monotonic()
+        while any(x.status == "pending" for x in says) and time.monotonic() - t0 < wait_s:
+            await asyncio.sleep(0.5)
+        pending = sum(1 for x in says if x.status == "pending")
+        if pending:
+            raise ValueError(f"{pending} paragraph(s) are still being voiced after {wait_s:.0f} s; try again shortly")
+        silent = sum(1 for x in says if x.status != "ready")
+        s.save_now()  # the exporters read the saved state
+        data_dir = self.store.data_dir
+        try:
+            if format == "mp4":
+                r = await asyncio.to_thread(render_mp4, data_dir, s.w.id, out, quiet=True, max_bytes=int(max_mb * 1e6))
+                shrunk, errors = r["shrunk"], r["errors"]
+            else:
+                await asyncio.to_thread(export_html, data_dir, s.w.id, out)
+                shrunk, errors = "", []
+                size = out.stat().st_size
+                if max_mb and size > max_mb * 1e6:
+                    out.unlink()
+                    raise SystemExit(f"the page is {size / 1e6:.1f} MB, over the {max_mb:g} MB limit; export an MP4 instead")
+        except SystemExit as e:  # the exporters stop the command line this way
+            raise ValueError(str(e)) from None
+        return {
+            "path": str(out),
+            "format": format,
+            "bytes": out.stat().st_size,
+            "duration_s": round(timeline_total(s.w), 1),
+            "shrunk": shrunk,
+            "silent": silent,
+            "errors": errors,
+            "seconds": round(time.monotonic() - t0, 1),
+        }
+
     async def source(self, wid: str) -> str:
         s = self.store.get(wid)
         if s is None:
@@ -187,8 +236,9 @@ class RemoteService:
         self.base = base.rstrip("/")
         self.client = httpx.AsyncClient(timeout=httpx.Timeout(70.0, connect=5.0), headers={"Authorization": f"Bearer {token}"})
 
-    async def _call(self, method: str, **kw) -> Any:
-        r = await self.client.post(f"{self.base}/api/rpc/{method}", json=kw)
+    async def _call(self, method: str, http_timeout: float | None = None, **kw) -> Any:
+        extra = {"timeout": http_timeout} if http_timeout else {}
+        r = await self.client.post(f"{self.base}/api/rpc/{method}", json=kw, **extra)
         try:
             data = r.json()
         except ValueError:  # a plain-text refusal, or not the daemon at all
@@ -223,8 +273,13 @@ class RemoteService:
     async def preview(self, handle, slides=None, short=360):
         return await self._call("preview", handle=handle, slides=slides, short=short)
 
+    async def export(self, handle, path="", format="mp4", max_mb=0):
+        # Rendering takes a while: about a tenth of the video's length, plus waiting for the voice.
+        return await self._call("export", http_timeout=EXPORT_WAIT_S + 900, handle=handle, path=path, format=format, max_mb=max_mb)
 
-RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list", "source", "preview"}
+
+RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list", "source", "preview", "export"}
+EXPORT_WAIT_S = 300.0  # for the narration to finish voicing before an export
 PREVIEW_MAX = 12
 LAYOUT_CHECK_MAX = 60  # slides drawn by the finish-time layout check
 LAYOUT_CHECK_S = 25.0
@@ -244,6 +299,33 @@ def _end_times(w) -> dict[str, float]:
         end = starts[order[i + 1]] if i + 1 < len(order) else total
         out[sid] = max(starts[sid], end - 0.35)
     return out
+
+
+def export_path(title: str, root: str | None, path: str, format: str) -> Path:
+    """Where an export goes: `path` (relative ones inside the project folder), else a file named
+    after the title in the project folder. The suffix must match the format."""
+    import re
+
+    if path:
+        p = Path(path).expanduser()
+        if not p.is_absolute():
+            if not root:
+                raise ValueError("a relative path needs a project folder; pass an absolute path")
+            p = Path(root) / p
+    else:
+        if not root:
+            raise ValueError("no project folder to save in; pass an absolute path")
+        slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:60].strip("-") or "walkthrough"
+        p = Path(root) / f"{slug}.{format}"
+    p = p.resolve()
+    want = (".mp4",) if format == "mp4" else (".html", ".htm")
+    if p.suffix.lower() not in want:
+        raise ValueError(f"path must end in {want[0]} for format {format}")
+    if p.is_dir():
+        raise ValueError(f"{p} is a folder")
+    if not p.parent.is_dir():
+        raise ValueError(f"folder {p.parent} does not exist")
+    return p
 
 
 def mmss(seconds: float | None) -> str:

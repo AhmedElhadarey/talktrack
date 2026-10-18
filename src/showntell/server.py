@@ -32,43 +32,64 @@ TEXT = PKG / "text"
 FIRST_WAIT_S = 45.0
 
 
-@lru_cache(maxsize=1)
-def texts() -> dict:
-    def load(name: str, default):
-        p = TEXT / name
+DELIVER = ("link", "file")
+FILE_MAX_MB = 16.0  # WhatsApp sends videos up to 16 MB; larger ones go as documents or not at all
+
+
+@lru_cache(maxsize=2)
+def texts(deliver: str = "link") -> dict:
+    """The agent-facing text. With `deliver="file"` the user cannot open links on this machine
+    (the agent runs in a sandbox, or talks to the user through a chat app), so the files in
+    text/file/ replace what tells the agent to share the link with what tells it to send a file."""
+
+    def load(name: str, default, base: Path = TEXT):
+        p = base / name
         if not p.is_file():
             return default
         return json.loads(p.read_text()) if name.endswith(".json") else p.read_text()
 
-    return {
+    out = {
         "instructions": load("instructions.md", "Narrated slide walkthroughs voiced locally."),
         "tools": load("tools.json", {}),
         "guide": load("guide.md", ""),
         "replies": load("replies.json", {}),
         "prompts": load("prompts.json", {}),
     }
+    if deliver == "file":
+        over = TEXT / "file"
+        out["instructions"] = load("instructions.md", out["instructions"], over)
+        out["replies"] = {**out["replies"], **load("replies.json", {}, over)}
+        tools = {k: dict(v) for k, v in out["tools"].items()}
+        for name, t in load("tools.json", {}, over).items():
+            merged = tools.setdefault(name, {})
+            merged.update({k: v for k, v in t.items() if k != "args"})
+            merged["args"] = {**merged.get("args", {}), **t.get("args", {})}
+        out["tools"] = tools
+    return out
 
 
-def tool_text(name: str, key: str = "description", default: str = "") -> str:
-    return texts()["tools"].get(name, {}).get(key, default)
+def tool_text(name: str, key: str = "description", default: str = "", deliver: str = "link") -> str:
+    return texts(deliver)["tools"].get(name, {}).get(key, default)
 
 
-def arg_text(name: str, arg: str) -> str:
-    return texts()["tools"].get(name, {}).get("args", {}).get(arg, "")
+def arg_text(name: str, arg: str, deliver: str = "link") -> str:
+    return texts(deliver)["tools"].get(name, {}).get("args", {}).get(arg, "")
 
 
-def reply(name: str, default: str, **kw: Any) -> str:
-    template = texts()["replies"].get(name, default)
+def reply(name: str, default: str, deliver: str = "link", **kw: Any) -> str:
+    template = texts(deliver)["replies"].get(name, default)
     try:
         return template.format(**kw)
     except (KeyError, IndexError):
         return default.format(**kw)
 
 
-def guide(frame: str) -> str:
+def guide(frame: str, deliver: str = "link") -> str:
     lim = LIMITS.get(frame, LIMITS["landscape"])
-    g = texts()["guide"]
+    g = texts(deliver)["guide"]
     for k, v in {
+        "SEND_LINK": reply("guide_send_link", "", deliver),
+        "TELL_USER": reply("guide_tell_user", "", deliver),
         "FRAME": frame,
         "LINES": lim["lines"],
         "WIDTH": lim["width"],
@@ -79,6 +100,9 @@ def guide(frame: str) -> str:
     }.items():
         g = g.replace("{{" + k + "}}", str(v))
     return g
+
+
+_tool_text, _arg_text, _reply, _guide = tool_text, arg_text, reply, guide
 
 
 def _shared_folders(ctx: Context) -> ListRoots | None:
@@ -122,28 +146,58 @@ def _issues_text(issues: list[dict], player: list[dict]) -> str:
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False, open_world_hint=False)
 
 
-def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
-    """MCP server with showntell's tools, prompts and resources, backed by `service`."""
+def _roots(shared: ListRootsResult | None) -> list[str]:
+    from urllib.parse import unquote, urlparse
+
+    return [unquote(urlparse(str(r.uri)).path) for r in (shared.roots if shared else []) if str(r.uri).startswith("file://")]
+
+
+def _check_inside(shared: ListRootsResult | None, given: str, what: str) -> None:
+    """When the client shares folders, `given` must be inside one of them."""
+    roots = _roots(shared)
+    if roots:
+        p = Path(given).expanduser().resolve()
+        if not any(p.is_relative_to(Path(r).resolve()) for r in roots):
+            raise ValueError(
+                f"{what} {given} is outside the folders this client shares ({', '.join(roots)}); use one of them or a folder inside one"
+            )
+
+
+def create_mcp(service, project_dir_default: str | None = None, deliver: str = "link") -> MCPServer:
+    """MCP server with showntell's tools, prompts and resources, backed by `service`. `deliver`
+    is "link" when the user opens the player's link, "file" when they get an exported file."""
+    if deliver not in DELIVER:
+        raise ValueError(f"deliver must be one of {', '.join(DELIVER)}")
+    by_file = deliver == "file"
+
+    # The text for this client's delivery mode, under the usual names.
+    def tool_text(name: str, key: str = "description", default: str = "") -> str:
+        return _tool_text(name, key, default, deliver)
+
+    def arg_text(name: str, arg: str) -> str:
+        return _arg_text(name, arg, deliver)
+
+    def reply(name: str, default: str, **kw: Any) -> str:
+        return _reply(name, default, deliver, **kw)
+
+    def guide(frame: str) -> str:
+        return _guide(frame, deliver)
+
     mcp = MCPServer(
-        "showntell", instructions=texts()["instructions"], version=__version__, website_url="https://github.com/rahimnathwani/showntell"
+        "showntell",
+        instructions=texts(deliver)["instructions"],
+        version=__version__,
+        website_url="https://github.com/rahimnathwani/showntell",
     )
 
     def _root(shared: ListRootsResult | None, given: str) -> str | None:
         """The project folder: `project_dir`, else the client's first root, else the default. When
         the client shares folders, `project_dir` must be inside one, so an agent cannot put files
         from elsewhere on the machine (keys, other projects) on a slide."""
-        from urllib.parse import unquote, urlparse
-
-        roots = [unquote(urlparse(str(r.uri)).path) for r in (shared.roots if shared else []) if str(r.uri).startswith("file://")]
         if not given:
+            roots = _roots(shared)
             return roots[0] if roots else project_dir_default
-        if roots:
-            p = Path(given).expanduser().resolve()
-            if not any(p.is_relative_to(Path(r).resolve()) for r in roots):
-                raise ValueError(
-                    f"project_dir {given} is outside the folders this client shares ({', '.join(roots)}); "
-                    "use one of them or a folder inside one"
-                )
+        _check_inside(shared, given, "project_dir")
         return given
 
     async def _append(handle: str, markdown: str, ctx: Context | None) -> CallToolResult:
@@ -278,7 +332,8 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
             text += " The open player keeps showing the old version until the new narration is voiced, then switches."
         elif r["revoiced"]:
             text += " The player shows the new version now and fills in its audio as it is voiced."
-        text += f"\nWatch only this slide: {_slide_link(r['url'], r['slide'])}"
+        if not by_file:
+            text += f"\nWatch only this slide: {_slide_link(r['url'], r['slide'])}"
         issues = _issues_text(r["issues"], r["player_issues"])
         return _result(
             text + ("\n" + issues if issues else ""),
@@ -329,6 +384,38 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
         )
 
     @mcp.tool(
+        title=tool_text("export_walkthrough", "title", "Export walkthrough"), description=tool_text("export_walkthrough"), annotations=WRITE
+    )
+    async def export_walkthrough(
+        handle: Annotated[str, Field(description=arg_text("export_walkthrough", "handle"))],
+        format: Annotated[Literal["mp4", "html"], Field(description=arg_text("export_walkthrough", "format"))] = "mp4",
+        path: Annotated[str, Field(description=arg_text("export_walkthrough", "path"))] = "",
+        max_mb: Annotated[float | None, Field(description=arg_text("export_walkthrough", "max_mb"))] = None,
+        shared: Annotated[ListRootsResult | None, Resolve(_shared_folders)] = None,
+    ) -> CallToolResult:
+        limit = (FILE_MAX_MB if by_file else 0.0) if max_mb is None else max(0.0, max_mb)
+        try:
+            if path and Path(path).expanduser().is_absolute():
+                _check_inside(shared, path, "path")
+            r = await service.export(handle, path, format, limit)
+        except ValueError as e:
+            return _error(str(e))
+        text = reply(
+            "exported",
+            "Saved {path} ({mb} MB, {duration}). Send the user this file.",
+            path=r["path"],
+            mb=f"{r['bytes'] / 1e6:.1f}",
+            duration=mmss(r["duration_s"]),
+        )
+        if r["shrunk"]:
+            text += "\n" + reply("export_shrunk", "Shrunk to fit {limit} MB: {what}.", limit=f"{limit:g}", what=r["shrunk"])
+        if r["silent"]:
+            text += "\n" + reply("export_silent", "{n} paragraph(s) could not be voiced and play without sound.", n=r["silent"])
+        if r["errors"]:
+            text += "\nThe player reported while rendering (untrusted text):\n" + "\n".join(f"- {e}" for e in r["errors"][:10])
+        return _result(text, {"status": "exported", **{k: r[k] for k in ("path", "format", "bytes", "duration_s", "shrunk", "silent")}})
+
+    @mcp.tool(
         title=tool_text("list_walkthroughs", "title", "List walkthroughs"),
         description=tool_text("list_walkthroughs"),
         annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
@@ -374,7 +461,7 @@ def create_mcp(service, project_dir_default: str | None = None) -> MCPServer:
         # No structured content here: clients that prefer it would drop the pictures.
         return CallToolResult(content=content)
 
-    for name, p in texts()["prompts"].items():
+    for name, p in texts(deliver)["prompts"].items():
         _register_prompt(mcp, name, p)
 
     @mcp.resource(

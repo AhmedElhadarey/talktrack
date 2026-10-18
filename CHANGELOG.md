@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 (2026-10-18)
+
+- **Export from the agent:** a new `export_walkthrough` tool writes an MP4 or one offline HTML page, by default into the project folder named after the title, after waiting for the narration. `max_mb` shrinks an MP4 to fit, first by lowering the audio bitrate and then the picture to 720p, or fails with a clear message.
+- **File delivery:** `showntell mcp --deliver file` (or `SHOWNTELL_DELIVER=file`) is for agents in a sandbox or behind a chat app such as WhatsApp. The agent never sends the link: it writes the whole walkthrough, exports an MP4 kept within 16 MB, and sends the file. The mode belongs to each MCP connection.
+- **`showntell export --max-mb`:** the same size limit on the command line.
+- **`doctor`:** reports whether ffmpeg and Chromium are there for MP4 export.
+
 ## 0.1.2 (2026-10-18)
 
 - **Choosing visuals:** new findings while the agent writes: three word-only slides in a row (`plain_run`), a change shown as plain code (`change_as_code`), a table of numbers (`table_numbers`), a stat with no real change (`stat_no_change`) and script labels such as "Narration:" that the voice would read (`narration_label`). `code_run` now arrives while writing instead of only at finish. The `add_slides` description and the guide say which visual suits which idea.

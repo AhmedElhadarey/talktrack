@@ -12,7 +12,7 @@ from . import __version__, daemon
 from .config import Config
 
 # Until showntell is on PyPI, where this becomes `uvx showntell mcp`.
-INSTALL = "uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.2 showntell mcp"
+INSTALL = "uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.3 showntell mcp"
 
 OK, WARN, FAIL = "ok", "warn", "fail"
 
@@ -20,6 +20,30 @@ OK, WARN, FAIL = "ok", "warn", "fail"
 def _row(status: str, name: str, detail: str) -> None:
     mark = {"ok": "✓", "warn": "!", "fail": "✗"}[status]
     print(f"  {mark} {name:<16} {detail}")
+
+
+def _chromium() -> str:
+    """Path of Playwright's Chromium, or '' when Playwright or its browser is missing."""
+    try:
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as pw:
+            path = pw.chromium.executable_path
+    except Exception:
+        return ""
+    from pathlib import Path
+
+    return path if Path(path).is_file() else ""
+
+
+def _video_check() -> tuple[str, str, str]:
+    """MP4 export needs ffmpeg and Chromium; a missing one is a warning, as only exports need it."""
+    missing = [x for x in ("ffmpeg", "ffprobe") if not shutil.which(x)]
+    if not _chromium():
+        missing.append("Playwright Chromium (the `video` extra, then `playwright install chromium`)")
+    if missing:
+        return WARN, "video export", "MP4 export and slide checks need " + ", ".join(missing) + "; HTML export works without"
+    return OK, "video export", "ffmpeg and Chromium found: MP4 export works"
 
 
 def doctor(cfg: Config, args) -> None:
@@ -39,6 +63,9 @@ def doctor(cfg: Config, args) -> None:
 
     # git, used for diffs read from the project
     _row(OK if shutil.which("git") else WARN, "git", shutil.which("git") or "not found: diffs from git revisions will not work")
+
+    # MP4 export and the finish-time layout check
+    _row(*_video_check())
 
     # speech backend and models
     from .speech import Status, make_backend

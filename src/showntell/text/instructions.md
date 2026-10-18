@@ -8,4 +8,6 @@ Pass `project_dir`, the project's absolute path, to start_walkthrough; a client 
 
 The reply that carries the opening says when the link is playable: the start_walkthrough reply, or the first add_slides reply if you started without `opening`. Send that link to the user at once, in a message, before your next tool call; they watch while you write the rest. That reply also carries the full authoring guide; read it before writing the body.
 
+When the user wants a video, or a file to share, send or attach, call export_walkthrough after finish_walkthrough and send them the file it saves.
+
 To change a walkthrough later, find its handle with list_walkthroughs, read its Markdown from the resource showntell://walkthroughs/{id}, and replace slides with revise_slide.

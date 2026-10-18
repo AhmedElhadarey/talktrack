@@ -64,6 +64,9 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+handles: dict = {}  # walkthrough id -> (handle, export route, auth header), for tests through the daemon
+
+
 @pytest.fixture(scope="module")
 def walkthrough(tmp_path_factory):
     """(data folder, walkthrough id) for DOC, voiced by a fake-speech daemon."""
@@ -102,6 +105,7 @@ def walkthrough(tmp_path_factory):
                 break
             time.sleep(0.1)
         wid = r["handle"].split(".")[0]
+        handles[wid] = (r["handle"], f"http://127.0.0.1:{lock['port']}/api/rpc/export", h)
         state = data / "walkthroughs" / wid / "state.json"
         for _ in range(100):  # state is saved a moment after the last change
             if state.is_file():
@@ -200,3 +204,33 @@ def test_folder_export_writes_a_poster(walkthrough, tmp_path):
     page = (out / "index.html").read_text()
     assert '<meta property="og:image" content="poster.png">' in page
     assert '<meta name="twitter:image" content="poster.png">' in page
+
+
+@pytest.mark.browser
+@pytest.mark.slow
+def test_mp4_export_through_the_daemon_fits_a_size_limit(walkthrough, tmp_path):
+    """export_walkthrough's path: the daemon renders, then shrinks the file to fit `max_mb`."""
+    if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
+        pytest.skip("ffmpeg not installed")
+    from showntell.video import probe
+
+    data, wid = walkthrough
+    handle, route, auth = handles[wid]
+
+    def export(name: str, max_mb: float) -> httpx.Response:
+        body = {"handle": handle, "path": str(tmp_path / name), "format": "mp4", "max_mb": max_mb}
+        return httpx.post(route, json=body, headers=auth, timeout=180)
+
+    r = export("full.mp4", 0)
+    if r.status_code == 400 and ("not installed" in r.text or "Chromium" in r.text):
+        pytest.skip(r.text)
+    full = r.json()["result"]
+    assert full["shrunk"] == "" and full["bytes"] == (tmp_path / "full.mp4").stat().st_size
+    limit = full["bytes"] * 0.95 / 1e6
+    small = export("small.mp4", limit).json()["result"]
+    assert small["shrunk"] and small["bytes"] <= limit * 1e6
+    streams = {s["codec_type"] for s in probe(tmp_path / "small.mp4")["streams"]}
+    assert streams == {"video", "audio", "subtitle"}
+    r = export("tiny.mp4", 0.001)
+    assert r.status_code == 400 and "split the walkthrough" in r.json()["error"]
+    assert not (tmp_path / "tiny.mp4").exists()

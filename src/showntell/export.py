@@ -415,12 +415,14 @@ def _export_mp4(cfg: Config, wid: str, dest: Path, args) -> None:
 
     if args.mp3:
         raise SystemExit("--mp3 applies to folder exports; an MP4 always carries AAC audio")
-    r = render_mp4(cfg.data_dir, wid, dest, fps=args.fps, workers=args.workers, captions=args.burn_captions)
+    max_bytes = int(getattr(args, "max_mb", 0) * 1e6)
+    r = render_mp4(cfg.data_dir, wid, dest, fps=args.fps, workers=args.workers, captions=args.burn_captions, max_bytes=max_bytes)
     for e in r["errors"]:
         print(f"- player: {e}", file=sys.stderr)
     print(
         f"Exported to {dest} ({dest.stat().st_size / 1e6:.1f} MB, {r['duration']:.1f} s, {r['frames']} frames at "
         f"{r['fps']} fps) in {r['seconds']:.1f} s: {r['speed']:.1f} s of video per second"
+        + (f"; shrunk to fit with {r['shrunk']}" if r["shrunk"] else "")
     )
 
 

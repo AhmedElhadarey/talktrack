@@ -1,6 +1,6 @@
 # Writing a showntell walkthrough
 
-If the user lacks the link, send it now, then keep writing. This walkthrough uses the **{{FRAME}}** frame.
+{{SEND_LINK}} This walkthrough uses the **{{FRAME}}** frame.
 
 ## Plan
 
@@ -137,7 +137,7 @@ Bigger visuals render smaller: narrow `lines=`, show only the changed region, sp
 
 1. **Questions:** give `finish_walkthrough` two or three specific follow-up questions ("What happens if the loader throws?", not "Any questions?"), or list them in your last `add_slides` call under `## Questions {.questions}`.
 2. **Check:** the `finish_walkthrough` reply lists render and layout problems from drawing every slide; fix them with `revise_slide`. Call `preview_slides` only for slides it names, a picture you want to see, or when asked.
-3. **Tell the user** it is finished, with the link, in a line or two; don't repeat the script.
+3. {{TELL_USER}}
 
 ## Example slide
 

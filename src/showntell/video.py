@@ -225,6 +225,41 @@ def _mux(segs: list[Path], wav: Path, vtt: Path, out: Path, work: Path) -> None:
         raise SystemExit(f"ffmpeg could not join the video: {r.stderr.strip()}")
 
 
+# Each step re-encodes the full-size file. Narration is most of a walkthrough's bytes (about
+# 100 kb/s of AAC against 50 to 70 kb/s of mostly still picture), so audio goes first.
+SHORT_720 = "scale='if(gt(iw,ih),-2,720)':'if(gt(iw,ih),720,-2)'"
+FIT_STEPS = [
+    ("64 kb/s audio", ["-c:v", "copy", "-b:a", "64k"]),
+    (
+        "720p picture and 48 kb/s audio",
+        ["-vf", SHORT_720, "-c:v", "libx264", "-preset", PRESET, "-crf", "28", "-tune", "stillimage", "-pix_fmt", "yuv420p"]
+        + ["-b:a", "48k"],
+    ),
+]
+
+
+def fit_size(path: Path, max_bytes: int, work: Path) -> str:
+    """Shrink an MP4 larger than `max_bytes`, for apps that cap attachments (WhatsApp sends
+    videos up to 16 MB). Returns what was given up, or '' when it already fits."""
+    size = path.stat().st_size
+    if size <= max_bytes:
+        return ""
+    for what, args in FIT_STEPS:
+        tmp = work / f"fit{path.suffix}"
+        cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(path), "-map", "0", "-c:a", "aac", "-c:s", "copy"] + args
+        cmd += ["-map_metadata", "0", "-movflags", "+faststart", str(tmp)]
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode != 0:
+            raise SystemExit(f"ffmpeg could not shrink the video: {r.stderr.strip()}")
+        if tmp.stat().st_size <= max_bytes:
+            shutil.move(tmp, path)
+            return what
+    raise SystemExit(
+        f"the video is {size / 1e6:.1f} MB and still {tmp.stat().st_size / 1e6:.1f} MB with {what}, over the "
+        f"{max_bytes / 1e6:.1f} MB limit; split the walkthrough in two or raise the limit"
+    )
+
+
 def probe(path: Path) -> dict:
     r = subprocess.run(
         [
@@ -264,8 +299,10 @@ def render_mp4(
     captions: bool = False,
     image: str = IMAGE,
     quiet: bool = False,
+    max_bytes: int = 0,
 ) -> dict:
-    """Render walkthrough `wid` to an MP4 at `out`. Returns timing and frame counts."""
+    """Render walkthrough `wid` to an MP4 at `out`. Returns timing and frame counts. With
+    `max_bytes`, a larger file is shrunk to fit (fit_size) or the export fails."""
     require_ffmpeg()
     try:
         require_playwright()
@@ -293,6 +330,11 @@ def render_mp4(
         wav = work / "narration.wav"
         clips = soundtrack(folder, n / fps, wav)
         _mux(segs, wav, folder / "captions.vtt", out, work)
+        try:
+            shrunk = fit_size(out, max_bytes, work) if max_bytes else ""
+        except SystemExit:
+            out.unlink()  # too big to send is no use
+            raise
     got = check_duration(out, total)
     wall = time.monotonic() - t0
     return {
@@ -306,4 +348,5 @@ def render_mp4(
         "speed": total / wall if wall else 0.0,
         "errors": stats["errors"],
         "fps": fps,
+        "shrunk": shrunk,
     }

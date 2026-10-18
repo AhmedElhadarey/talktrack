@@ -31,10 +31,20 @@
   },
   "finish_walkthrough": {
     "title": "Finish walkthrough",
-    "description": "Close the walkthrough after its last slide. Records the end questions and returns a summary: remaining problems, slide start times and what could not be checked. With Playwright installed it first draws every slide, so the summary already reports render and layout problems (render errors, text_too_small, overflow, drawing_overlap); fix them with revise_slide. Call preview_slides only for slides it names, a drawing or diagram you want to see, or when the user asks. Then tell the user it is finished and give the link.",
+    "description": "Close the walkthrough after its last slide. Records the end questions and returns a summary: remaining problems, slide start times and what could not be checked. With Playwright installed it first draws every slide, so the summary already reports render and layout problems (render errors, text_too_small, overflow, drawing_overlap); fix them with revise_slide. Call preview_slides only for slides it names, a drawing or diagram you want to see, or when the user asks. Then tell the user it is finished and give the link; if they want a video or a file to send, call export_walkthrough.",
     "args": {
       "handle": "Handle from start_walkthrough.",
       "questions": "Two or three short follow-up questions the viewer might ask next, as a list of strings. Offered at the end of the walkthrough. Optional when the Markdown already lists them under a `.questions` heading; questions passed here replace those."
+    }
+  },
+  "export_walkthrough": {
+    "title": "Export walkthrough",
+    "description": "Save a walkthrough as one file the user can keep or forward: an MP4 video (H.264 and AAC, with a subtitle track) or a self-contained HTML page that plays offline in a browser. Call it after finish_walkthrough and the fixes its reply names. It waits up to five minutes for narration still being voiced, then renders; an MP4 takes about a tenth of its length plus a few seconds. Use it when the user asks for a video, or for a file to share, send or attach. MP4 needs ffmpeg and Playwright Chromium, HTML neither; the error says what is missing.",
+    "args": {
+      "handle": "Handle from start_walkthrough or list_walkthroughs.",
+      "format": "mp4 (default): a video for chat apps, email and phones. html: one page that plays offline in a browser.",
+      "path": "Where to write. Empty: a file named after the title in the project folder. Relative: inside the project folder. Absolute: that path, inside a folder the client shares. Must end in .mp4 or .html to match `format`. An existing file is overwritten.",
+      "max_mb": "Size limit in MB. An MP4 over it is shrunk, first lower audio bitrate, then 720p; if it still does not fit, the call fails: split the walkthrough or raise the limit. An HTML page over it fails. 0: no limit. Omit for the server default: 16 (WhatsApp's video limit) when the user receives files, otherwise none. Other channels: Telegram bots 50, Signal 100, email often 25."
     }
   },
   "list_walkthroughs": {
