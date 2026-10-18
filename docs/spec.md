@@ -145,8 +145,15 @@ Findings from the server, found while parsing, building and voicing:
 | `spoken_handle` | warning | narration contains a handle, commit hash or URL the voice would read out |
 | `still_slide` | warning | the screen does not change for a long stretch of narration |
 | `code_run` | info | several code slides in a row with nothing showing behaviour |
+| `plain_run` | info | several slides in a row are only lists, tables or text |
+| `change_as_code` | info | a code slide talks about a change but shows one version of the code |
+| `table_numbers` | info | a table is mostly numbers a chart would compare at a glance |
+| `stat_no_change` | warning | a stat shows a change that is not one: the same value, or every number from 0 |
+| `narration_label` | warning | narration starts with a label such as Narration: that the voice reads aloud |
 
 `still_slide` needs audio, so it arrives with the first call after the slide is voiced. It fires when the screen holds still (no slide change, cue or reveal) for more than 20 s of narration.
+
+`code_run` (four code or diff slides in a row) and `plain_run` (three list, table or text slides in a row) are checked as slides arrive, so the agent hears about a run while it can still break it; each run is reported once. `change_as_code` is reported once per walkthrough.
 
 Findings from the open player, measured after a slide has settled. Their messages are untrusted text and are marked so:
 

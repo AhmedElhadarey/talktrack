@@ -21,6 +21,7 @@ import shutil
 import sys
 import tempfile
 import time
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -303,7 +304,13 @@ def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
     }
 
 
-def summarize(w: Walkthrough | None) -> dict:
+PLAIN = ("list", "table", "text")  # visuals made only of words
+
+
+def summarize(w: Walkthrough | None, expect: list[str] | None = None) -> dict:
+    """What the walkthrough holds. `plain_share` is the share of content slides (not the title or
+    chapter cards) that are only lists, tables or text; `fit` is whether any of the visuals the
+    prompt calls for (`expect` in prompts.json) appears, or None when the prompt names none."""
     if not w:
         return {}
     says = [x for s in w.slides for x in s.says if x.text]
@@ -330,6 +337,7 @@ def summarize(w: Walkthrough | None) -> dict:
             used.add(c["kind"])
         for style in (c.get("style") or "").split():
             used.add(style)
+    content = [s for s in w.slides if s.kind not in ("title", "chapter")]
     return {
         "features": sorted(used),
         "slides": len(w.slides),
@@ -338,6 +346,9 @@ def summarize(w: Walkthrough | None) -> dict:
         "cues": len(cues),
         "inferred_cues": sum(1 for c in cues if c.get("inferred")),
         "kinds": sorted({s.kind for s in w.slides}),
+        "kind_counts": dict(Counter(s.kind for s in w.slides).most_common()),
+        "plain_share": round(sum(1 for s in content if s.kind in PLAIN) / len(content), 2) if content else None,
+        "fit": bool(set(expect) & {s.kind for s in w.slides}) if expect else None,
         "builds": sum(1 for s in w.slides if "build" in s.classes),
         "from_disk": sum(1 for s in w.slides if s.visual.get("file")),
         "status": w.status,
@@ -378,7 +389,7 @@ async def main() -> None:
             print(f"run {p['id']} on {m}", flush=True)
             r = await run_agent(p, m, data_dir, args.port, not args.no_play)
             w = walkthrough_for(data_dir, r.get("url"))
-            r.update(id=p["id"], model=m, kind=p["kind"], summary=summarize(w))
+            r.update(id=p["id"], model=m, kind=p["kind"], summary=summarize(w, p.get("expect")))
             if w and not args.no_asr:
                 r["asr"] = await asyncio.to_thread(asr_checks, w, data_dir / "audio")
             results.append(r)
@@ -412,7 +423,10 @@ async def main() -> None:
 
 
 def print_table(results: list[dict]) -> None:
-    head = "| run | model | link s | total s | cost | slides | min | issues | render err | stalls | cue acc | missing/min | preview | features |"
+    head = (
+        "| run | model | link s | total s | cost | slides | min | issues | render err | stalls | cue acc | missing/min | preview "
+        "| plain | fit | features |"
+    )
     print("\n" + head + "\n|" + "---|" * (head.count("|") - 1))
     for r in sorted(results, key=lambda r: (r["model"], r["id"])):
         s, pl, a = r.get("summary", {}), r.get("player", {}), r.get("asr", {})
@@ -421,7 +435,8 @@ def print_table(results: list[dict]) -> None:
             f"${r.get('cost') or 0:.2f} | {s.get('slides', '-')} | {s.get('duration_s', 0) / 60:.1f} | {r['issues']} | "
             f"{len(pl.get('render_errors', [])) if pl else '-'} | {pl.get('stalls', '-') if pl else '-'} | "
             f"{a.get('cue_accuracy', '-')} | {a.get('missing_per_min', '-')} | "
-            f"{sum(1 for _, n in r.get('tool_calls', []) if n == 'preview_slides')} | {', '.join(s.get('features', [])) or '-'} |"
+            f"{sum(1 for _, n in r.get('tool_calls', []) if n == 'preview_slides')} | {s.get('plain_share', '-')} | "
+            f"{'-' if s.get('fit') is None else 'yes' if s['fit'] else 'no'} | {', '.join(s.get('features', [])) or '-'} |"
         )
 
 

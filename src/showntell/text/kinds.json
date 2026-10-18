@@ -87,7 +87,7 @@
     {
       "kind": "stat",
       "fence": "```stat [unit=\"ms\"]",
-      "use": "one to four headline numbers, often before and after",
+      "use": "one to four headline numbers; each counts up from zero by itself, so `before -> after` only for a real change, not a total as `0 -> 300 million` or `3 -> 3`",
       "point": "#label, lowercased with hyphens",
       "reveal": "numbers in source order; each counts up when pointed at, or at the slide's start if none are",
       "format": "One `label: value` or `label: before -> after` line per number. Values may carry a unit (`420 ms`, `2.1%`).",

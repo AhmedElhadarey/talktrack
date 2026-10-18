@@ -148,6 +148,112 @@ def test_a_run_of_code_slides_suggests_a_diagram(build):
     assert "code_run" not in codes(b.issues)
 
 
+def test_a_run_of_code_slides_is_reported_while_writing_and_once(build):
+    slides = "".join(f"## C{i} {{#c{i}}}\n\n```python\nx = {i}\n```\n\nThe value is {i}.\n\n" for i in range(5))
+    _, b = build("# T\n\nA.\n\n" + slides)
+    assert codes(b.issues).count("code_run") == 1  # in the reply to the call, not only at finish
+    b.issues = []
+    b.check_all()
+    assert "code_run" not in codes(b.issues)
+
+
+WORDS = {
+    "list": "- **Parse**: a\n- **Plan**: b\n",
+    "table": "| A | B |\n|---|---|\n| one | two |\n",
+    "text": "> A quote on screen\n",
+    "diagram": "```mermaid\nflowchart LR\n  a --> b\n```\n",
+}
+
+
+def _slides(*kinds: str) -> str:
+    return "# T\n\nA.\n\n" + "".join(f"## S{i} {{#s{i}}}\n\n{WORDS[k]}\nAbout part {i} of it.\n\n" for i, k in enumerate(kinds))
+
+
+def test_three_wordy_slides_in_a_row_ask_for_a_picture(build):
+    _, b = build(_slides("list", "table", "text"))
+    found = [i for i in b.issues if i.code == "plain_run"]
+    assert len(found) == 1 and "s0, s1, s2" in found[0] and "diagram" in found[0]
+    b.issues = []
+    b.add("## S9 {#s9}\n\n- **More**: c\n\nAnd more.\n")  # the same run grows: not reported again
+    assert "plain_run" not in codes(b.issues)
+
+
+def test_a_picture_breaks_a_run_of_words(build):
+    _, b = build(_slides("list", "table", "diagram", "text", "list"))
+    b.check_all()
+    assert "plain_run" not in codes(b.issues)
+
+
+@pytest.mark.parametrize(
+    ("said", "flagged"),
+    [
+        ("This change replaces the fixed sleep. The old code used to wait a whole second.", True),
+        ("The retry loop was removed, and the client no longer blocks.", True),
+        ("The loader reads the file. Each entry is added to the cache and is removed when it expires.", False),
+        ("We use a dict instead of a list here, so lookups stay fast.", False),
+    ],
+)
+def test_a_change_told_over_plain_code_suggests_a_diff(build, said, flagged):
+    _, b = build(f"# T\n\nA.\n\n## Retry {{#retry}}\n\n```python\nx = 1\n```\n\n{said}\n")
+    assert ("change_as_code" in codes(b.issues)) == flagged
+
+
+def test_a_change_shown_as_steps_is_fine_and_the_hint_comes_once(build):
+    said = "This change replaces the fixed sleep. The old code used to wait a whole second."
+    steps = f"## R {{#r}}\n\n```python step\nx = 1\n```\n\n```python step\nx = 2\n```\n\n{said}\n\n"
+    _, b = build("# T\n\nA.\n\n" + steps)
+    assert "change_as_code" not in codes(b.issues)
+    plain = "".join(f"## P{i} {{#p{i}}}\n\n```python\nx = {i}\n```\n\n{said}\n\n" for i in range(2))
+    _, b = build("# T\n\nA.\n\n" + plain)
+    assert codes(b.issues).count("change_as_code") == 1
+
+
+@pytest.mark.parametrize(
+    ("rows", "flagged"),
+    [
+        ("| Violet | 400 nm |\n| Blue | 470 nm |\n| Green | 530 nm |\n| Red | 700 nm |", True),
+        ("| p50 | 12 ms | 9 ms |\n| p95 | 80 ms | 31 ms |\n| Errors | **2.1%** | 0.4% |", True),
+        ("| Turing test | 1950 |\n| Dartmouth | 1956 |\n| ELIZA | 1966 |", False),  # years are not quantities
+        ("| Asset | Loan to you | +100,000 |\n| Liability | Your deposit | +100,000 |\n| Equity | None | 0 |", False),
+        ("| Violet | 400 nm |\n| Blue | 470 nm |", False),  # two rows read fine
+    ],
+)
+def test_a_table_of_numbers_suggests_a_chart(build, rows, flagged):
+    width = rows.split("\n")[0].count("|") - 1
+    head = "|" + " x |" * width + "\n|" + "---|" * width + "\n"
+    _, b = build(f"# T\n\nA.\n\n## Light {{#light}}\n\n{head}{rows}\n\nShort waves scatter most.\n")
+    assert ("table_numbers" in codes(b.issues)) == flagged
+
+
+@pytest.mark.parametrize(
+    ("body", "flagged"),
+    [
+        ("Win conditions: 0 -> 0", True),
+        ("Copies sold: 0 -> 300 million\nPlayers: 0 -> 170 million", True),
+        ("Errors: 0 -> 12\nLatency: 420 ms -> 90 ms", False),
+        ("Copies sold: 300 million", False),
+    ],
+)
+def test_a_stat_without_a_real_change_is_flagged(build, body, flagged):
+    _, b = build(f"# T\n\nA.\n\n## Numbers {{#numbers}}\n\n```stat\n{body}\n```\n\nThe [numbers](#numbers) say it.\n")
+    assert ("stat_no_change" in codes(b.issues)) == flagged
+
+
+@pytest.mark.parametrize(
+    ("para", "flagged"),
+    [
+        ("Narration: Say you ask for a mortgage.", True),
+        ("**Voiceover:** The bank approves it.", True),
+        ("Title slide: How debt creates money.", True),
+        ("Note: this only runs on Linux.", False),
+        ("The script: it runs nightly.", False),
+    ],
+)
+def test_a_script_label_in_narration_is_flagged(build, para, flagged):
+    _, b = build(f"# T\n\nA.\n\n## Loan {{#loan}}\n\n- **Loan**: a\n\n{para}\n")
+    assert ("narration_label" in codes(b.issues)) == flagged
+
+
 def test_opening_that_names_code_is_flagged(build):
     _, b = build("# T\n\nThe `RetryPolicy` class wraps `send`.\n\n## Next\n\nMore.\n")
     b.check_all()

@@ -183,7 +183,7 @@ All Phase 1 items are done and the evaluation meets the launch criteria.
 
 | Area | Items |
 |---|---|
-| **Slide kinds** | camera (zoom and pan on a cue), scene animation (manim-web tested 16 October 2026 and not ready: wrong frames after seeking; SVG with a seekable timeline worked 5 of 5), quiz, formula-part pointer |
+| **Slide kinds** | timeline (a `.timeline` list for dated events, with a finding for lists of dates; Mermaid's `timeline` was tried 17 October 2026: dark boxes on the dark theme and no cue targets), camera (zoom and pan on a cue), scene animation (manim-web tested 16 October 2026 and not ready: wrong frames after seeking; SVG with a seekable timeline worked 5 of 5), quiz, formula-part pointer |
 | **Trust** | citations with a sources panel, open-in-editor links, stale-code marks, syntax checks on code blocks |
 | **Voice** | Kokoro's other languages (check which give word timings), voice blends, per-slide voice and speed, second speaker, sentence-level audio for slow CPUs, recording your own voice |
 | **Sharing** | MP3 and podcast feed, read view, CI recipe for pull requests |

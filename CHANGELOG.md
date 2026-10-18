@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Choosing visuals:** new findings while the agent writes: three word-only slides in a row (`plain_run`), a change shown as plain code (`change_as_code`), a table of numbers (`table_numbers`), a stat with no real change (`stat_no_change`) and script labels such as "Narration:" that the voice would read (`narration_label`). `code_run` now arrives while writing instead of only at finish. The `add_slides` description and the guide say which visual suits which idea.
+- **Evaluation:** four prompts that name no visual (a commit review, a history, a business decision, compound interest); every run is scored for its share of word-only slides and whether the visual the prompt calls for appears.
+
 ## 0.1.1 (2026-10-17)
 
 - **MLX speech:** uses only mlx-audio's model loader and forward pass. Phonemes, chunking, voices and word timings are shared with the ONNX engine, so an mlx-audio release can no longer break them, and both engines time words the same way.

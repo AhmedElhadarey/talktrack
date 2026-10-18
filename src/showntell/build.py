@@ -77,6 +77,7 @@ class Builder(CueResolver, Checks):
             # Slides arrive whole, so the last one is done: check it now, not a call later when
             # the next heading arrives. Checking it again then reports only what is new.
             self._check_finished_slide(self.w.slides[-1])
+            self.check_runs()
 
     def _current(self) -> Slide:
         if not self.w.slides:

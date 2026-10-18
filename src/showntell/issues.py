@@ -56,6 +56,11 @@ CODES: dict[str, tuple[str, str]] = {
     "spoken_handle": ("warning", "narration contains a handle, commit hash or URL the voice would read out"),
     "still_slide": ("warning", "the screen does not change for a long stretch of narration"),
     "code_run": ("info", "several code slides in a row with nothing showing behaviour"),
+    "plain_run": ("info", "several slides in a row are only lists, tables or text"),
+    "change_as_code": ("info", "a code slide talks about a change but shows one version of the code"),
+    "table_numbers": ("info", "a table is mostly numbers a chart would compare at a glance"),
+    "stat_no_change": ("warning", "a stat shows a change that is not one: the same value, or every number from 0"),
+    "narration_label": ("warning", "narration starts with a label such as Narration: that the voice reads aloud"),
     # reported by the open player
     "render_error": ("error", "a diagram, formula or image failed to render in the player"),
     "audio_error": ("error", "narration audio failed to load or be voiced"),

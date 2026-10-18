@@ -17,6 +17,20 @@ SPOKEN_RE = re.compile(
     r"(?P<url>https?://\S+|www\.\S+)|(?P<handle>(?<![\w.])@[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\b(?![.@]\w))"
     r"|(?P<sha>(?<![\w-])(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}(?![\w-]))"
 )
+# Visuals made only of words. A few in a row and the walkthrough reads like a document.
+PLAIN = ("list", "table", "text")
+# Narration that describes a change rather than code as it is.
+CHANGE_RE = re.compile(
+    r"\b(?:this (?:change|commit|pull request|PR|diff)|the (?:old|previous|new) (?:code|version|behaviou?r)|used to|previously"
+    r"|no longer|instead of|before the (?:change|fix|commit)|(?:was|were|got|has been|have been) "
+    r"(?:added|removed|renamed|replaced|moved|deleted|changed|dropped|introduced)|now (?:adds|removes|replaces|returns|checks|calls|uses))\b",
+    re.I,
+)
+# A script-style label the voice would read out: "Narration: ...", "Title slide: ...".
+LABEL_RE = re.compile(r"^\W*(narration|narrator|voice[- ]?over|speaker notes?|script|transcript|title slide|slide \d+)\W*:", re.I)
+# A table cell that is a number, with a sign, currency or unit; bare years do not count.
+NUMBER_CELL = re.compile(r"^[~≈<>≤≥+\-−±]?\s*[$€£¥]?\s*\d[\d,_]*(?:\.\d+)?\s*(?:%|×|[A-Za-zµ°/²³]{1,10}(?: [A-Za-z]{1,10})?)?$")
+YEAR = re.compile(r"^(1[5-9]|20)\d\d$")
 GENERATED = re.compile(
     r"(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|uv\.lock|poetry\.lock|Cargo\.lock|Gemfile\.lock|go\.sum"
     r"|composer\.lock|Pipfile\.lock|bun\.lockb?)$|\.min\.(js|css)$|(^|/)(dist|build|vendor|node_modules)/|_pb2\.py$|\.generated\."
@@ -131,6 +145,7 @@ class Checks:
                 )
         self._check_spoken(s)
         self._check_build_order(s)
+        self._check_fit(s)
         shown = " ".join([s.shown] + [it.get("body", "") for it in s.visual.get("items", [])])
         spoken = " " + " ".join(re.findall(r"[\w'-]+", " ".join(x.text for x in s.says).lower())) + " "
         for chunk in _phrases(shown, 7):
@@ -161,6 +176,67 @@ class Checks:
                 )
                 return
 
+    def _check_fit(self, s: Slide) -> None:
+        """Whether the visual suits what the slide says: labels the voice would read, a change
+        shown as plain code, a table of numbers, stats that do not change."""
+        for x in s.says:
+            m = LABEL_RE.match(x.text)
+            if m:
+                self._issue(
+                    "narration_label",
+                    f'Slide `{s.id}`: a paragraph starts with "{m.group(0).strip()}", which the voice reads aloud.',
+                    "Remove the label: every paragraph of prose under a heading is spoken, and nothing else is.",
+                    slide=s.id,
+                    line=s.line,
+                )
+                break
+        if s.kind == "code" and len(s.visual.get("steps", [])) < 2 and "change_as_code" not in self._once():
+            said = " ".join(x.text for x in s.says)
+            if len(CHANGE_RE.findall(said)) >= 2:
+                self._once().add("change_as_code")
+                self._issue(
+                    "change_as_code",
+                    f"Slide `{s.id}` talks about a change but shows only one version of the code.",
+                    "Show the change itself, removed and added lines side by side: `diff file=... rev=...`, "
+                    "old/new blocks, or back-to-back `step` versions.",
+                    slide=s.id,
+                    line=s.line,
+                )
+        if s.kind == "table":
+            cells = [_plain_cell(c) for row in s.visual.get("rows", []) for c in row[1:]]
+            nums = [c for c in cells if NUMBER_CELL.match(c) and not YEAR.match(c)]
+            if len(s.visual.get("rows", [])) >= 3 and len(nums) >= 3 and len(nums) * 3 >= len(cells) * 2:
+                self._issue(
+                    "table_numbers",
+                    f"Slide `{s.id}`: the table is mostly numbers ({len(nums)} of {len(cells)} cells).",
+                    "A chart shows how they compare at a glance (`chart bar` or `hbar`); keep the table only when the exact values matter.",
+                    slide=s.id,
+                    line=s.line,
+                )
+        if s.kind == "stat":
+            items = s.visual.get("items", [])
+            same = [it["label"] for it in items if "before" in it and it["before"] == it["after"]]
+            if same:
+                self._issue(
+                    "stat_no_change",
+                    f"Slide `{s.id}`: {', '.join(same[:3])} goes from a value to the same value, so there is no change to show.",
+                    "Write `label: value` for a number that does not change, or show a different number.",
+                    slide=s.id,
+                    line=s.line,
+                )
+            elif len(items) >= 2 and all(it.get("before") == 0 for it in items):
+                self._issue(
+                    "stat_no_change",
+                    f"Slide `{s.id}`: every number starts from 0, so `before -> after` adds nothing.",
+                    "Write `label: value`; a number counts up from zero on its own when cued. Keep `before -> after` for a real change.",
+                    slide=s.id,
+                    line=s.line,
+                )
+
+    def _once(self) -> set:
+        """Hints given once per walkthrough."""
+        return self.__dict__.setdefault("_hints_given", set())
+
     def _check_build_order(self, s: Slide) -> None:
         if "build" not in s.classes or not s.visual:
             return
@@ -188,22 +264,39 @@ class Checks:
                 line=s.line,
             )
 
+    def check_runs(self) -> None:
+        """Runs of alike slides: code with nothing showing it run, or words with no picture. Checked
+        as slides arrive and at finish; each run is reported once, when it first reaches its length."""
+        seen = self.__dict__.setdefault("_runs_seen", set())
+        for code, members, need in (("code_run", ("code", "diff"), 4), ("plain_run", PLAIN, 3)):
+            run: list[str] = []
+            for s in self.w.slides + [None]:
+                if s is not None and s.kind in members:
+                    run.append(s.id)
+                    continue
+                if len(run) >= need and (code, run[0]) not in seen:
+                    seen.add((code, run[0]))
+                    if code == "code_run":
+                        self._issue(
+                            code,
+                            f"{len(run)} code slides in a row ({', '.join(run[:5])}) with nothing showing what the code does when it runs.",
+                            "Add a diagram of the flow or the states it moves through between them.",
+                            slide=run[-1],
+                        )
+                    else:
+                        self._issue(
+                            code,
+                            f"{len(run)} slides in a row ({', '.join(run[:5])}) are only words: lists, tables or text.",
+                            "Show one as a picture of the idea: a diagram for steps, causes or parts that connect, "
+                            "a chart or stat for numbers, a drawing for something physical or spatial.",
+                            slide=run[-1],
+                        )
+                run = []
+
     def check_all(self) -> None:
         if self.w.slides:
             self._check_finished_slide(self.w.slides[-1])
-        run: list[str] = []
-        for s in self.w.slides + [None]:
-            if s is not None and s.kind in ("code", "diff"):
-                run.append(s.id)
-                continue
-            if len(run) >= 4:
-                self._issue(
-                    "code_run",
-                    f"{len(run)} code slides in a row ({', '.join(run[:5])}) with nothing showing what the code does when it runs.",
-                    "Add a diagram of the flow or the states it moves through between them.",
-                    slide=run[-1],
-                )
-            run = []
+        self.check_runs()
         if self.w.slides:
             first = self.w.slides[0]
             names = [x.text[a:b] for x in first.says for a, b in x.code]
@@ -256,6 +349,10 @@ def _source_rank(s: Slide):
     if s.kind == "code" or kinds.line_kind(s.kind):
         return lambda c: c.get("l0") if c.get("kind") == "lines" else None
     return lambda c: None
+
+
+def _plain_cell(cell: str) -> str:
+    return re.sub(r"[*_`]", "", cell).strip()
 
 
 def _phrases(text: str, n: int) -> list[str]:
