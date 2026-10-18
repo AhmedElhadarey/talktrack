@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 (2026-10-18)
 
 - **Choosing visuals:** new findings while the agent writes: three word-only slides in a row (`plain_run`), a change shown as plain code (`change_as_code`), a table of numbers (`table_numbers`), a stat with no real change (`stat_no_change`) and script labels such as "Narration:" that the voice would read (`narration_label`). `code_run` now arrives while writing instead of only at finish. The `add_slides` description and the guide say which visual suits which idea.
 - **Timelines:** `.timeline` on a list's heading draws dated events on a line (`- **1989**: what happened`), across a landscape slide and down a tall one; `list_dates` suggests it for a list or table of dates.
