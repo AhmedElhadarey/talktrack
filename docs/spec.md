@@ -147,6 +147,7 @@ Findings from the server, found while parsing, building and voicing:
 | `code_run` | info | several code slides in a row with nothing showing behaviour |
 | `plain_run` | info | several slides in a row are only lists, tables or text |
 | `change_as_code` | info | a code slide talks about a change but shows one version of the code |
+| `list_dates` | info | a list or table of dated events that a timeline would show |
 | `table_numbers` | info | a table is mostly numbers a chart would compare at a glance |
 | `stat_no_change` | warning | a stat shows a change that is not one: the same value, or every number from 0 |
 | `narration_label` | warning | narration starts with a label such as Narration: that the voice reads aloud |

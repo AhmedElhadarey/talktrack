@@ -286,7 +286,9 @@ class Builder(CueResolver, Checks):
                     it["id"] += "-2"
                 used.add(it["id"])
             style = (
-                "cards"
+                "timeline"
+                if "timeline" in s.classes
+                else "cards"
                 if "cards" in s.classes
                 else "stack"
                 if "stack" in s.classes

@@ -191,7 +191,7 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **draw.io diagram** | `drawio file=docs/arch.drawio`, drawn by the bundled draw.io viewer offline; cues point at cells by id or label |
 | **Formula** | a `math` block or `$$ … $$`, rendered with KaTeX |
 | **Table** | a pipe table |
-| **List, steps, cards** | `-` or `1.` items; `.cards` on the heading for cards |
+| **List, steps, cards, timeline** | `-` or `1.` items; `.cards` on the heading for cards, `.timeline` for dated events |
 | **Image** | `![alt](path)` from the project, optionally `{frame=browser}`; cues can point at a region |
 | **Chart** | `chart bar`, `chart hbar` or `chart line` with `label: value` lines |
 | **Terminal session** | a `terminal` block: `$` commands and their output |

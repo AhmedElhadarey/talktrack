@@ -39,6 +39,7 @@ A heading may end with attributes in braces: `## The lookup {#lookup .build}`.
 |---|---|
 | **`#id`** | the slide's id, used to revise it later. Letters, digits, `-` and `_`. Generated from the title when missing. |
 | **`.cards`** | show a list as a grid of cards |
+| **`.timeline`** | show a list of dated events on a timeline |
 | **`.steps`** | show a list as numbered steps (same as writing `1.` items) |
 | **`.build`** | step reveal: parts appear as narration points at them |
 | **`.questions`** | the end-of-walkthrough questions, not a slide |
@@ -150,7 +151,7 @@ A GitHub-style pipe table. Cells may hold inline code and emphasis. Rows are `#r
 - **Disk**: survives restarts {#disk}
 ```
 
-Bullets give a bulleted list and `1.` items give numbered steps; add `.cards` to the heading for cards, or `.stack` for layers drawn as a stack (top item on top). Items starting with `[x]` or `[ ]` make a checklist: a ticked item's tick draws in when narration points at it, or at once if the slide has no item cues; `[ ]` stays empty. An item may start with a bold title, followed by `:` or a dash and a description. A trailing `{#id}` names the item for cues; without one, the id is the title in lowercase with hyphens (`**Hot path**` becomes `#hot-path`). Nested lists are flattened.
+Bullets give a bulleted list and `1.` items give numbered steps; add `.cards` to the heading for cards, `.stack` for layers drawn as a stack (top item on top), or `.timeline` for dated events: each item's bold title is its date (`- **1989**: the first proposal`), drawn on a line across a landscape slide and down a square or portrait one, or any slide with more than six dates. Items starting with `[x]` or `[ ]` make a checklist: a ticked item's tick draws in when narration points at it, or at once if the slide has no item cues; `[ ]` stays empty. An item may start with a bold title, followed by `:` or a dash and a description. A trailing `{#id}` names the item for cues; without one, the id is the title in lowercase with hyphens (`**Hot path**` becomes `#hot-path`). Nested lists are flattened.
 
 ### Image
 

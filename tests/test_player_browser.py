@@ -176,6 +176,15 @@ The [search box](#@4,16,55,9) sits above [the first result](#@4,31,92,14){.circl
 ```
 
 [Sunlight](#beam) meets the air. [Blue](#blue) scatters toward [your eye](#eye) and [red](#red) passes on.
+
+## Five years {#timeline .timeline .build}
+
+- **1989**: A memo proposes linked documents
+- **1990**: The first server runs
+- **1991**: The Web opens to the public
+- **1993**: Released into the public domain
+
+It began with [a memo](#1989), and [two years later](#1991) anyone could use it.
 """
 
 KINDS = [
@@ -196,6 +205,7 @@ KINDS = [
     "tree",
     "image",
     "svg",
+    "list",
 ]
 
 

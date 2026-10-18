@@ -26,10 +26,18 @@ CHANGE_RE = re.compile(
     r"(?:added|removed|renamed|replaced|moved|deleted|changed|dropped|introduced)|now (?:adds|removes|replaces|returns|checks|calls|uses))\b",
     re.I,
 )
+# A title or opening about a change: a commit, a range, a pull request.
+CHANGE_TOPIC_RE = re.compile(
+    r"\b(?:commits?|pull request|PR|merge request|diff|what changed|changes? (?:in|to|between|since|from))\b"
+    r"|(?<![\w-])(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}(?![\w-])",
+    re.I,
+)
 # A script-style label the voice would read out: "Narration: ...", "Title slide: ...".
 LABEL_RE = re.compile(r"^\W*(narration|narrator|voice[- ]?over|speaker notes?|script|transcript|title slide|slide \d+)\W*:", re.I)
 # A table cell that is a number, with a sign, currency or unit; bare years do not count.
 NUMBER_CELL = re.compile(r"^[~≈<>≤≥+\-−±]?\s*[$€£¥]?\s*\d[\d,_]*(?:\.\d+)?\s*(?:%|×|[A-Za-zµ°/²³]{1,10}(?: [A-Za-z]{1,10})?)?$")
+# An entry that starts with a date: 1989, 1990s, March 1989, 1989-03, Q3 2021.
+DATED = re.compile(r"^\W*(?:(?:[A-Z][a-z]{2,8}\.?|Q[1-4]) )?(?:1[5-9]|20)\d\d(?:s|-\d\d)?\b")
 YEAR = re.compile(r"^(1[5-9]|20)\d\d$")
 GENERATED = re.compile(
     r"(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|uv\.lock|poetry\.lock|Cargo\.lock|Gemfile\.lock|go\.sum"
@@ -192,16 +200,35 @@ class Checks:
                 break
         if s.kind == "code" and len(s.visual.get("steps", [])) < 2 and "change_as_code" not in self._once():
             said = " ".join(x.text for x in s.says)
-            if len(CHANGE_RE.findall(said)) >= 2:
+            topic = self._change_topic() and s.visual.get("file") and not any(x.kind == "diff" for x in self.w.slides)
+            if topic or len(CHANGE_RE.findall(said)) >= 2:
                 self._once().add("change_as_code")
+                what = "is about a change" if topic else "talks about a change"
                 self._issue(
                     "change_as_code",
-                    f"Slide `{s.id}` talks about a change but shows only one version of the code.",
+                    f"Slide `{s.id}` {what} but shows only one version of the code.",
                     "Show the change itself, removed and added lines side by side: `diff file=... rev=...`, "
                     "old/new blocks, or back-to-back `step` versions.",
                     slide=s.id,
                     line=s.line,
                 )
+        dated = []
+        if s.kind == "list" and s.visual.get("style") != "timeline":
+            items = s.visual.get("items", [])
+            dated = [it for it in items if DATED.match(_plain_cell(it.get("title") or it.get("body", "")))]
+            total = len(items)
+        elif s.kind == "table":
+            rows = s.visual.get("rows", [])
+            dated = [r for r in rows if r and DATED.match(_plain_cell(r[0]))]
+            total = len(rows)
+        if len(dated) >= 3 and len(dated) * 3 >= total * 2:
+            self._issue(
+                "list_dates",
+                f"Slide `{s.id}` lists {len(dated)} dated events as a {s.kind}.",
+                "Show them on a timeline: a list with `.timeline` on the heading, each item `- **1989**: what happened`; cue `#1989`.",
+                slide=s.id,
+                line=s.line,
+            )
         if s.kind == "table":
             cells = [_plain_cell(c) for row in s.visual.get("rows", []) for c in row[1:]]
             nums = [c for c in cells if NUMBER_CELL.match(c) and not YEAR.match(c)]
@@ -232,6 +259,11 @@ class Checks:
                     slide=s.id,
                     line=s.line,
                 )
+
+    def _change_topic(self) -> bool:
+        """Whether the title or the opening narration names a commit, a range or a pull request."""
+        opening = " ".join(x.text for x in self.w.slides[0].says) if self.w.slides else ""
+        return bool(CHANGE_TOPIC_RE.search(f"{self.w.title} {opening}"))
 
     def _once(self) -> set:
         """Hints given once per walkthrough."""

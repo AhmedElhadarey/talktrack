@@ -43,8 +43,8 @@
     },
     {
       "kind": "list",
-      "fence": "- items, 1. items, - [x] / - [ ] checklist items; .cards, .steps or .stack on the heading",
-      "use": "parallel parts, options, a procedure, layers of a stack, a checklist",
+      "fence": "- items, 1. items, - [x] / - [ ] checklist items; .cards, .steps, .stack or .timeline (dates as bold titles) on the heading",
+      "use": "parallel parts, options, a procedure, layers of a stack, a checklist, dated events",
       "point": "#id from {#id}, or the bold title lowercased with hyphens",
       "reveal": "items up to the last one pointed at; checklist ticks draw as their item is pointed at",
       "example": "- **Memory**: fast, gone on restart {#memory}\n- **Disk**: survives restarts {#disk}"

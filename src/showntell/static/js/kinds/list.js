@@ -1,4 +1,4 @@
-// Lists: bullets, numbered steps, cards, a stack of layers, or a checklist whose ticks draw in.
+// Lists: bullets, numbered steps, cards, a stack of layers, a timeline, or a checklist whose ticks draw in.
 
 import { el } from "../draw.js";
 import { inline } from "../util.js";
@@ -9,7 +9,9 @@ export default {
   render(slide, body, parts, ctx) {
     const v = slide.visual || {};
     const style = v.style || "bullets";
-    const list = el(style === "cards" || style === "stack" ? "div" : style === "steps" ? "ol" : "ul", `list ${style}`);
+    const list = el(style === "cards" || style === "stack" ? "div" : style === "steps" || style === "timeline" ? "ol" : "ul", `list ${style}`);
+    // A timeline runs across a landscape slide, and down a tall one or when it has many dates.
+    if (style === "timeline" && (ctx.frame !== "landscape" || v.items.length > 6)) list.classList.add("down");
     if (style === "cards") {
       const n = v.items.length;
       const cols = ctx.frame === "portrait" ? 1 : ctx.frame === "square" ? (n <= 2 ? n : 2) : n <= 3 ? n : n === 4 ? 2 : 3;

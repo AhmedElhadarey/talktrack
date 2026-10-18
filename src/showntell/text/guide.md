@@ -14,7 +14,7 @@ Settle the arc before the next call: a viewer cannot skim back.
 - **Read first:** open the files and diffs before writing; if playback catches up, the player pauses.
 - **Show behaviour.** After two or three code or diff slides, show the code running: a Mermaid sequence or state diagram, or a terminal (`code_run`).
 - **Show the thing.** A concept explainer draws what it explains: the sun, the ray, the lens. Mermaid is for flows, structure and states, not objects.
-- **Every topic gets pictures.** History, business, economics: causes and consequences or dated decisions as a Mermaid flowchart, not a `timeline`; money and growth as charts; places and objects as drawings.
+- **Every topic gets pictures.** History, business, economics: dated events as a `.timeline` list; causes and consequences as a Mermaid flowchart (not Mermaid's `timeline`: it can't be cued); money and growth as charts; places and objects as drawings.
 - **Words last.** Lists, tables and text alone are the last resort, for words with no shape: at most about a third of the slides, never three in a row (`plain_run`). A table of numbers is a chart (`table_numbers`). A stat counts up from zero: `before -> after` only for a real change (`stat_no_change`).
 
 Pick the change's shape; for a mix, lead with what a reviewer most needs.
@@ -38,6 +38,7 @@ Every slide but the title and brief transitions gets the visual that carries its
 | **Comparison in words** | table: a few rows, short cells |
 | **Parallel parts, options, layers** | list; `.cards` or `.stack` on the heading |
 | **Procedure** | `1.` items or `.steps` |
+| **Dated events** | list with `.timeline` on the heading, `- **1989**: event` items: short dates, few-word events (`list_dates`) |
 | **Done and open items** | `- [x]` and `- [ ]` items; ticks draw in when cued |
 | **Formula** | `math`; say what each term means, not the symbols |
 | **Before/after, shares, trends** | `chart bar`, `hbar` or `line`, at most 12 bars or series |

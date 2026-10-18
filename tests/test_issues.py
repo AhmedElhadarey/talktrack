@@ -198,6 +198,34 @@ def test_a_change_told_over_plain_code_suggests_a_diff(build, said, flagged):
     assert ("change_as_code" in codes(b.issues)) == flagged
 
 
+@pytest.mark.parametrize(
+    ("title", "opening", "flagged"),
+    [
+        ("What changed between 8d0619a and f2a4a93", "Two fixes landed.", True),
+        ("Retry review", "This pull request makes retries safe.", True),
+        ("How retries work", "Failed requests now recover on their own.", False),
+    ],
+)
+def test_code_from_disk_in_a_walkthrough_of_a_change_suggests_a_diff(build, repo, title, opening, flagged):
+    repo.write("app.py", "x = 1\n")
+    repo.commit()
+    md = f"# {title}\n\n{opening}\n\n## App {{#app}}\n\n```python file=app.py\n```\n\nThe [value](#L1) is set once.\n"
+    _, b = build(md, root=repo.root, title=title)
+    assert ("change_as_code" in codes(b.issues)) == flagged
+
+
+def test_a_change_already_shown_as_a_diff_does_not_ask_again(build, repo):
+    repo.write("app.py", "x = 1\n")
+    repo.commit()
+    repo.write("app.py", "x = 2\n")
+    md = (
+        "# Commit review\n\nOne fix.\n\n## Fix {#fix}\n\n```diff file=app.py rev=HEAD\n```\n\nThe [value](#L1) changed.\n\n"
+        "## Context {#ctx}\n\n```python file=app.py\n```\n\nThe [value](#L1) is read here.\n"
+    )
+    _, b = build(md, root=repo.root, title="Commit review")
+    assert "change_as_code" not in codes(b.issues)
+
+
 def test_a_change_shown_as_steps_is_fine_and_the_hint_comes_once(build):
     said = "This change replaces the fixed sleep. The old code used to wait a whole second."
     steps = f"## R {{#r}}\n\n```python step\nx = 1\n```\n\n```python step\nx = 2\n```\n\n{said}\n\n"
@@ -223,6 +251,32 @@ def test_a_table_of_numbers_suggests_a_chart(build, rows, flagged):
     head = "|" + " x |" * width + "\n|" + "---|" * width + "\n"
     _, b = build(f"# T\n\nA.\n\n## Light {{#light}}\n\n{head}{rows}\n\nShort waves scatter most.\n")
     assert ("table_numbers" in codes(b.issues)) == flagged
+
+
+@pytest.mark.parametrize(
+    ("visual", "flagged"),
+    [
+        ("- **1989**: a memo\n- **1990**: a server\n- **1991**: public\n", True),
+        ("- **March 1989**: a memo\n- **1990s**: growth\n- **Q3 2021**: a fork\n- **Today**: here\n", True),
+        ("| 1950 | Turing test |\n| 1956 | Dartmouth |\n| 1966 | ELIZA |\n", True),
+        ("- **Parse**: a\n- **Plan**: b\n- **Run**: c\n", False),
+        ("- **1989**: a memo\n- **Later**: more\n- **Then**: more\n", False),
+    ],
+)
+def test_dated_events_suggest_a_timeline(build, visual, flagged):
+    if visual.startswith("|"):
+        visual = "| Year | Event |\n|---|---|\n" + visual
+    _, b = build(f"# T\n\nA.\n\n## History {{#history}}\n\n{visual}\nIt grew.\n")
+    assert ("list_dates" in codes(b.issues)) == flagged
+
+
+def test_a_timeline_is_built_and_not_flagged(build):
+    w, b = build(
+        "# T\n\nA.\n\n## History {#history .timeline}\n\n- **1989**: a memo\n- **1990**: a server\n- **1991**: public\n\nIt [began](#1989).\n"
+    )
+    s = w.slides[-1]
+    assert s.kind == "list" and s.visual["style"] == "timeline" and [i["id"] for i in s.visual["items"]] == ["1989", "1990", "1991"]
+    assert "list_dates" not in codes(b.issues) and "cue_no_target" not in codes(b.issues)
 
 
 @pytest.mark.parametrize(
