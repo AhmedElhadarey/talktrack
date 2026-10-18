@@ -439,7 +439,7 @@ def test_embedded_player_sends_events_and_takes_commands(daemon, browser):
     page.goto(f"http://127.0.0.1:{srv.server_port}/")
     page.wait_for_function("window.got.some(([t]) => t === 'ready')", timeout=15000)
     page.evaluate("document.getElementById('p').seek(document.getElementById('p').duration - 0.5)")
-    page.wait_for_function("window.got.some(([t, d]) => t === 'slidechange' && d.id === 'svg')", timeout=10000)
+    page.wait_for_function("window.got.some(([t, d]) => t === 'slidechange' && d.id === 'timeline')", timeout=10000)
     ready = page.evaluate("window.got.find(([t]) => t === 'ready')[1]")
     assert ready["slides"] == len(KINDS) and ready["duration"] > 0
     page.close()
