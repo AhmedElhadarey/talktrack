@@ -30,6 +30,18 @@ The tag after `@` installs that release; leave it off for the latest commit. Onc
 
 The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model. The first walkthrough takes a few seconds longer while they load. After that, everything works offline.
 
+Or paste this into your agent and let it set itself up:
+
+```text
+Install showntell, an MCP server that turns Markdown into narrated slide walkthroughs voiced on this machine: https://github.com/rahimnathwani/showntell
+
+1. If `uv` is missing, install it: curl -LsSf https://astral.sh/uv/install.sh | sh
+2. Add a stdio MCP server named showntell to your own MCP configuration, for all my projects, with this command:
+   uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.3 showntell mcp
+3. Run `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.3 showntell doctor` and fix anything it marks with ✗. The first run downloads the voice model, a few hundred MB.
+4. Tell me whether I need to restart you or reload MCP servers before the tools appear. Once they do, make a three-slide walkthrough of this project and send me the link.
+```
+
 ### Claude Code
 
 1. Add the server for all your projects:
@@ -148,6 +160,23 @@ uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0
 | **Size** | kept within 16 MB, WhatsApp's video limit, by lowering the audio bitrate and then the picture to 720p; the agent passes `max_mb` for other apps (Telegram bots 50, Signal 100). Narration is most of the size: a 3.5-minute walkthrough is about 4 MB |
 | **Frame** | the agent is told you are likely on a phone, so it picks portrait or square unless the code is wide |
 | **Checks** | `showntell doctor` says whether ffmpeg and Chromium are there |
+
+To set it up, paste this into the agent:
+
+```text
+Install showntell, an MCP server that turns Markdown into narrated slide walkthroughs: https://github.com/rahimnathwani/showntell
+I can't open links on your machine, so you'll send me walkthroughs as MP4 files.
+
+1. Install what's missing in your environment: uv (curl -LsSf https://astral.sh/uv/install.sh | sh) and ffmpeg with ffprobe (apt-get install -y ffmpeg, your package manager, or a static build on PATH).
+2. Install Chromium for video rendering:
+   uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.3' playwright install --with-deps chromium
+   If you can't install system packages, drop --with-deps and tell me if Chromium fails to start.
+3. Add a stdio MCP server named showntell to your own MCP configuration, running inside this environment, not on a host outside it:
+   uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.3' showntell mcp --deliver file
+4. Run `uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.3' showntell doctor` and fix anything marked ✗ or about video export. The first run downloads the voice model, about 100 MB.
+5. If this environment is rebuilt between sessions, add steps 1 to 3 to whatever sets it up, so they persist.
+6. Once the tools appear (restart or reload MCP servers if you must), make a three-slide walkthrough on any topic, export it with export_walkthrough, and send me the MP4 as an attachment. If you have no way to attach files, tell me so instead of sending a path.
+```
 
 `SHOWNTELL_DELIVER=file` does the same as the flag. In link mode the agent can still call `export_walkthrough` whenever you want an MP4 or a page to forward. To watch live links from your phone instead, serve over a private network such as Tailscale (or self-hosted Headscale) with `SHOWNTELL_PUBLIC_URL`.
 
