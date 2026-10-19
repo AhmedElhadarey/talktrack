@@ -13,7 +13,7 @@ Version 1.0 ships when it meets the launch criteria below. Everything else waits
 | **Slide format** | Markdown-based |
 | **Speech** | Kokoro-82M, English. MLX on Apple silicon; ONNX (the timestamped export, which returns per-token durations) everywhere else |
 | **First link** | returned only once the opening narration is playable |
-| **Privacy** | No hosted service and no telemetry. The first run downloads the voice and language models from Hugging Face; nothing else leaves the machine. |
+| **Privacy** | No hosted service and no telemetry. The first run downloads the voice model from Hugging Face and the language model from GitHub; nothing else leaves the machine. |
 
 ## Launch criteria for 1.0
 
@@ -24,7 +24,7 @@ Version 1.0 ships when it meets the launch criteria below. Everything else waits
 - **Pronunciation:** at most one mispronounced technical term per minute of narration on the pronunciation test set, measured by speech-recognition round trip.
 - **Quality:** no open priority-1 bugs. All tests pass on macOS and on Linux CI with the fake narrator.
 
-## Status (16 October 2026)
+## Status (18 October 2026)
 
 Phases 0 to 2 are built, every launch criterion is met, and the repository is public at https://github.com/rahimnathwani/showntell with the gallery at https://rahimnathwani.github.io/showntell/.
 
@@ -44,10 +44,11 @@ Phases 0 to 2 are built, every launch criterion is met, and the repository is pu
 | **2** | static export with captions, docs, CI, release and gallery workflows, recorder for demo video, a five-walkthrough gallery made with Opus (links 0.38 to 0.81 s, $0.22 to $0.64 each), README demo |
 | **2.5** | ideas adapted from a study of HyperFrames (an HTML-to-video framework): coded findings with fixes, layout findings measured by the open player, timing and coverage checks, slide-ready wait, MP4 export by frame capture, posters, `preview_slides`, themes with contrast tests, charts, terminal sessions and file trees, a slide-kind catalogue, ranges, presenter mode, `<showntell-player>`, pause-aware captions, golden player state and Linux pixel baselines, plugin marketplace and Gemini extension, one version everywhere, a wheel smoke test |
 | **2.6** | daemon replaced when its code changes, five eval prompts for the newer kinds, an opt-in test through the real Claude Code CLI, a shorter guide checked by A/B evaluation, layout checks at `finish_walkthrough`, builder and player split into modules with one Python and one JS module per bundled kind, word-level code morphs at a steady scale, reduced motion and announcements for moving cues, sequence-message and row-number cues, screenshot baselines for every kind in every frame |
+| **0.1.x** | releases 0.1.0 to 0.1.4: MLX narrowed to the model loader and forward pass, findings that steer agents to the visual that fits (A/B: word-only slides fell from 27% to 2%), timelines, `export_walkthrough` and `--deliver file` for agents in a sandbox or behind a chat app, first-run fixes. 865 fast tests |
 
 Evaluation cost on Sonnet: $0.09 to $0.24 per walkthrough, $1.40 for the ten.
 
-**Owner steps left:** add a PyPI trusted publisher for `release.yml`, then publish a GitHub release for the `v0.1.2` tag (until then the README installs from the tag on GitHub); announce.
+**Owner steps left:** add a PyPI trusted publisher for `release.yml`, then publish a GitHub release for the `v0.1.4` tag (until then the README installs from the tag on GitHub); announce.
 
 ## Phase 0: Foundations
 

@@ -12,7 +12,7 @@ Ask your agent to walk you through a pull request, a module or a concept. It wri
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
 - **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the player, diagrams that failed to render or text shrunk too small to read; with Playwright installed, `finish_walkthrough` draws every slide to find them. The agent can also look at pictures of its slides with `preview_slides`.
-- **Shareable:** export a walkthrough as one HTML file that plays offline (send it in Slack or by email), a static folder with captions, or an MP4; embed it with `<showntell-player>`, link to a range of slides, or present it yourself with speaker notes.
+- **Shareable:** export a walkthrough as one HTML file that plays offline (send it in Slack or by email), a static folder with captions, or an MP4; embed it with `<showntell-player>`, link to a range of slides, or present it yourself with speaker notes. An agent in a sandbox or behind WhatsApp sends you the MP4 itself.
 
 How it compares with a screen recording, a written PR description and a rendered MP4 explainer, including where those win: [docs/comparison.md](docs/comparison.md).
 
@@ -113,7 +113,7 @@ Recent Pi (checked with 1.3.0) has MCP built in.
    pi mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.4 showntell mcp
    ```
 
-2. Check it with `pi mcp list`. It should say `showntell: connected, 5 tools`.
+2. Check it with `pi mcp list`. It should say `showntell: connected, 7 tools`.
 3. Start `pi` in your project and ask for a walkthrough.
 
 Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) extension instead. Run `pi install npm:pi-mcp-adapter`, then put this in `~/.config/mcp/mcp.json`:
@@ -352,8 +352,8 @@ English voices only for now. Kokoro's other languages are on the [roadmap](ROADM
 
 ```zsh
 uv sync
-uv run pytest                    # fast tests, no GPU needed
-uv run showntell serve --speech fake   # run without a voice model
+uv run pytest -m "not slow and not browser and not mlx and not onnx"   # fast tests, no models or browser
+uv run showntell serve --speech fake                                   # run without a voice model
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [docs/spec.md](docs/spec.md) and [docs/architecture.md](docs/architecture.md).

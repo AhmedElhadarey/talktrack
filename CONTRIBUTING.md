@@ -6,9 +6,10 @@ Thanks for helping. showntell is small on purpose: one Python package, one playe
 
 ```zsh
 uv sync
-uv run pytest                          # fast tests; no voice model needed
-uv run pytest -m "mlx or onnx or slow" # tests that need models or start processes
-uv run ruff check . && uv run ruff format --check .
+uv run pytest -m "not slow and not browser and not mlx and not onnx"   # fast tests; no models or browser
+uv run pytest -m "browser or slow"     # Playwright's Chromium and ffmpeg; `uv run playwright install chromium` once
+uv run pytest -m "mlx or onnx"         # need the cached voice models
+uv run ruff check src tests scripts && uv run ruff format --check src tests scripts
 node --test tests/js/*.test.js         # player logic
 ```
 
@@ -30,7 +31,8 @@ Run a daemon without a voice model with `uv run showntell serve --speech fake --
 | `src/showntell/speech/` | speech backends (MLX, ONNX, fake), the worker queue and audio cache |
 | `src/showntell/pronounce.py` | turning code and units into speakable text |
 | `src/showntell/static/` | the player; `js/timeline.js` is the pure core, `js/kinds/` has one module per slide kind (module map in `docs/architecture.md`) |
-| `src/showntell/text/` | everything the agent reads: instructions, tool descriptions, guide |
+| `src/showntell/text/` | everything the agent reads: instructions, tool descriptions, guide; `text/file/` replaces the parts about links for `--deliver file` |
+| `src/showntell/export.py`, `video.py` | HTML, folder and MP4 exports; `capture.py` drives the headless player |
 | `docs/` | format reference, functional spec, architecture |
 | `scripts/eval.py` | end-to-end evaluation with real agents |
 

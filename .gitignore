@@ -16,6 +16,7 @@ build/
 # Local output
 /out/
 /exports/
+*.mp4
 *.wav
 !tests/fixtures/*.wav
 node_modules/
