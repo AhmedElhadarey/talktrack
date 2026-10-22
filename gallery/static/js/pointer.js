@@ -88,10 +88,14 @@ function move(el, transform, cueKey) {
 // Where a cue points: a list of DOMRect-like boxes, plus side effects (active classes, highlights).
 // The slide's kind answers first (image regions, diagram nodes); then lines, items, rows and text.
 export function cueTarget(cue, slide) {
-  const p = S.view.parts;
   if (!cue) return null;
+  // On a `.pair` slide a cue points into the pane it names.
+  const pane = S.view.panes?.[cue.pane || 0];
+  const p = pane?.parts || S.view.parts;
+  if (pane) slide = pane.slide;
+  const whole = () => wholeVisual(p);
   if (cue.kind === "step" || cue.kind === "edge") return null; // the code's change, or the moving dot, is the pointer
-  const own = kindOf(slide).target?.(cue, p, { wholeVisual });
+  const own = kindOf(slide).target?.(cue, p, { wholeVisual: whole });
   if (own !== undefined) return own;
   const range = (r) => { if (window.CSS?.highlights) CSS.highlights.set("ptr", new Highlight(r)); };
   if (cue.kind === "lines") {
@@ -135,13 +139,13 @@ export function cueTarget(cue, slide) {
     const r = drawn && findText(drawn, cue.text);
     if (r) { range(r); return { rects: [...r.getClientRects()] }; }
   }
-  return wholeVisual();
+  return whole();
 }
 
-function wholeVisual() {
-  const v = S.view.parts.visual;
+function wholeVisual(parts = S.view.parts) {
+  const v = parts.visual;
   if (!v || S.shown.slide < 0 || kindOf(S.W.slides[S.shown.slide]).bare) return null;
-  const t = v.querySelector?.(".katex-display") || S.view.parts.svg || v;
+  const t = v.querySelector?.(".katex-display") || parts.svg || v;
   return { rects: [t.getBoundingClientRect()], wide: true };
 }
 

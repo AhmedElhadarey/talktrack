@@ -264,7 +264,7 @@ def daemon(tmp_path_factory):
     proc.wait(10)
 
 
-def _make(lock: dict, frame: str) -> str:
+def _make(lock: dict, frame: str, doc: str = DOC, title: str = "Every slide kind") -> str:
     h = {"Authorization": f"Bearer {lock['token']}"}
     base = f"http://127.0.0.1:{lock['port']}/api/rpc"
 
@@ -273,8 +273,8 @@ def _make(lock: dict, frame: str) -> str:
         r.raise_for_status()
         return r.json()["result"]
 
-    r = call("start", title="Every slide kind", frame=frame, voice="", speed=1.0, project_dir=str(ROOT))
-    call("add", handle=r["handle"], markdown=DOC)
+    r = call("start", title=title, frame=frame, voice="", speed=1.0, project_dir=str(ROOT))
+    call("add", handle=r["handle"], markdown=doc)
     call("playable", handle=r["handle"], timeout=10)
     for _ in range(50):
         if not call("finish", handle=r["handle"], questions=["What next?"])["pending"]:
@@ -888,3 +888,121 @@ def test_a_drawing_past_its_viewbox_is_reported(daemon):
     call("playable", handle=r["handle"], timeout=10)
     f = call("finish", handle=r["handle"], questions=None)
     assert any(i["code"] == "overflow" and "viewBox" in i["message"] for i in f["player_issues"]), f["player_issues"]
+
+
+LAYOUTS_DOC = """# Layouts {icon=layout-grid}
+> Side, pair, full and statement
+
+Opening.
+
+## Takeaways beside code {#side .side}
+> :search: Check first
+> :download: Load on a miss
+
+```python
+def get(key):
+    if key in cache:
+        return cache[key]
+    return load(key)
+```
+
+The [check](#L2) comes first.
+
+## Code and its flow {#pair .pair}
+
+```python
+def get(key):
+    return cache.get(key) or load(key)
+```
+
+```mermaid
+flowchart TB
+  req[Request] --> hit{In cache?}
+  hit --> db[(Database)]
+```
+
+The [lookup](#L2) is one line; [the check](#hit) decides.
+
+## Edge to edge {#full .full}
+
+```svg
+<svg viewBox="0 0 1150 560"><g id="box"><rect x="100" y="100" width="300" height="200" fill="var(--panel)" stroke="var(--c2)"/>
+<use href="icon:database" x="200" y="140" width="96"/></g></svg>
+```
+
+The [box](#box) holds a database.
+
+## Moved {#moved .full .morph}
+
+```svg
+<svg viewBox="0 0 1150 560"><g id="box"><rect x="600" y="200" width="400" height="260" fill="var(--panel)" stroke="var(--c2)"/>
+<use href="icon:database" x="760" y="260" width="96"/></g></svg>
+```
+
+The [box](#box) moved.
+
+## The point {#statement}
+> A cache trades **memory** for time.
+
+Said aloud.
+
+## Parts {#cards .cards}
+
+- :server: **App**: asks
+- :zap: **Cache**: answers
+- :database: **Store**: keeps
+
+The [app](#app) asks.
+"""
+
+
+@pytest.mark.parametrize("frame", ["landscape", "portrait"])
+def test_layouts_render_inside_the_slide(daemon, browser, frame):
+    url = _make(daemon, frame, LAYOUTS_DOC, "Layouts")
+    data = httpx.get(url + "data.json").json()
+    ids = [s["id"] for s in data["slides"]]
+    assert ids[1:] == ["side", "pair", "full", "moved", "statement", "cards"]
+    assert data["slides"][2]["pair"]["kind"] == "diagram" and "database" in data["slides"][-1]["icons"]
+    page = browser.new_page(viewport={"width": 1440, "height": 900} if frame != "portrait" else {"width": 900, "height": 1400})
+    page.goto(url)
+    page.wait_for_function("window.__showntell !== undefined")
+    starts = page.evaluate(
+        """() => import('./' + document.body.dataset.static + '/js/timeline.js').then((m) => fetch('data.json')
+             .then((r) => r.json()).then((w) => { const tl = m.build(w); return w.slides.map((_, i) => [m.slideStart(tl, i), m.slideEnd(tl, i)]); }))"""
+    )
+    for i, sid in enumerate(ids):
+        page.goto(f"{url}?at={min(starts[i][0] + 2.5, starts[i][1] - 0.1):.2f}")  # settled, before the next slide
+        page.wait_for_timeout(1000 if sid in ("pair", "title") else 500)
+        state = page.evaluate(
+            """() => {
+              const slide = document.querySelector('.slide:not(.leaving)');
+              const stage = document.querySelector('#stage').getBoundingClientRect();
+              const out = (e) => { const r = e.getBoundingClientRect(); return r.left < stage.left - 2 || r.right > stage.right + 2 || r.bottom > stage.bottom + 2; };
+              const bodies = [...slide.querySelectorAll('.slide-body')];
+              return {cls: slide.className, errors: window.__showntell.renderErrors, style: slide.getAttribute('style') || '',
+                      bodies: bodies.map((b) => !!b.firstElementChild && b.firstElementChild.getBoundingClientRect().width > 50),
+                      overflow: [...slide.querySelectorAll('.slide-body > *, .points, .statement, .slide-head')].some(out),
+                      points: slide.querySelectorAll('.points .point').length, icons: slide.querySelectorAll('svg.ic').length,
+                      say: slide.querySelector('.statement .say')?.textContent || '', kicker: slide.querySelector('.kicker .n')?.textContent || ''};
+            }"""
+        )
+        page.screenshot(path=str(ART / f"layout-{frame}-{i:02d}-{sid}.png"), animations="disabled")
+        assert not state["errors"], state["errors"]
+        assert not state["overflow"], f"{frame} {sid} spills off the stage"
+        assert state["style"] in ("", 'style=""') or "opacity" not in state["style"], f"{sid} is still coming in: {state['style']}"
+        if sid == "side":
+            assert "l-side" in state["cls"] and state["points"] == 2 and state["icons"] == 2 and state["kicker"] == "01"
+        if sid == "pair":
+            assert "l-pair" in state["cls"] and state["bodies"] == [True, True]
+        if sid in ("full", "moved"):
+            assert "l-full" in state["cls"] and state["bodies"] == [True]
+        if sid == "statement":
+            assert "k-text" in state["cls"] and state["say"] == "A cache trades memory for time."
+        if sid == "cards":
+            assert state["icons"] == 3
+    # A moment into a slide it is still arriving, by the clock, so a paused frame shows it too.
+    page.goto(f"{url}?at={starts[6][0] + 0.15:.2f}")
+    page.wait_for_timeout(400)
+    moving = page.evaluate("() => [...document.querySelectorAll('.slide:not(.leaving) .entering')].length")
+    assert moving == 3
+    page.close()

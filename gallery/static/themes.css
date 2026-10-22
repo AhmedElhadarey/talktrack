@@ -40,8 +40,8 @@
   --scrim-light: rgba(7, 9, 12, 0.35);
   --shadow: rgba(0, 0, 0, 0.5);
   --edge: rgba(255, 255, 255, 0.04);
-  --glow-1: rgba(111, 182, 255, 0.05);
-  --glow-2: rgba(255, 200, 87, 0.04);
+  --glow-1: rgba(111, 182, 255, 0.10);
+  --glow-2: rgba(244, 114, 182, 0.07);
   --hl-keyword: #ff7b72;
   --hl-title: #d2a8ff;
   --hl-attr: #79c0ff;
@@ -51,6 +51,13 @@
   --hl-name: #7ee787;
   --hl-section: #6fb6ff;
   --hl-bullet: #f2cc60;
+  --c1: #ffc857;
+  --c2: #6fb6ff;
+  --c3: #4ade80;
+  --c4: #f472b6;
+  --c5: #a78bfa;
+  --c6: #ff8a65;
+  --grid: rgba(152, 162, 179, 0.07);
 }
 
 [data-theme="light"] {
@@ -90,8 +97,8 @@
   --scrim-light: rgba(240, 243, 247, 0.35);
   --shadow: rgba(31, 35, 40, 0.15);
   --edge: rgba(31, 35, 40, 0.08);
-  --glow-1: rgba(9, 105, 218, 0.03);
-  --glow-2: rgba(212, 140, 20, 0.03);
+  --glow-1: rgba(9, 105, 218, 0.06);
+  --glow-2: rgba(191, 57, 137, 0.05);
   --hl-keyword: #cf222e;
   --hl-title: #8250df;
   --hl-attr: #0550ae;
@@ -101,6 +108,13 @@
   --hl-name: #116329;
   --hl-section: #0550ae;
   --hl-bullet: #953800;
+  --c1: #b45309;
+  --c2: #0969da;
+  --c3: #1a7f37;
+  --c4: #bf3989;
+  --c5: #8250df;
+  --c6: #0e7490;
+  --grid: rgba(31, 35, 40, 0.06);
 }
 
 [data-theme="paper"] {
@@ -140,8 +154,8 @@
   --scrim-light: rgba(244, 238, 226, 0.35);
   --shadow: rgba(60, 45, 25, 0.16);
   --edge: rgba(60, 45, 25, 0.08);
-  --glow-1: rgba(47, 95, 138, 0.03);
-  --glow-2: rgba(196, 90, 30, 0.03);
+  --glow-1: rgba(47, 95, 138, 0.06);
+  --glow-2: rgba(196, 90, 30, 0.06);
   --hl-keyword: #a3261b;
   --hl-title: #6a3d9a;
   --hl-attr: #2f5f8a;
@@ -151,6 +165,13 @@
   --hl-name: #2f6b2f;
   --hl-section: #2f5f8a;
   --hl-bullet: #8a4b00;
+  --c1: #a3410f;
+  --c2: #2f5f8a;
+  --c3: #3d6b2f;
+  --c4: #9b2c5f;
+  --c5: #6a3d9a;
+  --c6: #0f6b6b;
+  --grid: rgba(60, 45, 25, 0.07);
 }
 
 [data-theme="contrast"] {
@@ -201,6 +222,13 @@
   --hl-name: #9ff0a8;
   --hl-section: #9fd3ff;
   --hl-bullet: #ffe066;
+  --c1: #ffd60a;
+  --c2: #7cc4ff;
+  --c3: #6ef08a;
+  --c4: #ff8ad8;
+  --c5: #c4a7ff;
+  --c6: #5ff0f0;
+  --grid: transparent;
 }
 
 /* Syntax colours from the tokens (highlight.js class names). */

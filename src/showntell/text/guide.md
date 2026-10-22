@@ -17,6 +17,23 @@ Settle the arc before the next call: a viewer cannot skim back.
 - **Every topic gets pictures.** History, business, economics: dated events as a `.timeline` list; causes and consequences as a Mermaid flowchart (not Mermaid's `timeline`: it can't be cued); money and growth as charts; places and objects as drawings.
 - **Words last.** Lists, tables and text alone are the last resort, for words with no shape: at most about a third of the slides, never three in a row (`plain_run`). A table of numbers is a chart (`table_numbers`). A stat counts up from zero: `before -> after` only for a real change (`stat_no_change`).
 
+## Design every slide
+
+Title-and-visual slides in a row look like a document. Give each slide the look that carries its idea:
+
+| Look | When | How |
+|---|---|---|
+| **Takeaway** | every code, diff, table or formula slide | one `>` line under the heading: the point in a few words, never read aloud (`no_takeaway`) |
+| **Side** | code, a diagram or a drawing that needs a reading guide | `{.side}`, then one to three short `>` lines shown beside the visual |
+| **Pair** | code and what it does; before and after; a picture and its numbers | `{.pair}` and two visuals under one heading; cues reach either |
+| **Full** | a big drawing, diagram, screenshot or chart | `{.full}`: edge to edge, the title small in a corner |
+| **Statement** | a claim, a definition, a turning point | no visual and one `>` sentence, shown large; `**bold**` words take the accent colour |
+| **Morph** | a drawing that changes from one slide to the next | `{.morph}` on the second ```` ```svg ```` slide; keep the ids of what moves |
+
+- **Vary the look.** Two slides in a row with the same visual and layout read as one long slide (`same_look`): change the layout or the visual.
+- **Icons.** Lucide names such as `database`, `server`, `lock`, `zap`, `users`, `clock`, `git-branch`: `- :database: **Postgres**: …` in lists and cards, `:clock: p95: 420 ms` in stats, `> :zap: …` takeaways, `{icon=rocket}` on the title or a chapter heading, `<use href="icon:cloud" x="40" y="40" width="64"/>` in drawings (`icon_unknown` names close ones).
+- **Colour.** Drawings tell parts apart with `var(--c1)` to `var(--c6)`: one colour per kind of thing, the same on every slide.
+
 Pick the change's shape; for a mix, lead with what a reviewer most needs.
 
 - **New capability:** what it enables → how it works → how to use it, limits.
@@ -50,7 +67,7 @@ Every slide but the title and brief transitions gets the visual that carries its
 
 - **Charts.** Options go on the fence line, never in the body: ```` ```chart bar title="p95 latency" unit="ms" ````. Then one `label: value` line per bar; for grouped bars, a `series: before, after` line first, then `read: 420, 180`. A `chart line` body must start with `x: 1, 2, 4`, then one `name: v1, v2, v3` line per series. `note <bar or x value>: text` adds a callout.
 - **Lists.** Keep items to a few words; narration carries the detail. Don't nest.
-- **Drawings.** Draw to viewBox `{{DRAWING}}`: it fills the slide. Wrap each thing the narration names in `<g id="...">`, in the order named; with `.build` each appears when cued and unfilled strokes (rays, arrows) draw in. Real colours where colour carries meaning; otherwise theme colours: `var(--fg)` for text and outlines, `var(--muted)`, `var(--accent)`, `var(--line)`, `var(--panel)`. Text `font-size` 24 or more; under about 12 px on the slide is `text_too_small`. No scripts, outside links, HTML or animation (`svg_removed`).
+- **Drawings.** Draw to viewBox `{{DRAWING}}`: it fills the slide. Wrap each thing the narration names in `<g id="...">`, in the order named; with `.build` each appears when cued and unfilled strokes (rays, arrows) draw in. Real colours where colour carries meaning; otherwise theme colours: `var(--fg)` for text and outlines, `var(--muted)`, `var(--accent)`, `var(--line)`, `var(--panel)` for fills, `var(--c1)` to `var(--c6)` for parts. A labelled box with an icon reads faster than a box alone. Text `font-size` 24 or more; under about 12 px on the slide is `text_too_small`. No scripts, outside links, HTML or animation (`svg_removed`).
 - **Drawings that move.** Consecutive ```` ```svg step ```` blocks are versions of one drawing: at `#step-2`, elements keeping their `id` glide to new attribute values (numbers, hex colours), new ones fade in, dropped ones out. Keep moving values in attributes and write a transform alike in each version; use it for orbits, a level rising, a ray bending.
 
 ## Write for the ear
@@ -143,6 +160,7 @@ Bigger visuals render smaller: narrow `lines=`, show only the changed region, sp
 
 ````markdown
 ## Giving up {#give-up .build}
+> Each failure waits longer; the last one goes back to the caller
 
 ```python file=src/http/retry.py lines=40-56
 ```

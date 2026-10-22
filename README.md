@@ -250,6 +250,8 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **Numbers** | a `stat` block: `p95: 420 ms -> 180 ms` counts down as it is named |
 | **Exchange** | a `chat` block: `user:` and `assistant:` messages |
 | **Chapter** | `## Part title {.chapter}` |
+| **Layouts** | `{.side}` puts `>` takeaways beside the visual, `{.pair}` shows two visuals, `{.full}` one edge to edge; a slide with only a `>` sentence is a statement |
+| **Icons** | Lucide names: `- :database: **Postgres**`, `> :zap: takeaway`, `{icon=rocket}` on a heading, `<use href="icon:cloud"/>` in a drawing |
 
 `.build` on a heading reveals parts as the narration reaches them. A cue can send a dot along diagram edges (`#client->api->db`), and a style after it changes the pointer: `{.circle}`, `{.underline}`, `{.arrow}`, `{.highlight}`, or `{.zoom}` to move the camera in. Four themes (dark, light, paper, high contrast) are chosen with `theme`, in front matter or in the project's `showntell.theme.json`, and viewers can switch. The full reference is [docs/format.md](docs/format.md). You can also write a walkthrough by hand and play it with `showntell play talk.md`.
 

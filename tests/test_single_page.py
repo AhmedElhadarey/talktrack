@@ -182,7 +182,8 @@ def test_a_page_without_diagrams_leaves_the_libraries_out(tmp_path):
     wid = _voiced(data, "# Plain\n\nJust words.\n\n## List {#l}\n\n- **A**: one\n- **B**: two\n\nThe [first](#a).\n", str(tmp_path))
     html = export_html(data, wid, tmp_path / "plain.html").read_text()
     files = json.loads(html.split('<script type="application/json" id="showntell-files">', 1)[1].split("</script>", 1)[0])
-    assert files == {} and "mermaid" not in html and len(html) < 400_000
+    assert files == {} and "mermaid" not in html and len(html) < 600_000  # the player's three faces are about 175 KB of it
+    assert html.count("data:font/woff2;base64,") == 3 and 'url("vendor/fonts/' not in html
 
 
 @pytest.mark.browser

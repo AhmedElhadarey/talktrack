@@ -46,7 +46,7 @@ class CueResolver:
                 if c.get("kind") == "step":
                     self._step = c["n"]
         for c in raw:
-            r = self._resolve(s, c, quiet=not s.visual and not reresolve)
+            r = self._resolve_pair(s, c, quiet=not s.visual and not reresolve)
             if r:
                 if c.style:
                     r["style"] = c.style
@@ -62,6 +62,29 @@ class CueResolver:
             if (c["at"], c.get("target")) in times and times[(c["at"], c.get("target"))] is not None:
                 c["t"] = times[(c["at"], c.get("target"))]
         say.cues = sorted(out, key=lambda c: c["at"])
+
+    def _resolve_pair(self, s: Slide, c: Cue, quiet: bool = False) -> dict | None:
+        """On a `.pair` slide a cue points into the first visual, or else into the second, whose
+        cues carry `pane: 1`; problems are reported only when neither has the target."""
+        if not s.pair or c.target.strip() in ("", s.id, "visual", "slide"):
+            return self._resolve(s, c, quiet=quiet)
+        mark = len(self.issues)
+        r = self._resolve(s, c, quiet=quiet)
+        if r and len(self.issues) == mark and r.get("kind") != "visual":
+            return r
+        first = self.issues[mark:]
+        del self.issues[mark:]
+        kind, visual = s.kind, s.visual
+        s.kind, s.visual = s.pair["kind"], s.pair["visual"]
+        try:
+            r2 = self._resolve(s, c, quiet=quiet)
+        finally:
+            s.kind, s.visual = kind, visual
+        if r2 and len(self.issues) == mark and r2.get("kind") != "visual":
+            return {**r2, "pane": 1}
+        del self.issues[mark:]
+        self.issues += first
+        return r
 
     def _resolve(self, s: Slide, c: Cue, quiet: bool = False) -> dict | None:
         base = {"at": c.at, "end": c.end, "label": c.label, "target": c.target, "text": c.text}

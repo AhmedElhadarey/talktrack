@@ -326,6 +326,8 @@ def export_html(data_dir: Path, wid: str, out: Path) -> Path:
 
     page = render_player(w.title, w.frame, "", "__STATIC__", live=False, theme=w.theme, tokens=w.tokens)
     css = "\n".join((STATIC / n).read_text() for n in ("themes.css", "player.css"))
+    # The player's own faces travel inside the stylesheet, as KaTeX's do.
+    css = re.sub(r'url\("(vendor/fonts/[^"]+\.woff2)"\)', lambda m: f'url("{_data_uri(STATIC / m.group(1))}")', css)
     if "</style" in css:
         raise RuntimeError("the player's CSS cannot be inlined")
     page = _swap(

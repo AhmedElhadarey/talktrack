@@ -24,8 +24,8 @@ On a miss it [calls the loader](#L18) and stores the result.
 | **Front matter** | optional, only at the very start, between `---` lines. Keys: `title`, `frame`, `theme`, `voice`, `speed`. Tools pass these as arguments instead. |
 | **Slide** | every heading (`#`, `##` or `###`) starts a slide. The level does not matter. |
 | **Title slide** | the first slide renders as a title slide when it has no visual. A `>` quote under it is the subtitle. |
-| **Visual** | at most one per slide: a code block, a diff, a diagram, a formula, a table, a list, an image, a chart, headline numbers (`stat`), an exchange (`chat`), a terminal session, a file tree, a drawing (`svg`) or a draw.io diagram |
-| **Shown text** | `>` quote lines are shown on the slide, never spoken |
+| **Visual** | one per slide (two on a `.pair` slide): a code block, a diff, a diagram, a formula, a table, a list, an image, a chart, headline numbers (`stat`), an exchange (`chat`), a terminal session, a file tree, a drawing (`svg`) or a draw.io diagram |
+| **Shown text** | `>` quote lines are shown on the slide, never spoken: under a heading with a visual, a takeaway line; on a `.side` slide, takeaways beside the visual; on a slide with no visual, one large statement |
 | **Narration** | every other paragraph is spoken. Each paragraph is voiced separately, with a short pause after it. A paragraph that starts with `1. ` or `- ` right after the slide's visual is spoken too, since a list there would be a second visual. |
 | **Questions** | a slide whose heading has the `.questions` class is not shown; its list items become the questions offered at the end. Questions passed to `finish_walkthrough` replace them. |
 
@@ -42,9 +42,42 @@ A heading may end with attributes in braces: `## The lookup {#lookup .build}`.
 | **`.timeline`** | show a list of dated events on a timeline |
 | **`.steps`** | show a list as numbered steps (same as writing `1.` items) |
 | **`.build`** | step reveal: parts appear as narration points at them |
+| **`.side`** | the visual with the slide's `>` lines beside it as takeaways |
+| **`.pair`** | two visuals side by side |
+| **`.full`** | the visual edge to edge, the title small in a corner |
+| **`.morph`** | a drawing that starts as the previous slide's drawing and glides into its own |
+| **`icon=name`** | an icon on a title, chapter or statement slide |
 | **`.questions`** | the end-of-walkthrough questions, not a slide |
 | **`alt="..."`** | text alternative for a diagram or image |
 | **`voice=`, `speed=`** | reserved: per-slide voice and speed |
+
+## Layouts
+
+| Layout | Shows |
+|---|---|
+| **default** | the title, an optional `>` takeaway under it, and the visual filling the rest |
+| **`.side`** | the visual on the left and the slide's `>` lines on the right, one card per line, each numbered or led by its icon; below the visual in portrait |
+| **`.pair`** | two visuals under one heading, side by side (stacked in portrait); each is written as usual, one after the other |
+| **`.full`** | the visual over the whole slide, the title and takeaway in a small panel in the top corner |
+| **statement** | a slide with no visual: its first `>` line as one large sentence, the heading as a kicker above it (the heading alone when there is no `>` line), and further `>` lines smaller below |
+
+On a `.pair` slide a cue points into the first visual when it has the target, else into the second; give the two visuals different ids. `.build` does not apply to a pair, and only the first visual may have `step` versions.
+
+Every content slide has a kicker above its title: its number among the content slides and the part it belongs to. Slides come in by the narration's clock, so seeking and MP4 export show the same motion: they rise in, a slide that shows the same kind of visual in the same layout as the one before slides across like a page, title and chapter slides zoom in, and cards, numbers, rows, messages and takeaways arrive one after another (except on `.build` slides).
+
+## Icons
+
+The [Lucide](https://lucide.dev) set (ISC) is bundled. An icon is named:
+
+| Where | How |
+|---|---|
+| **List item or card** | `- :database: **Postgres**: durable store` |
+| **Number** | `:clock: p95 latency: 420 ms` in a `stat` block |
+| **Takeaway** | `> :zap: Reads skip the database` |
+| **Title, chapter, statement** | `## Storage {.chapter icon=database}` |
+| **Drawing** | `<use href="icon:cloud" x="40" y="40" width="64"/>` (see Drawing) |
+
+The builder copies each icon into the slide that uses it. An unknown name is reported as `icon_unknown` with close names and left out.
 
 ## Visuals
 
@@ -251,6 +284,10 @@ One `<svg>` with a `viewBox` (or a width and height), written inline, or read fr
 
 The builder rebuilds the drawing from an allowlist of SVG elements and attributes: shapes, paths, text, groups, `use`, gradients, patterns, markers, clip paths, masks, filters, `<style>` rules and embedded fonts and images (`data:` only). Scripts, event handlers, links and references outside the drawing, `foreignObject` and SMIL animation are removed and reported as `svg_removed`. The player draws it in a shadow root, so its `<style>` rules apply only inside it. Theme colours are available as `var(--fg)`, `var(--muted)`, `var(--accent)` and the other tokens in `static/themes.css`.
 
+**Icons.** `<use href="icon:name" x="…" y="…" width="…"/>` becomes a group drawing that Lucide icon, 24 units square scaled to `width` (or `height`), stroked with the text colour unless it sets `stroke`. Its `id`, `class` and `<title>` stay, so cues and reveals reach it.
+
+**Across slides.** `.morph` on a slide whose drawing follows another slide's drawing starts it as the previous slide's (its last version) and glides into its own as the slide begins, by the rules of drawings that change.
+
 Cues point at any element by its `id`, by its `<title>` or own text, or by that text's slug; at a region with `#@left,top,width,height` in percent of the drawing; or at drawn text with `[label](# "text")`. With `.build`, the outermost elements with ids are the parts that appear in source order; a cue at an element inside one reveals that part, and unfilled strokes in a part draw themselves in.
 
 **Drawings that change.** Consecutive ```` ```svg step ```` blocks are versions of one drawing. A `#step-2` cue moves to version 2: elements that keep their `id` glide from where they were over about 1.2 s (numbers in attributes move, also inside a `transform`, path or point list written the same way in both versions; colours blend; anything else switches halfway), elements new in this version fade in and those it dropped fade out. The glide follows the narration's clock, so seeking and MP4 export show the same in-between pictures. To move something along a circle, rotate a group around the centre (`transform="rotate(-90 575 280)"`) rather than changing its x and y.
@@ -360,7 +397,9 @@ The walkthrough's theme comes from `start_walkthrough`'s `theme`, else front mat
 { "theme": "light", "tokens": { "accent": "#0969da", "node-line": "#8250df" } }
 ```
 
-Token names are those defined in `static/themes.css`. Values must be colours (`#rrggbb`, `rgb()`, `rgba()`); anything else is reported and ignored. Every built-in theme meets WCAG contrast for its text.
+Token names are those defined in `static/themes.css`; `c1` to `c6` are the palette that cards, numbers, takeaways, diagram shapes and charts take their colours from, and drawings may use as `var(--c1)` and so on. Values must be colours (`#rrggbb`, `rgb()`, `rgba()`); anything else is reported and ignored. Every built-in theme meets WCAG contrast for its text.
+
+Text is set in Inter, titles in Bricolage Grotesque and code in JetBrains Mono, bundled with the player (OFL), so slides look the same on every machine and in MP4 export.
 
 ## Reserved for later versions
 

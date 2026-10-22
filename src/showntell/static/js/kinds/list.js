@@ -1,5 +1,6 @@
 // Lists: bullets, numbered steps, cards, a stack of layers, a timeline, or a checklist whose ticks draw in.
 
+import { icon } from "../deco.js";
 import { el } from "../draw.js";
 import { inline } from "../util.js";
 
@@ -19,8 +20,9 @@ export default {
     }
     v.items.forEach((it, i) => {
       const tick = style === "checklist" ? `<span class="tick${it.check ? " todo-done" : ""}" aria-hidden="true">${TICK}</span>` : "";
-      const item = el(style === "cards" || style === "stack" ? "div" : "li", "entry",
-        `${tick}<div class="entry-text">${it.title ? `<h3>${inline(it.title)}</h3>` : ""}${it.body ? `<p>${inline(it.body)}</p>` : ""}</div>`);
+      const ic = style === "checklist" || style === "timeline" ? "" : icon(slide, it.icon);
+      const text = `<div class="entry-text">${it.title ? `<h3>${inline(it.title)}</h3>` : ""}${it.body ? `<p>${inline(it.body)}</p>` : ""}</div>`;
+      const item = el(style === "cards" || style === "stack" ? "div" : "li", `entry${ic ? " has-icon" : ""}`, `${tick}${ic}${text}`);
       if (style === "checklist") item.setAttribute("aria-label", `${it.check ? "Done" : "Not done"}: ${it.title || it.body}`);
       if (style === "stack") item.style.setProperty("--layer", i);
       if (style === "steps") item.dataset.n = i + 1;

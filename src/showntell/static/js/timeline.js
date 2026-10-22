@@ -103,7 +103,7 @@ export function stateAt(w, tl, t) {
 // {rows: n} for table rows, {line: n} for one pane of numbered lines (code, terminal),
 // {nodes: n} for flowcharts; counted in source order. null when everything shows.
 export function revealLevel(slide, cues, all) {
-  if (!slide || !(slide.classes || []).includes("build") || all) return null;
+  if (!slide || !(slide.classes || []).includes("build") || all || slide.pair) return null; // a pair shows whole
   const v = slide.visual || {};
   const every = slide.says.flatMap((x) => x.cues || []);
   const upTo = (kind, ids) => {

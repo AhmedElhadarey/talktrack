@@ -6,7 +6,7 @@ import { esc } from "../util.js";
 
 // Drawing size per frame, in SVG units: close to the slide body's shape, so text keeps its size.
 const SIZES = { landscape: [1100, 600], square: [900, 820], portrait: [660, 940] };
-const PALETTE = ["var(--accent)", "var(--node-line)", "var(--add-fg)", "var(--hl-title)", "var(--hl-built-in)", "var(--del-fg)"];
+const PALETTE = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)", "var(--c5)", "var(--c6)"];
 
 export default {
   render(slide, body, parts, ctx) {
@@ -47,7 +47,8 @@ function drawChart(v, [W, H]) {
   const t = (x, y, text, cls, anchor = "middle") => `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${esc(text)}</text>`;
   const all = v.type === "line" ? v.series.flatMap((s) => s.values) : v.categories.flatMap((c) => c.values);
   const lo = Math.min(0, ...all);
-  const { top, step } = niceScale(Math.max(...all, 0) - lo);
+  // Callouts sit above their point: leave headroom over the tallest value when there are any.
+  const { top, step } = niceScale((Math.max(...all, 0) - lo) * ((v.notes || []).length ? 1.4 : 1));
   const head = v.title ? t(W / 2, 34, v.title, "ctitle") : "";
   const m = { l: 96, r: 40, t: v.title ? 70 : 30, b: 86 };
   if (v.type === "hbar") return drawHbar(v, W, H, m, top, step, head, t);

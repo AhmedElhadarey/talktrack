@@ -13,6 +13,7 @@ import re
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape, quoteattr
 
+from .. import icons
 from .base import Finding, Kind, slug
 
 MAX_BYTES = 600_000
@@ -364,6 +365,7 @@ def parse_svg(body: str, attrs: dict) -> tuple[dict, list[str]]:
     for k in ("width", "height", "x", "y"):
         root.attrib.pop(k, None)
     root.set("preserveAspectRatio", "xMidYMid meet")
+    icon_problems = _expand_icons(root)
 
     ids, items, part_of = [], [], {}
 
@@ -392,7 +394,7 @@ def parse_svg(body: str, attrs: dict) -> tuple[dict, list[str]]:
     for it in items:
         first.setdefault(it["id"], it)
     dupes = sorted({it["id"] for it in items if first[it["id"]] is not it})
-    problems = [f"id `{d}` is used more than once; cues reach the first" for d in dupes]
+    problems = icon_problems + [f"id `{d}` is used more than once; cues reach the first" for d in dupes]
     vis.update(
         svg=svg,
         ids=list(dict.fromkeys(ids)),
@@ -407,6 +409,41 @@ def parse_svg(body: str, attrs: dict) -> tuple[dict, list[str]]:
 
 
 STEP_KEYS = ("svg", "ids", "items", "part_of", "box")
+
+
+def _expand_icons(root: ET.Element) -> list[str]:
+    """`<use href="icon:name" x y width height/>` becomes a group drawing that Lucide icon, 24 units
+    square scaled to `width` (or `height`), stroked with `currentColor` unless it sets `stroke`.
+    Its id, class, colour and title stay, so cues and reveals reach it like any other part."""
+    problems = []
+    for e in root.iter():
+        if _local(e.tag) != "use":
+            continue
+        href = e.get("href") or e.get(f"{XLINK}href") or ""
+        if not href.startswith("icon:"):
+            continue
+        name = href[5:].strip()
+        inner = icons.get(name)
+        if inner is None:
+            close = icons.suggest(name)
+            problems.append(f"there is no icon `{name}`" + (f" (close: {', '.join(close)})" if close else ""))
+            e.attrib.pop("href", None)
+            e.attrib.pop(f"{XLINK}href", None)
+            continue
+        x, y = _number(e.get("x")) or 0.0, _number(e.get("y")) or 0.0
+        size = _number(e.get("width")) or _number(e.get("height")) or 24.0
+        outer = e.get("transform", "")
+        keep = {k: v for k, v in e.attrib.items() if k not in ("href", f"{XLINK}href", "x", "y", "width", "height", "transform")}
+        e.tag = f"{{{SVG_NS}}}g"
+        e.attrib.clear()
+        e.attrib.update(
+            {"fill": "none", "stroke": "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round"}
+        )
+        e.attrib.update(keep)
+        e.set("transform", f"{outer} translate({x:g} {y:g}) scale({size / 24:g})".strip())
+        for c in ET.fromstring(f'<g xmlns="{SVG_NS}">{inner}</g>'):
+            e.append(c)
+    return problems
 
 
 def _items(vis: dict) -> list[dict]:

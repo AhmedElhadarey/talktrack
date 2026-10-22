@@ -1,5 +1,6 @@
 // Headline numbers that count up, from `before` when given, when the narration reaches them.
 
+import { icon } from "../deco.js";
 import { el, reducedMotion } from "../draw.js";
 import { esc, inline } from "../util.js";
 
@@ -24,10 +25,14 @@ export default {
   render(slide, body, parts, ctx) {
     const v = slide.visual || {};
     const g = el("div", "stats");
-    g.style.gridTemplateColumns = `repeat(${ctx.frame === "portrait" ? 1 : Math.min(2, v.items.length) || 1}, minmax(0, 1fr))`;
+    // One row of up to three across a landscape slide, two by two for four; one column when tall.
+    const n = v.items.length || 1;
+    const cols = ctx.frame === "portrait" ? 1 : ctx.frame === "square" ? Math.min(2, n) : n === 4 ? 2 : Math.min(3, n);
+    g.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+    g.classList.add(`cols-${cols}`);
     v.items.forEach((it, i) => {
       const card = el("div", "entry stat",
-        `<div class="label">${inline(it.label)}</div><div class="num" aria-hidden="true">${esc(statText(it, 1))}</div>`
+        `<div class="label">${icon(slide, it.icon)}${inline(it.label)}</div><div class="num" aria-hidden="true">${esc(statText(it, 1))}</div>`
         + (changed(it) ? `<div class="was">from ${esc(statValue(it, it.before))}</div>` : ""));
       card.setAttribute("aria-label", `${it.label}: ${changed(it) ? `from ${statValue(it, it.before)} to ` : ""}${statValue(it, it.after)}`);
       card.dataset.id = it.id;

@@ -19,6 +19,22 @@ SPOKEN_RE = re.compile(
 )
 # Visuals made only of words. A few in a row and the walkthrough reads like a document.
 PLAIN = ("list", "table", "text")
+DENSE = ("code", "diff", "terminal", "table", "math")
+NOUNS = {
+    "svg": "a drawing",
+    "drawio": "a draw.io diagram",
+    "math": "a formula",
+    "stat": "numbers",
+    "chat": "an exchange",
+    "image": "an image",
+}
+LAYOUTS = ("side", "pair", "full")
+
+
+def _layout(s: Slide) -> str:
+    return next((x for x in LAYOUTS if x in s.classes), "")
+
+
 # Narration that describes a change rather than code as it is.
 CHANGE_RE = re.compile(
     r"\b(?:this (?:change|commit|pull request|PR|diff)|the (?:old|previous|new) (?:code|version|behaviou?r)|used to|previously"
@@ -154,6 +170,7 @@ class Checks:
         self._check_spoken(s)
         self._check_build_order(s)
         self._check_fit(s)
+        self._check_layout(s)
         shown = " ".join([s.shown] + [it.get("body", "") for it in s.visual.get("items", [])])
         spoken = " " + " ".join(re.findall(r"[\w'-]+", " ".join(x.text for x in s.says).lower())) + " "
         for chunk in _phrases(shown, 7):
@@ -260,6 +277,37 @@ class Checks:
                     line=s.line,
                 )
 
+    def _check_layout(self, s: Slide) -> None:
+        """Layout classes on the heading that have nothing to lay out."""
+        problems = []
+        if "side" in s.classes and not s.shown.strip():
+            problems.append(
+                (
+                    "`.side` puts takeaways beside the visual, but the slide has no `>` lines",
+                    "Add one to three short `>` lines, or drop `.side`.",
+                )
+            )
+        if "pair" in s.classes and s.visual and not s.pair:
+            problems.append(
+                ("`.pair` shows two visuals side by side, but the slide has one", "Add the second visual under the first, or drop `.pair`.")
+            )
+        if "pair" in s.classes and "build" in s.classes:
+            problems.append(
+                ("`.build` does not reveal a pair in steps; both visuals show whole", "Drop `.build`, or split the pair into two slides.")
+            )
+        if "morph" in s.classes:
+            i = self.w.slides.index(s) if s in self.w.slides else 0
+            prev = self.w.slides[i - 1] if i > 0 else None
+            if s.kind != "svg" or not prev or prev.kind != "svg":
+                problems.append(
+                    (
+                        "`.morph` glides from the previous slide's drawing, so both slides need an ```svg drawing",
+                        "Drop `.morph`, or draw both slides.",
+                    )
+                )
+        for message, fix in problems:
+            self._issue("layout_unused", f"Slide `{s.id}`: {message}.", fix, slide=s.id, line=s.line)
+
     def _change_topic(self) -> bool:
         """Whether the title or the opening narration names a commit, a range or a pull request."""
         opening = " ".join(x.text for x in self.w.slides[0].says) if self.w.slides else ""
@@ -324,6 +372,39 @@ class Checks:
                             slide=run[-1],
                         )
                 run = []
+
+        self._check_looks()
+
+    def _check_looks(self) -> None:
+        """Slides that look alike back to back, and dense visuals with nothing saying what to take
+        from them. Each is reported once per walkthrough, as it first happens."""
+        once = self._once()
+        body = [s for s in self.w.slides if s.kind not in ("title", "chapter", "text")]
+        if "same_look" not in once:
+            for a, b in zip(body, body[1:], strict=False):
+                same = a.kind == b.kind and _layout(a) == _layout(b) and "morph" not in b.classes
+                if same and self.w.slides.index(b) == self.w.slides.index(a) + 1:
+                    once.add("same_look")
+                    self._issue(
+                        "same_look",
+                        f"Slides `{a.id}` and `{b.id}` look the same: both show {NOUNS.get(a.kind, f'a {a.kind}')} the same way.",
+                        "Vary the next ones: `.side` with `>` takeaways, `.pair` with a diagram beside the code, "
+                        "`.full` for a big picture, or a different visual. Alike slides in a row slide across like pages, "
+                        "so keep the same look only for a sequence the viewer should read as one.",
+                        slide=b.id,
+                    )
+                    break
+        if "no_takeaway" not in once:
+            bare = [s.id for s in body if s.kind in DENSE and not s.shown.strip()]
+            if len(bare) >= 2:
+                once.add("no_takeaway")
+                self._issue(
+                    "no_takeaway",
+                    f"Slides {', '.join(f'`{x}`' for x in bare[:4])} show code, tables or formulas with no line saying what to take from them.",
+                    "Add a `>` line under the heading: the point in a few words, shown while the narration explains it. "
+                    "With `.side`, one to three `>` lines sit beside the visual as takeaways.",
+                    slide=bare[1],
+                )
 
     def check_all(self) -> None:
         if self.w.slides:

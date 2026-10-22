@@ -36,6 +36,7 @@ CODES: dict[str, tuple[str, str]] = {
     "block_error": ("error", "a line in a chart, stat or chat block could not be read and was left out"),
     "block_too_big": ("warning", "a chart, stat or chat block has more parts than the frame shows comfortably"),
     "tree_error": ("warning", "a file tree's nesting is inconsistent"),
+    "icon_unknown": ("warning", "an icon name is not in the bundled set and was left out"),
     "svg_removed": ("warning", "a drawing had elements or attributes the player does not allow, which were removed"),
     # cues
     "cue_off_code": ("error", "a cue points at lines the slide does not show"),
@@ -57,6 +58,9 @@ CODES: dict[str, tuple[str, str]] = {
     "still_slide": ("warning", "the screen does not change for a long stretch of narration"),
     "code_run": ("info", "several code slides in a row with nothing showing behaviour"),
     "plain_run": ("info", "several slides in a row are only lists, tables or text"),
+    "same_look": ("info", "two slides in a row show the same kind of visual the same way"),
+    "no_takeaway": ("info", "code, tables or formulas with no `>` line saying what to take from them"),
+    "layout_unused": ("info", "a layout class on a heading has nothing to lay out"),
     "change_as_code": ("info", "a code slide talks about a change but shows one version of the code"),
     "list_dates": ("info", "a list or table of dated events that a timeline would show"),
     "table_numbers": ("info", "a table is mostly numbers a chart would compare at a glance"),

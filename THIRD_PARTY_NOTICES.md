@@ -10,6 +10,11 @@ showntell bundles these libraries in `src/showntell/static/vendor/`, unmodified:
 | **Rough.js** | 4.6.6 | MIT | https://github.com/rough-stuff/rough |
 | **Virgil** (font) | 3d4c829 | OFL-1.1 | https://github.com/excalidraw/virgil |
 | **draw.io viewer** (`viewer-static.min.js`) | 31.7.0 | Apache-2.0 | https://github.com/jgraph/drawio |
+| **Inter** (font, Latin subset via Fontsource) | 5.3.0 | OFL-1.1 | https://github.com/rsms/inter |
+| **Bricolage Grotesque** (font, Latin subset via Fontsource) | 5.3.0 | OFL-1.1 | https://github.com/ateliertriay/bricolage |
+| **JetBrains Mono** (font, Latin subset via Fontsource) | 5.3.0 | OFL-1.1 | https://github.com/JetBrains/JetBrainsMono |
+
+The Lucide icons (`lucide-static` 1.50.0, ISC, https://github.com/lucide-icons/lucide) are bundled as `src/showntell/data/icons.json`: each icon's SVG elements and search tags, converted from the package's `icon-nodes.json` and `tags.json` by `scripts/vendor.sh`. The licence is in `static/vendor/LICENSES/lucide.txt`.
 
 showntell downloads these models on first run; they are not part of the package:
 

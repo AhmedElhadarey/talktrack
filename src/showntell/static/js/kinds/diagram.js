@@ -75,6 +75,9 @@ export default {
 
 async function mermaidReady() {
   await loadScript(`${STATIC}/vendor/mermaid.min.js`);
+  // Mermaid sizes each box by measuring its label: the face must be loaded first, or labels
+  // measured in a fallback font are clipped when drawn in the real one.
+  await Promise.all(["400 20px Inter", "700 20px Inter"].map((f) => document.fonts?.load(f).catch(() => null)));
   if (!window.__mermaidInit) {
     window.__mermaidInit = true;
     const css = getComputedStyle(document.body);
@@ -150,7 +153,7 @@ export function sizeDiagram(svg, body) {
   const vb = svg.viewBox.baseVal;
   if (!vb || !vb.width) return;
   const bw = body.clientWidth, bh = body.clientHeight;
-  const k = Math.min(bw / vb.width, bh / vb.height, 1.8);
+  const k = Math.min(bw / vb.width, bh / vb.height, 2.2);
   svg.setAttribute("width", Math.floor(vb.width * k));
   svg.setAttribute("height", Math.floor(vb.height * k));
 }

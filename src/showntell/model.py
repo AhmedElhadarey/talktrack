@@ -38,6 +38,9 @@ class Slide:
     attrs: dict = field(default_factory=dict)
     rev: int = 1
     line: int = 0  # where the slide starts in the walkthrough's Markdown
+    pair: dict = field(default_factory=dict)  # the second visual of a `.pair` slide: {kind, visual}
+    icon: str = ""  # the heading's {icon=name}
+    icons: dict = field(default_factory=dict)  # name -> inner SVG of every icon the slide uses
 
 
 @dataclass
@@ -97,7 +100,7 @@ class Walkthrough:
 
 
 def public_slide(s: Slide) -> dict:
-    return {
+    out = {
         "id": s.id,
         "rev": s.rev,
         "kind": s.kind,
@@ -107,6 +110,10 @@ def public_slide(s: Slide) -> dict:
         "visual": s.visual,
         "says": [public_say(x) for x in s.says],
     }
+    for k in ("pair", "icon", "icons"):  # only when used, so older walkthroughs read the same
+        if getattr(s, k):
+            out[k] = getattr(s, k)
+    return out
 
 
 def public_say(x: Say) -> dict:

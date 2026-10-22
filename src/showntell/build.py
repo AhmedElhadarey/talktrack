@@ -11,7 +11,7 @@ import re
 import shutil
 from pathlib import Path
 
-from . import kinds, sources
+from . import icons, kinds, sources
 from .checks import Checks, generated
 from .cues import CueResolver
 from .format import Block, Parser, inline_plain, parse_item, parse_narration, parse_table
@@ -47,6 +47,7 @@ class Builder(CueResolver, Checks):
         self.new_says: list[tuple[Slide, Say]] = []
         self.changed: set[str] = set()
         self.visual_line = 0  # where the visual being added starts, for a slide it spills onto
+        self.into_pair = False  # the visual being added is the second one on a `.pair` slide
 
     @property
     def root(self) -> Path | None:
@@ -91,14 +92,36 @@ class Builder(CueResolver, Checks):
         classes = attrs.pop("classes", [])
         sid = attrs.pop("id", "") or slugify(b.text)
         sid = self._unique_id(sid)
+        icon = attrs.pop("icon", "")
         s = Slide(id=sid, title=inline_plain(b.text), classes=classes, attrs=attrs, line=b.line)
         s.kind = "title" if not self.w.slides else "text"
         if "chapter" in classes and self.w.slides:
             s.kind = "chapter"
             s.visual = {"n": 1 + sum(1 for x in self.w.slides if x.kind == "chapter")}
         self.w.slides.append(s)
+        if icon and self._use_icon(s, icon, b.line):
+            s.icon = icon
         self.changed.add(s.id)
         return s
+
+    def _use_icon(self, s: Slide, name: str, line: int) -> bool:
+        """Copy a named icon into the slide; an unknown name is reported with names close to it."""
+        if not self._known_icon(name, line):
+            return False
+        s.icons[name] = icons.get(name)
+        return True
+
+    def _known_icon(self, name: str, line: int) -> bool:
+        if icons.get(name) is not None:
+            return True
+        close = icons.suggest(name)
+        self._issue(
+            "icon_unknown",
+            f"Line {line}: there is no icon `{name}`" + (f"; close: {', '.join(close)}." if close else "."),
+            "Use a Lucide icon name, such as database, server, cloud, lock, zap, clock or users.",
+            line=line,
+        )
+        return False
 
     def _unique_id(self, sid: str) -> str:
         taken = {s.id for s in self.w.slides}
@@ -178,6 +201,10 @@ class Builder(CueResolver, Checks):
         if b.kind == "quote":
             s = self._current()
             s.shown = (s.shown + "\n" + b.text).strip() if s.shown else b.text
+            for ln in b.text.split("\n"):  # `> :zap: takeaway` leads with an icon
+                name, _ = icons.split_leading(ln.strip())
+                if name and not self._use_icon(s, name, b.line):
+                    s.shown = s.shown.replace(f":{name}:", "", 1)
             self.changed.add(s.id)
             return
         if b.kind == "list" and self._spoken_item(b):
@@ -197,6 +224,15 @@ class Builder(CueResolver, Checks):
 
     def _slide_for_visual(self, kind: str) -> Slide:
         s = self._current()
+        if (
+            s.visual
+            and "pair" in s.classes
+            and not s.pair
+            and s.kind not in ("title", "chapter")
+            and not (kind == "list" and s.kind == "list")
+        ):
+            self.into_pair = True  # the second visual of a pair: `_set` puts it beside the first
+            return s
         if s.visual and not (kind == "list" and s.kind == "list"):
             self._issue(
                 "extra_visual",
@@ -208,6 +244,7 @@ class Builder(CueResolver, Checks):
         return s
 
     def _add_visual(self, b: Block) -> None:
+        self.into_pair = False
         k = kinds.for_lang(b.lang) if b.kind == "code" else None
         if k:
             return self._add_kind(k, b)
@@ -274,8 +311,16 @@ class Builder(CueResolver, Checks):
             return self._set(self._slide_for_visual("table"), "table", t)
         if b.kind == "list":
             s = self._slide_for_visual("list")
-            items = [parse_item(t) for t in b.items if t.strip()]
-            if s.kind == "list":
+            items = []
+            for t in b.items:
+                if not t.strip():
+                    continue
+                name, rest = icons.split_leading(t.strip())  # `- :database: **Postgres**: ...`
+                it = parse_item(rest)
+                if name and self._known_icon(name, b.line):
+                    it["icon"] = name
+                items.append(it)
+            if s.kind == "list" and not self.into_pair:
                 items = s.visual["items"] + items
             used = set()
             for i, it in enumerate(items):
@@ -304,6 +349,15 @@ class Builder(CueResolver, Checks):
 
     def _add_kind(self, k: kinds.Kind, b: Block) -> None:
         body = b.text
+        lead: dict[str, str] = {}
+        if k.name == "stat":  # `:clock: p95 latency: 420 ms`: the icon leads the label
+            lines = []
+            for ln in body.split("\n"):
+                name, rest = icons.split_leading(ln.strip())
+                if name:
+                    lead[rest.split(":", 1)[0].strip()] = name
+                lines.append(rest if name else ln)
+            body = "\n".join(lines)
         if k.reads_file and b.attrs.get("file"):
             try:
                 body = sources.read_text(sources.resolve(self.root, b.attrs["file"]))
@@ -318,6 +372,9 @@ class Builder(CueResolver, Checks):
                     line=b.line,
                 )
         vis, problems = k.parse(body, b.attrs)
+        for it in vis.get("items", []) if lead else []:
+            if it.get("label") in lead and self._known_icon(lead[it["label"]], b.line):
+                it["icon"] = lead[it["label"]]
         for i, p in enumerate(problems):  # the format once per block
             self._issue(k.error_code, f"Line {b.line}: {p}.", k.fix() if i == 0 else k.hint, line=b.line)
         if k.lines:
@@ -335,7 +392,14 @@ class Builder(CueResolver, Checks):
         self._set(self._slide_for_visual(k.name), k.name, vis)
 
     def _set(self, s: Slide, kind: str, visual: dict) -> None:
-        s.kind, s.visual = kind, visual
+        if self.into_pair and s.visual and not s.pair:
+            self.into_pair = False
+            s.pair = {"kind": kind, "visual": visual}
+        else:
+            s.kind, s.visual = kind, visual
+        for it in visual.get("items", []):  # icons leading list items and numbers
+            if isinstance(it, dict) and it.get("icon"):
+                s.icons[it["icon"]] = icons.get(it["icon"])
         self.changed.add(s.id)
         for say in s.says:  # cues written before the visual arrived
             self._resolve_cues(s, say, reresolve=True)

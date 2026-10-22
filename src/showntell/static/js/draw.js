@@ -95,13 +95,23 @@ export function textRange(container, start, end) {
   return started ? range : null;
 }
 
-// Shrink (or modestly grow) code, tables and formulas so they fit the slide body. A transform
-// rather than CSS zoom: bounding boxes of text ranges inside a transform are reported exactly,
-// which keeps the pointer on the words it points at.
+// Fit the visual to the slide body: shrink what is too big, and grow what is small until it fills
+// the space, up to a size per kind that keeps text from looking shouted. A transform rather than
+// CSS zoom: bounding boxes of text ranges inside a transform are reported exactly, which keeps
+// the pointer on the words it points at.
+const GROW = [
+  [".codebox, .diff", 1.6],
+  ["table.data, .tree", 1.5],
+  [".math", 1.3],
+  [".list", 1.35],
+  [".chat", 1.3],
+  [".stats", 1.25],
+];
 export function fit(body) {
   const content = body.firstElementChild;
   if (!content || content.matches(".diagram, .image, .chart")) return;
   content.style.transform = "";
+  content.style.width = "";
   const bw = body.clientWidth, bh = body.clientHeight;
   if (content.matches(".codebox.scroll")) {
     // Long code keeps its size and scrolls: fit the width only, and the box to the slide's height.
@@ -112,12 +122,25 @@ export function fit(body) {
     content.style.transform = `scale(${k})`;
     return;
   }
-  const cw = Math.max(content.offsetWidth, content.scrollWidth), ch = Math.max(content.offsetHeight, content.scrollHeight);
-  if (!cw || !ch) return;
-  const grow = content.matches(".codebox, .diff, .math, table.data, .tree") ? 1.3 : 1;
-  let k = Math.min(grow, bw / cw, bh / ch) * 0.98;
-  if (Math.abs(k - 1) <= 0.02) k = 1;
-  k = Math.max(0.3, k);
+  const grow = GROW.find(([sel]) => content.matches(sel))?.[1] || 1;
+  let k = fitScale(content, bw, bh, grow);
+  // A list spans the body's width, so it can only grow by laying out narrower and scaling up:
+  // try sizes from the largest down until its height fits.
+  if (content.matches(".list:not(.timeline)") && grow > 1 && k >= 0.97) {
+    for (let g = grow; g > 1.001; g -= 0.05) {
+      content.style.width = `${Math.floor((bw / g) * 0.98)}px`;
+      if (content.scrollWidth <= (bw / g) * 0.98 + 1 && Math.max(content.offsetHeight, content.scrollHeight) * g <= bh * 0.98) { k = g; break; }
+      content.style.width = "";
+    }
+  }
   content.dataset.scale = k.toFixed(3);
   if (k !== 1) content.style.transform = `scale(${k})`;
+}
+
+function fitScale(content, bw, bh, grow) {
+  const cw = Math.max(content.offsetWidth, content.scrollWidth), ch = Math.max(content.offsetHeight, content.scrollHeight);
+  if (!cw || !ch) return 1;
+  let k = Math.min(grow, bw / cw, bh / ch) * 0.98;
+  if (Math.abs(k - 1) <= 0.02) k = 1;
+  return Math.max(0.3, k);
 }

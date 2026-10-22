@@ -43,11 +43,11 @@
     },
     {
       "kind": "list",
-      "fence": "- items, 1. items, - [x] / - [ ] checklist items; .cards, .steps, .stack or .timeline (dates as bold titles) on the heading",
+      "fence": "- items, 1. items, - [x] / - [ ] checklist items; .cards, .steps, .stack or .timeline (dates as bold titles) on the heading; `- :icon: **Title**: text` leads an item with an icon",
       "use": "parallel parts, options, a procedure, layers of a stack, a checklist, dated events",
       "point": "#id from {#id}, or the bold title lowercased with hyphens",
       "reveal": "items up to the last one pointed at; checklist ticks draw as their item is pointed at",
-      "example": "- **Memory**: fast, gone on restart {#memory}\n- **Disk**: survives restarts {#disk}"
+      "example": "- :zap: **Memory**: fast, gone on restart {#memory}\n- :hard-drive: **Disk**: survives restarts {#disk}"
     },
     {
       "kind": "image",
@@ -90,7 +90,7 @@
       "use": "one to four headline numbers; each counts up from zero by itself, so `before -> after` only for a real change, not a total as `0 -> 300 million` or `3 -> 3`",
       "point": "#label, lowercased with hyphens",
       "reveal": "numbers in source order; each counts up when pointed at, or at the slide's start if none are",
-      "format": "One `label: value` or `label: before -> after` line per number. Values may carry a unit (`420 ms`, `2.1%`).",
+      "format": "One `label: value` or `label: before -> after` line per number. Values may carry a unit (`420 ms`, `2.1%`). `:icon:` before a label shows an icon beside it (`:clock: p95 latency: 420 ms`).",
       "example": "```stat\np95 latency: 420 ms -> 180 ms\nerror rate: 2.1% -> 0.3%\n```"
     },
     {
@@ -109,7 +109,7 @@
       "point": "#id of any element; an element's <title> or own text, or its slug (#air-molecule); #@left,top,width,height a region in percent of the drawing; [label](# \"text\") finds drawn text; add {.zoom} for small parts; with step versions, #step-2 moves to version 2",
       "reveal": "with .build, the outermost elements with ids, in source order; a cue at an id nested inside one reveals that part; unfilled strokes (rays, arrows, outlines) draw themselves in",
       "format": "One <svg> with a viewBox (0 0 1150 560 landscape, 0 0 860 800 square, 0 0 640 1080 portrait). Kept: shapes, paths, text, groups, gradients, markers, clip paths, masks, filters, <style> rules, <title>. Give each thing the narration names its own <g id=\"…\">, in the order named. Removed (svg_removed): scripts, event handlers, links outside the drawing, foreignObject (embedded HTML), SMIL animation. For an existing .svg, ```svg file=path, empty body.",
-      "details": "The viewBox shape for the frame fills the slide; in it, font-size 24 or more reads well, and text under about 12 px on the slide is flagged (text_too_small). file= reads an SVG from the project, such as an export from Excalidraw or Inkscape; for a .drawio or .drawio.svg file use ```drawio, whose cues reach its cells. Removed parts are reported; motion comes from reveals, cues and step versions. Use real colours where colour carries meaning; otherwise theme colours, which follow light and dark: var(--fg) for text and outlines, var(--muted), var(--accent), var(--line), var(--panel) for fills, var(--stage) for the slide background. Step versions: consecutive ```svg step blocks on one slide are versions of one drawing. At #step-N, elements that keep their id glide to version N over about 1.2 s: numbers in attributes move, also inside a transform, path d or points list written the same way in both versions; hex and rgb() colours blend; other values and an element's text switch halfway; style= does not glide. Ids new in the version fade in, ids it dropped fade out. So keep the same ids across versions for what moves, put moving values in attributes, and write a transform alike in each (rotate(0 575 280), then rotate(-90 575 280)). To move along a circle, rotate a group around the centre instead of changing its x and y. Sketch: ```svg sketch redraws shapes by hand, as on a whiteboard (wobbly outlines, hatched fills, solid for small shapes, dashes kept), with text in a hand-drawn face; gradient fills stay as drawn. It combines with step; optional, suits informal explainers.",
+      "details": "The viewBox shape for the frame fills the slide; in it, font-size 24 or more reads well, and text under about 12 px on the slide is flagged (text_too_small). file= reads an SVG from the project, such as an export from Excalidraw or Inkscape; for a .drawio or .drawio.svg file use ```drawio, whose cues reach its cells. Removed parts are reported; motion comes from reveals, cues and step versions. Use real colours where colour carries meaning; otherwise theme colours, which follow light and dark: var(--fg) for text and outlines, var(--muted), var(--accent), var(--line), var(--panel) for fills, var(--stage) for the slide background, and six palette colours var(--c1) to var(--c6) to tell parts apart. Icons: <use href=\"icon:database\" x=\"40\" y=\"40\" width=\"64\"/> draws a Lucide icon 64 units wide, stroked in the text colour or its own stroke=; ids, <title> and cues work on it as on any part. Step versions: consecutive ```svg step blocks on one slide are versions of one drawing. At #step-N, elements that keep their id glide to version N over about 1.2 s: numbers in attributes move, also inside a transform, path d or points list written the same way in both versions; hex and rgb() colours blend; other values and an element's text switch halfway; style= does not glide. Ids new in the version fade in, ids it dropped fade out. So keep the same ids across versions for what moves, put moving values in attributes, and write a transform alike in each (rotate(0 575 280), then rotate(-90 575 280)). To move along a circle, rotate a group around the centre instead of changing its x and y. Sketch: ```svg sketch redraws shapes by hand, as on a whiteboard (wobbly outlines, hatched fills, solid for small shapes, dashes kept), with text in a hand-drawn face; gradient fills stay as drawn. It combines with step; optional, suits informal explainers. Across slides: `.morph` on the next slide's heading, with an ```svg drawing on both, makes its drawing start as the previous one and glide into its own as the slide begins (same rules: keep ids for what moves).",
       "example": "```svg\n<svg viewBox=\"0 0 1150 560\">\n  <g id=\"sun\"><circle cx=\"140\" cy=\"140\" r=\"70\" fill=\"#ffd166\"/><text x=\"140\" y=\"260\" font-size=\"28\" text-anchor=\"middle\" fill=\"var(--fg)\">Sun</text></g>\n  <g id=\"air\"><title>Air molecule</title><path d=\"M215 165 L560 260\" stroke=\"var(--fg)\" stroke-width=\"6\" fill=\"none\"/><circle cx=\"580\" cy=\"266\" r=\"18\" fill=\"var(--muted)\"/></g>\n  <g id=\"blue\"><title>Scattered blue</title><path d=\"M595 280 L880 450\" stroke=\"#4f8cff\" stroke-width=\"8\" fill=\"none\"/><text x=\"895\" y=\"490\" font-size=\"28\" fill=\"var(--fg)\">Your eye</text></g>\n</svg>\n```"
     },
     {
@@ -142,5 +142,18 @@
       "highlight": "a marker stroke behind it",
       "zoom": "the camera zooms onto the target until the next cue; combine with another style"
     }
+  },
+  "layouts": {
+    "syntax": "classes on the heading, as in ## Title {.side}; one layout per slide",
+    "layouts": {
+      "default": "title and an optional `>` line under it as a takeaway, the visual filling the rest",
+      ".side": "the visual on the left, one to three `>` lines beside it as takeaways (each may start with :icon:); for code, a diagram or a drawing that needs a reading guide",
+      ".pair": "two visuals side by side under one title, each written as usual: code and the diagram of what it does, before and after, a screenshot and its numbers. Cues point into either; ids must differ between them. No .build",
+      ".full": "the visual edge to edge, the title small in a corner: big drawings, diagrams, screenshots, charts",
+      "statement": "a slide with no visual: its `>` line is shown as one large sentence, the heading a small kicker above it; for a claim, a definition, a turning point",
+      ".morph": "on an ```svg slide after another ```svg slide: the drawing glides from the previous slide's (see svg)"
+    },
+    "icons": "Lucide icon names (lucide.dev), as :name: before a list item, stat label or `>` line, {icon=name} on a title, chapter or statement heading, or <use href=\"icon:name\"/> in a drawing. Unknown names are reported with close ones (icon_unknown).",
+    "motion": "slides rise in; alike slides in a row slide across like pages; title and chapter slides zoom in; cards, numbers, rows and takeaways arrive one after another. All of it follows the narration's clock and shows in MP4 export."
   }
 }

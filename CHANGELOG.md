@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.5 (unreleased)
+
+- **Design:** bundled faces (Inter for text, Bricolage Grotesque for titles, JetBrains Mono for code), larger titles with a kicker (slide number and part), a six-colour palette per theme (`--c1` to `--c6`) for cards, numbers, takeaways, chart series and diagram shapes, a faint dot grid on the stage, a motif behind the title slide and the part number drawn large on chapter cards.
+- **Layouts:** `.side` (takeaways beside the visual), `.pair` (two visuals on one slide, cues reach either) and `.full` (the visual edge to edge). A `>` line under a heading is shown as its takeaway, and a slide with no visual is a large statement.
+- **Icons:** the Lucide set is bundled: `:name:` before a list item, stat label or `>` line, `{icon=name}` on a heading, `<use href="icon:name"/>` in a drawing. `icon_unknown` names close ones.
+- **Filling the slide:** code, tables, lists, numbers and exchanges grow into the space they have, and diagrams up to 2.2 times their drawn size.
+- **Motion:** slides rise in, alike slides in a row slide across like pages, title and chapter slides zoom in, and cards, numbers, rows and takeaways arrive one after another. `.morph` makes a drawing glide from the previous slide's. All of it follows the narration's clock, so MP4 export shows it.
+- **Findings:** `same_look` (two alike slides in a row), `no_takeaway` (dense slides with no `>` line) and `layout_unused` (a layout class with nothing to lay out). The guide has a section on giving each slide its look.
+
 ## 0.1.4 (2026-10-18)
 
 - **First run:** when the daemon and `showntell doctor` downloaded the spaCy model at the same time, one could pull the other's half-unpacked folder away (FileNotFoundError on `tok2vec/model`). Each now unpacks into its own folder.

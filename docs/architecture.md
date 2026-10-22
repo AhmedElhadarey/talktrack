@@ -44,13 +44,14 @@ graph TB
 | `cues.py` | `CueResolver`: each cue target to a resolved cue (lines, item, row, node, edge path, image region, code step, whole visual), and cues inferred from names when narration has none |
 | `checks.py` | `Checks`: size findings on code and diffs, findings on each finished slide (narration, cues, reading the screen, reveal order) and on the whole walkthrough (code runs, openings) |
 | `mermaid.py` | node ids, labels and edges read from Mermaid source, for cues and edge paths |
+| `icons.py` | the bundled Lucide icons: lookup by name, close names for an unknown one, `:name:` at the start of text |
 | `kinds/` | one module per bundled kind (chart, stat, chat, terminal, tree, svg, drawio) and a registry by fence language and slide kind |
 
 Each bundled kind is a `kinds.base.Kind`: its fence languages, a parser that returns the visual and problems, a size check, and how a cue names its parts. The builder, cue resolver and checks ask the registry instead of naming kinds, so a new kind is one Python module plus its player module, styles and catalogue entry (CONTRIBUTING.md lists them). A problem with a block goes back with the kind's `format` text from `text/kinds.json` as the fix.
 
 ## Player
 
-`static/js/timeline.js` turns the walkthrough into segments (one per paragraph, with gaps) on a single clock and answers "what should be on screen at time *t*": slide, fired cues, step-reveal level and current word. `playback.js` advances the clock from the audio element while a paragraph plays and from wall time during gaps; `view.js` applies that state to the DOM. Seeking, live updates and export all go through the same function. The player is plain ES modules with no build step:
+`static/js/timeline.js` turns the walkthrough into segments (one per paragraph, with gaps) on a single clock and answers "what should be on screen at time *t*": slide, fired cues, step-reveal level and current word. `playback.js` advances the clock from the audio element while a paragraph plays and from wall time during gaps; `view.js` applies that state to the DOM, including slide transitions and the staggered arrival of cards, timed from the slide's start on the same clock. Seeking, live updates and export all go through the same function. The player is plain ES modules with no build step:
 
 | Module | Role |
 |---|---|
@@ -65,6 +66,7 @@ Each bundled kind is a `kinds.base.Kind`: its fence languages, a parser that ret
 | **`render.js`** | the slide skeleton and the registry of slide kinds |
 | **`kinds/*.js`** | one module per slide kind (`code`, `diff`, `list`, `table`, `diagram`, `math`, `image`, `chart`, `stat`, `chat`, `terminal`, `tree`, `svg`, `drawio`, `title` with chapter cards) |
 | **`draw.js`, `diff.js`, `util.js`** | DOM helpers shared by kinds (`fit`, highlighting, text ranges), the line and word diff, escaping and inline Markdown |
+| **`deco.js`** | icons copied into a slide, and the motif behind title slides |
 
 A kind module's default export has `render(slide, body, parts, ctx)`, which draws the visual and registers the parts cues point at (`lines`, `items`, `rows`, `svg`), and optional hooks: `layout` (size once drawn; default `fit`), `reveal` (step reveals other than items, rows and lines), `target` (where a cue of its own kind points), `frame` (per-frame animation such as counting numbers or a travelling dot) and `measure` (its own layout findings). Items with ids reveal, point and highlight without a hook, so a new kind is usually one module plus its CSS.
 

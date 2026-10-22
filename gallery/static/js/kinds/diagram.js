@@ -55,7 +55,7 @@ export default {
   },
 
   frame(st, slide, parts, t) {
-    if (parts.svg) travel(st, parts.svg, t, slide.visual?.order);
+    return parts.svg ? travel(st, parts.svg, t, slide.visual?.order) : "";
   },
 
   // Labels shrunk below a readable size; diagrams are scaled as a whole, not by fit().
@@ -75,6 +75,9 @@ export default {
 
 async function mermaidReady() {
   await loadScript(`${STATIC}/vendor/mermaid.min.js`);
+  // Mermaid sizes each box by measuring its label: the face must be loaded first, or labels
+  // measured in a fallback font are clipped when drawn in the real one.
+  await Promise.all(["400 20px Inter", "700 20px Inter"].map((f) => document.fonts?.load(f).catch(() => null)));
   if (!window.__mermaidInit) {
     window.__mermaidInit = true;
     const css = getComputedStyle(document.body);
@@ -150,7 +153,7 @@ export function sizeDiagram(svg, body) {
   const vb = svg.viewBox.baseVal;
   if (!vb || !vb.width) return;
   const bw = body.clientWidth, bh = body.clientHeight;
-  const k = Math.min(bw / vb.width, bh / vb.height, 1.8);
+  const k = Math.min(bw / vb.width, bh / vb.height, 2.2);
   svg.setAttribute("width", Math.floor(vb.width * k));
   svg.setAttribute("height", Math.floor(vb.height * k));
 }
@@ -206,19 +209,19 @@ export function findInDiagram(svg, label) {
   return part ? part.closest("g.node, g.edgeLabel, g.cluster, g.stateGroup") || part : null;
 }
 
-// A dot travelling along an edge-path cue's edges, lighting them as it goes.
+// A dot travelling along an edge-path cue's edges, lighting them as it goes. Returns where it is.
 function travel(st, svg, t, order) {
   let dot = svg.querySelector("circle.packet");
   const cue = st.cue?.kind === "edge" ? st.cue : null;
   svg.querySelectorAll("path.lit").forEach((e) => e.classList.remove("lit"));
-  if (!cue) { if (dot) dot.style.display = "none"; return; }
+  if (!cue) { if (dot) dot.style.display = "none"; return ""; }
   const edges = diagramEdges(svg, order);
   const legs = [];
   for (let i = 0; i + 1 < cue.path.length; i++) {
     const e = edges.find((x) => x.from === cue.path[i] && x.to === cue.path[i + 1]);
     if (e) { e.el.classList.add("lit"); legs.push(e.el); }
   }
-  if (!legs.length) { if (dot) dot.style.display = "none"; return; }
+  if (!legs.length) { if (dot) dot.style.display = "none"; return ""; }
   if (!dot) {
     dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     dot.setAttribute("class", "packet");
@@ -238,4 +241,5 @@ function travel(st, svg, t, order) {
   dot.setAttribute("cx", q.x);
   dot.setAttribute("cy", q.y);
   dot.style.display = "";
+  return `${Math.round(q.x)},${Math.round(q.y)}`;
 }

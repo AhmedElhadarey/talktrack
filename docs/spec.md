@@ -67,7 +67,7 @@ Paths must stay inside the root after resolving symbolic links. Git runs only pl
 | Unit | Holds |
 |---|---|
 | **Walkthrough** | id (128-bit), write key, title, frame, voice, speed, project root, status, questions, Markdown source, format version, state version |
-| **Slide** | stable id, revision, kind, title, classes, visual data, shown text, narration |
+| **Slide** | stable id, revision, kind, title, classes (layout among them), visual data, a second visual on `.pair` slides, shown text, narration, the icons it uses |
 | **Narration** | display text, spoken text, cues, audio file, duration, word timings, status |
 | **Cue** | position in the display text, target, optional exact text, inferred flag, resolved time |
 
@@ -86,8 +86,8 @@ While a player is connected, a revised slide replaces the old one only once all 
 
 ## Player
 
-- **Data:** the full walkthrough on connect, then only changed slides over server-sent events. A static export reads the same JSON from a file; a single-page export carries it in the page, with narration as data, the player's modules in an import map of `data:` URLs, and Mermaid, KaTeX (with its fonts) and highlight.js only when its slides use them, the large ones gzipped.
-- **Time-driven:** every narration has a start time on one timeline, and the visible state (slide, revealed parts, pointer, highlighted entry, caption word) is computed from the current time. Playback, seeking and export all use that one function.
+- **Data:** the full walkthrough on connect, then only changed slides over server-sent events. A static export reads the same JSON from a file; a single-page export carries it in the page, with narration and the player's fonts as data, the player's modules in an import map of `data:` URLs, and Mermaid, KaTeX (with its fonts) and highlight.js only when its slides use them, the large ones gzipped.
+- **Time-driven:** every narration has a start time on one timeline, and the visible state (slide, revealed parts, pointer, highlighted entry, caption word) is computed from the current time. Playback, seeking and export all use that one function. Slide transitions (a rise, a push between alike slides, a zoom into title and chapter slides, a drawing gliding from the previous slide's) and the staggered arrival of cards, numbers and rows are driven by the same clock, so MP4 export shows them too.
 - **Waiting:** when playback reaches narration without audio yet, it pauses and shows that the next slide is being written.
 - **Reports:** render errors are posted back to the server with the per-walkthrough report key and reach the agent, marked as player reports, on its next call.
 
@@ -130,6 +130,7 @@ Findings from the server, found while parsing, building and voicing:
 | `block_error` | error | a line in a chart, stat or chat block could not be read and was left out |
 | `block_too_big` | warning | a chart, stat or chat block has more parts than the frame shows comfortably |
 | `tree_error` | warning | a file tree's nesting is inconsistent |
+| `icon_unknown` | warning | an icon name is not in the bundled set and was left out |
 | `svg_removed` | warning | a drawing had elements or attributes the player does not allow, which were removed |
 | `cue_off_code` | error | a cue points at lines the slide does not show |
 | `cue_no_target` | error | a cue names an item, row or node that does not exist |
@@ -149,6 +150,9 @@ Findings from the server, found while parsing, building and voicing:
 | `still_slide` | warning | the screen does not change for a long stretch of narration |
 | `code_run` | info | several code slides in a row with nothing showing behaviour |
 | `plain_run` | info | several slides in a row are only lists, tables or text |
+| `same_look` | info | two slides in a row show the same kind of visual the same way |
+| `no_takeaway` | info | code, tables or formulas with no `>` line saying what to take from them |
+| `layout_unused` | info | a layout class on a heading has nothing to lay out |
 | `change_as_code` | info | a code slide talks about a change but shows one version of the code |
 | `list_dates` | info | a list or table of dated events that a timeline would show |
 | `table_numbers` | info | a table is mostly numbers a chart would compare at a glance |
@@ -157,7 +161,7 @@ Findings from the server, found while parsing, building and voicing:
 
 `still_slide` needs audio, so it arrives with the first call after the slide is voiced. It fires when the screen holds still (no slide change, cue or reveal) for more than 20 s of narration.
 
-`code_run` (four code or diff slides in a row) and `plain_run` (three list, table or text slides in a row) are checked as slides arrive, so the agent hears about a run while it can still break it; each run is reported once. `change_as_code` is reported once per walkthrough.
+`code_run` (four code or diff slides in a row) and `plain_run` (three list, table or text slides in a row) are checked as slides arrive, so the agent hears about a run while it can still break it; each run is reported once. `change_as_code`, `same_look` (the first two alike slides in a row) and `no_takeaway` (from the second dense slide without a `>` line) are reported once per walkthrough.
 
 Findings from the open player, measured after a slide has settled. Their messages are untrusted text and are marked so:
 

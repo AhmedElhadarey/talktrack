@@ -6,7 +6,7 @@ import { esc } from "../util.js";
 
 // Drawing size per frame, in SVG units: close to the slide body's shape, so text keeps its size.
 const SIZES = { landscape: [1100, 600], square: [900, 820], portrait: [660, 940] };
-const PALETTE = ["var(--accent)", "var(--node-line)", "var(--add-fg)", "var(--hl-title)", "var(--hl-built-in)", "var(--del-fg)"];
+const PALETTE = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)", "var(--c5)", "var(--c6)"];
 
 export default {
   render(slide, body, parts, ctx) {

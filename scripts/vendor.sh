@@ -37,6 +37,31 @@ VIRGIL=https://raw.githubusercontent.com/excalidraw/virgil/3d4c829dc85b455d46466
 curl -fsSL "$VIRGIL/Virgil.woff2" -o "$V/fonts/Virgil.woff2"
 echo "9976295bfe709bdea64839a4d4e9a1d436dd6eb67538399a5a0e8b8fadbcf1cf  $V/fonts/Virgil.woff2" | shasum -a 256 -c --quiet
 curl -fsSL "$VIRGIL/LICENSE.md" -o "$V/LICENSES/virgil.txt"
+# The player's faces (OFL), Latin subsets of the variable fonts: text, titles and code look the
+# same on every machine and in MP4 export.
+fetch @fontsource-variable/inter 5.3.0 d26710dd38e7217484a1d47ee76c024977ec550548876f26d06ed1844af09a14
+cp "$TMP/@fontsource-variable/inter/package/files/inter-latin-wght-normal.woff2" "$V/fonts/Inter.woff2"
+cp "$TMP/@fontsource-variable/inter/package/LICENSE" "$V/LICENSES/inter.txt"
+fetch @fontsource-variable/bricolage-grotesque 5.3.0 6e99e0d844f7bc152bb3b007f9b1493c53e60cc0744cc681bb744e0b5f14665e
+cp "$TMP/@fontsource-variable/bricolage-grotesque/package/files/bricolage-grotesque-latin-wght-normal.woff2" "$V/fonts/Bricolage.woff2"
+cp "$TMP/@fontsource-variable/bricolage-grotesque/package/LICENSE" "$V/LICENSES/bricolage-grotesque.txt"
+fetch @fontsource-variable/jetbrains-mono 5.3.0 996fe6368a480c9ce15d4de22a2682b7c40b403718fee2b15e7272f244fd993f
+cp "$TMP/@fontsource-variable/jetbrains-mono/package/files/jetbrains-mono-latin-wght-normal.woff2" "$V/fonts/JetBrainsMono.woff2"
+cp "$TMP/@fontsource-variable/jetbrains-mono/package/LICENSE" "$V/LICENSES/jetbrains-mono.txt"
+# Lucide icons (ISC), as one JSON file the builder reads: name -> inner SVG, plus search tags.
+fetch lucide-static 1.50.0 b23b1b4c30dbf0877eee2087275f48310b45a098e537ba83598cce1ea553dce6
+cp "$TMP/lucide-static/package/LICENSE" "$V/LICENSES/lucide.txt"
+python3 - "$TMP/lucide-static/package" src/showntell/data/icons.json <<'EOF'
+import json, sys
+from pathlib import Path
+from xml.sax.saxutils import quoteattr
+src, out = Path(sys.argv[1]), Path(sys.argv[2])
+nodes = json.loads((src / "icon-nodes.json").read_text())
+tags = json.loads((src / "tags.json").read_text())
+draw = lambda parts: "".join(f"<{t}{''.join(f' {k}={quoteattr(str(v))}' for k, v in a.items() if k != 'key')}/>" for t, a in parts)
+icons = {name: draw(parts) for name, parts in sorted(nodes.items())}
+out.write_text(json.dumps({"version": "lucide-static 1.50.0", "icons": icons, "tags": {k: tags.get(k, []) for k in icons}}, separators=(",", ":")))
+EOF
 # The draw.io viewer (Apache-2.0) is not on npm; it is pinned to a release tag of jgraph/drawio.
 DRAWIO=https://raw.githubusercontent.com/jgraph/drawio/v31.7.0
 fetch_url "$DRAWIO/src/main/webapp/js/viewer-static.min.js" 53a25e8f766e759835a3a6a35d7e88742cb41762ed631ddd6944e38723dade33 "$V/drawio/viewer-static.min.js"

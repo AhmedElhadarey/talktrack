@@ -3,7 +3,7 @@
 
 import { stateAt } from "./timeline.js";
 import { fit, READABLE_PX } from "./draw.js";
-import { kindOf, renderSlide } from "./render.js";
+import { kindOf, layoutOf, renderSlide } from "./render.js";
 import { $, emit, FRAMES, host, LIVE, now, pointer, reducedMotion, report, S, scale, stage } from "./state.js";
 import { camera, cueTarget, placePointer, scrollCode } from "./pointer.js";
 import { announce, applyCaption, markChapter, updateTime } from "./chrome.js";
@@ -32,8 +32,10 @@ export function render(force) {
   if (force || shown.slide !== st.slide || shown.rev !== slide.rev || shown.id !== slide.id) {
     if (shown.slide !== st.slide || shown.rev !== slide.rev || shown.id !== slide.id) showSlide(st.slide);
   }
+  const entering = applyEntrance(st);
+  if (entering && st.cue) S.lastCueKey = ""; // the slide is still moving in: place the pointer where the target is now
   applyVisual(st, slide, force);
-  liveFrame(st, slide);
+  liveFrame(st, slide, entering);
   applyCaption(st, slide, force);
   updateTime(st);
 }
@@ -41,24 +43,32 @@ export function render(force) {
 function showSlide(i) {
   const { W } = S;
   const slide = W.slides[i];
+  const was = S.shown.slide;
   S.shown = { slide: i, rev: slide.rev, id: slide.id };
   S.lastCueKey = S.lastReveal = S.zoomFor = "";
   clearMarks();
-  const v = renderSlide(slide, { frame: W.frame, report });
-  host.replaceChildren(v.root);
-  // The slide eases in from a few pixels below; measure the pointer again once it has landed.
-  v.root.addEventListener("animationend", () => { if (S.view?.root === v.root) { S.lastCueKey = ""; render(true); } }, { once: true });
+  const v = renderSlide(slide, { frame: W.frame, report, prev: W.slides[i - 1], ...placeOf(W, i) });
+  // Moving on by one slide, the old one stays for the transition; any other jump cuts.
+  const old = was === i - 1 ? host.querySelector(".slide:not(.leaving)") : null;
+  host.querySelectorAll(".slide").forEach((e) => { if (e !== old) e.remove(); });
+  if (old) old.classList.add("leaving");
+  host.append(v.root);
+  S.enter = { type: entranceFor(W, i, slide), root: v.root, old, done: false };
   const bodyEl = v.root.querySelector(".slide-body");
   const view = S.view = { ...v, body: bodyEl, done: false };
-  const kind = kindOf(slide);
+  const panes = v.panes || [];
   v.ready.then(() => document.fonts?.ready).then(() => {
     if (view.root !== S.view.root) return;
-    if (bodyEl) (kind.layout || fit)(bodyEl, view.parts);
+    for (const p of panes) (p.kind.layout || fit)(p.body, p.parts);
     view.done = true;
     S.lastCueKey = S.lastReveal = "";
     render(true);
     const idle = window.requestIdleCallback || ((f) => setTimeout(f, 50));
-    idle(() => { if (S.view?.root === v.root) { measure(slide, bodyEl, view.parts); view.measured = true; } });
+    idle(() => {
+      if (S.view?.root !== v.root) return;
+      for (const p of panes) measure(p.slide, p.body, p.parts);
+      view.measured = true;
+    });
   });
   announce(`Slide ${i + 1} of ${W.slides.length}: ${slide.title}`);
   markChapter(i);
@@ -84,6 +94,85 @@ function measure(slide, bodyEl, parts) {
   if ((c.width - b.width) / s > 4 || (c.height - b.height) / s > 4) {
     report(`Slide ${id}: the ${slide.kind} does not fit the slide even at the smallest size.`, "overflow", id);
   }
+}
+
+// The slide's number among the content slides, and the part it belongs to, for its kicker.
+function placeOf(W, i) {
+  let n = 0, chapter = "";
+  for (let k = 0; k <= i; k++) {
+    const s = W.slides[k];
+    if (s.kind === "chapter") chapter = s.title;
+    else if (s.kind !== "title") n++;
+  }
+  return { n: W.slides[i].kind === "title" ? 0 : n, chapter };
+}
+
+// How a slide comes in. Driven by the clock (seconds since the slide began), so seeking and frame
+// capture land on the same in-between picture, and MP4 export shows the same motion.
+const ENTER_S = 0.6;
+const STAGGER_S = 0.07, ITEM_S = 0.4;
+const easeOut = (p) => 1 - (1 - p) ** 3;
+const clamp = (x) => Math.max(0, Math.min(1, x));
+
+function entranceFor(W, i, slide) {
+  if (reducedMotion()) return "none";
+  const prev = W.slides[i - 1];
+  if (slide.kind === "title" || slide.kind === "chapter") return "zoom";
+  if (slide.kind === "svg" && prev?.kind === "svg" && (slide.classes || []).includes("morph")) return "morph";
+  // Slides of the same kind and layout in a row slide across, like turning a page.
+  if (prev && prev.kind === slide.kind && layoutOf(prev) === layoutOf(slide) && slide.kind !== "text") return "push";
+  return "rise";
+}
+
+function applyEntrance(st) {
+  const e = S.enter;
+  if (!e || e.done || e.root !== S.view?.root) return "";
+  const t = st.sinceSlide;
+  const p = e.type === "none" ? 1 : clamp(t / ENTER_S), k = easeOut(p);
+  const r = e.root.style, o = e.old?.style;
+  if (e.type === "push") {
+    r.transform = `translateX(${((1 - k) * 100).toFixed(2)}%)`;
+    if (o) o.transform = `translateX(${(-k * 100).toFixed(2)}%)`;
+  } else if (e.type === "zoom") {
+    r.opacity = k.toFixed(3);
+    r.transform = `scale(${(1.04 - 0.04 * k).toFixed(4)})`;
+    if (o) o.opacity = (1 - clamp(p * 2)).toFixed(3);
+  } else if (e.type === "morph") {
+    const h = e.root.querySelector(".slide-head");
+    if (h) h.style.opacity = k.toFixed(3);
+    if (o) o.opacity = "0";
+  } else if (e.type === "rise") {
+    r.opacity = k.toFixed(3);
+    r.transform = `translateY(${((1 - k) * 18).toFixed(2)}px)`;
+    if (o) o.opacity = (1 - clamp(p * 2.5)).toFixed(3);
+  }
+  // Cards, numbers, rows, messages and takeaways arrive one after another.
+  const items = e.type === "none" || e.root.classList.contains("build") ? [] : staggered(e.root);
+  let last = 0;
+  items.forEach((el, i) => {
+    const q = easeOut(clamp((t - 0.12 - i * STAGGER_S) / ITEM_S));
+    last = Math.max(last, (0.12 + i * STAGGER_S + ITEM_S) / ENTER_S);
+    el.classList.toggle("entering", q < 1);
+    el.style.setProperty("--in", q.toFixed(3));
+  });
+  if (p >= 1 && t / ENTER_S >= last) {
+    r.transform = r.opacity = "";
+    e.root.querySelector(".slide-head")?.style.removeProperty("opacity");
+    items.forEach((el) => { el.classList.remove("entering"); el.style.removeProperty("--in"); });
+    e.old?.remove();
+    e.done = true;
+    S.lastCueKey = ""; // landed: measure the pointer again
+    return "";
+  }
+  return `${e.type}:${Math.round(t * 30)}`;
+}
+
+function staggered(root) {
+  if (!root._stagger) {
+    root._stagger = [...root.querySelectorAll(".list > .entry, .stats > .stat, .chat > .msg, table.data tbody tr, .points > .point")]
+      .filter((x) => !x.closest(".list.timeline"));
+  }
+  return root._stagger;
 }
 
 function clearMarks() {
@@ -151,7 +240,15 @@ function applyReveal(reveal, slide) {
 // Every frame: whatever the slide's kind animates with time (a dot travelling along diagram
 // edges, numbers counting, checklist ticks, a drawing changing version). The kind returns a key
 // for what it drew, so frame capture knows when the picture moved.
-function liveFrame(st, slide) {
-  if (!S.view?.done) return;
-  S.frameKey = kindOf(slide).frame?.(st, slide, S.view.parts, now()) || "";
+function liveFrame(st, slide, entering) {
+  if (!S.view?.done) { S.frameKey = entering; return; }
+  const panes = S.view.panes || [];
+  const keys = panes.map((p, i) => p.kind.frame?.(panes.length > 1 ? paneState(st, i) : st, p.slide, p.parts, now()) || "");
+  S.frameKey = `${keys.join("/")}${entering ? `|${entering}` : ""}`;
+}
+
+// The state one pane of a `.pair` slide sees: only the cues that point into it.
+function paneState(st, i) {
+  const cues = st.cues.filter((c) => (c.pane || 0) === i);
+  return { ...st, cues, cue: cues.length ? cues[cues.length - 1] : null };
 }

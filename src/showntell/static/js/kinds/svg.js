@@ -22,7 +22,7 @@ svg { display: block; width: 100%; height: 100%; overflow: visible; }
 const STROKES = "path, line, polyline, polygon, circle, ellipse, rect";
 
 export default {
-  render(slide, body, parts) {
+  render(slide, body, parts, ctx) {
     const v = slide.visual || {};
     const host = el("div", "drawing");
     if (v.background) { host.classList.add("page"); host.style.setProperty("--page", v.background); }
@@ -45,6 +45,12 @@ export default {
     parts.shadow = root;
     parts.build = (slide.classes || []).includes("build");
     parts.shown = 1;
+    // `.morph`: the drawing starts as the previous slide's and glides into this one.
+    const prev = ctx?.prev;
+    if ((slide.classes || []).includes("morph") && prev?.kind === "svg") {
+      const pv = prev.visual || {};
+      parts.fromSvg = pv.steps?.length ? pv.steps[pv.steps.length - 1].svg : pv.svg;
+    }
     body.append(host);
     if (v.sketch) {
       host.classList.add("sketch");
@@ -57,12 +63,22 @@ export default {
   // the narration's clock, so seeking and frame capture land on the same in-between picture.
   frame(st, slide, parts, t) {
     const v = slide.visual || {};
-    if (!(v.steps?.length > 1)) return "";
     const fired = st.cues.filter((c) => c.kind === "step");
+    if (parts.fromSvg && !fired.length) {
+      // Across slides: from the previous drawing to this one as the slide begins.
+      const p = reducedMotion() ? 1 : Math.max(0, Math.min(1, st.sinceSlide / MORPH_S));
+      if (!parts.morph?.cross || (parts.morph.done && p < 1)) {
+        startMorph(parts, parts.fromSvg, v.steps ? v.steps[0] : v, 1);
+        if (parts.morph) parts.morph.cross = true;
+      }
+      applyMorph(parts.morph, ease(p));
+      return `x:${p.toFixed(2)}`;
+    }
+    if (!(v.steps?.length > 1)) return "";
     const last = fired[fired.length - 1];
     const n = last?.n || 1, from = fired.length > 1 ? fired[fired.length - 2].n : 1;
     const p = !last || reducedMotion() ? 1 : Math.max(0, Math.min(1, (t - last._at) / MORPH_S));
-    if (parts.shown !== n || (parts.morph?.done && p < 1)) startMorph(parts, v, from, n);
+    if (parts.shown !== n || parts.morph?.cross || (parts.morph?.done && p < 1)) startMorph(parts, v.steps[from - 1].svg, v.steps[n - 1], n);
     applyMorph(parts.morph, ease(p));
     return `${n}:${p.toFixed(2)}`;
   },
@@ -149,10 +165,10 @@ function parse(svgText) {
   return t.content.querySelector("svg");
 }
 
-// Show version `n` and plan the glide from version `from`: pairs of elements by id with their
-// attributes before and after, plus elements that appear or go.
-function startMorph(parts, v, from, n) {
-  const next = parse(v.steps[n - 1].svg), prev = parse(v.steps[from - 1].svg);
+// Show `version` (step `n`) and plan the glide from the drawing `prevSvg`: pairs of elements by
+// id with their attributes before and after, plus elements that appear or go.
+function startMorph(parts, prevSvg, version, n) {
+  const next = parse(version.svg), prev = parse(prevSvg);
   if (!next || !prev) return;
   parts.drawing.replaceWith(next);
   parts.drawing = next;
@@ -163,7 +179,7 @@ function startMorph(parts, v, from, n) {
     sketch(next, parts.rough);
   }
   parts.items.clear();
-  (v.steps[n - 1].ids || []).forEach((id, i) => {
+  (version.ids || []).forEach((id, i) => {
     const e = next.querySelector(`[id="${CSS.escape(id)}"]`);
     if (e) { e.classList.add("part"); e.dataset.idx = i; parts.items.set(id, e); }
   });
