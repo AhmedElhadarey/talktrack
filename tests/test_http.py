@@ -207,6 +207,15 @@ async def test_player_page_escapes_the_title(http, service, store):
     assert "<script>alert(1)</script>" not in page and "&lt;script&gt;" in page
 
 
+async def test_player_page_carries_the_description(http, service, store):
+    r = await service.start("Caching", "landscape", "", 1.0, None, "", description='Reads "through" a cache')
+    wid = r["handle"].split(".")[0]
+    async with http() as c:
+        page = (await c.get(f"/w/{wid}/")).text
+    assert '<meta name="description" content="Reads &quot;through&quot; a cache">' in page
+    assert '<meta property="og:title" content="Caching">' in page and "{{DESCRIPTION}}" not in page
+
+
 async def test_unknown_player_is_404(http):
     async with http() as c:
         assert (await c.get(f"/w/{'Z' * 22}/")).status_code == 404
@@ -216,7 +225,7 @@ async def test_unknown_player_is_404(http):
 async def test_data_json_shape(http, walk):
     async with http() as c:
         d = (await c.get(f"/w/{walk.w.id}/data.json")).json()
-    assert set(d) == {"format", "id", "title", "frame", "theme", "tokens", "status", "questions", "notes", "slides"}
+    assert set(d) == {"format", "id", "title", "description", "frame", "theme", "tokens", "status", "questions", "notes", "slides"}
     assert (d["format"], d["id"], d["title"], d["frame"], d["status"]) == (1, walk.w.id, "Caching", "landscape", "writing")
     (slide,) = d["slides"]
     assert set(slide) == {"id", "rev", "kind", "title", "classes", "shown", "visual", "says"}
@@ -235,6 +244,12 @@ async def test_index_lists_walkthroughs(http, walk):
     async with http() as c:
         r = await c.get("/")
     assert r.status_code == 200 and f"/w/{walk.w.id}/" in r.text and "{{" not in r.text
+    assert '<span class="desc">' not in r.text
+    walk.w.description = "A read-through <cache>"
+    walk.save_now()
+    async with http() as c:
+        r = await c.get("/")
+    assert '<span class="desc">A read-through &lt;cache&gt;</span>' in r.text
 
 
 async def test_delete_route(http, walk, store):

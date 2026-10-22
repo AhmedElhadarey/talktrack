@@ -28,14 +28,16 @@ class LocalService:
         n = self.store.narrator
         return {"ready": n.ready, "state": n.status.state, "describe": n.status.describe()}
 
-    async def start(self, title: str, frame: str, voice: str, speed: float, project_dir: str | None, theme: str = "") -> dict:
+    async def start(
+        self, title: str, frame: str, voice: str, speed: float, project_dir: str | None, theme: str = "", description: str = ""
+    ) -> dict:
         root = None
         if project_dir:
             p = Path(project_dir).expanduser()
             if not p.is_dir():
                 raise ValueError(f"project_dir {project_dir} is not a folder")
             root = str(p.resolve())
-        s = self.store.create(title, frame, voice, speed, root, theme)
+        s = self.store.create(title, frame, voice, speed, root, theme, description)
         return {"handle": s.handle, "url": s.url, "frame": s.w.frame, "root": root, "speech": self.speech_status()}
 
     async def add(self, handle: str, markdown: str) -> dict:
@@ -259,8 +261,10 @@ class RemoteService:
             raise ValueError(data.get("error", f"daemon error {r.status_code}"))
         return data["result"]
 
-    async def start(self, title, frame, voice, speed, project_dir, theme=""):
-        return await self._call("start", title=title, frame=frame, voice=voice, speed=speed, project_dir=project_dir, theme=theme)
+    async def start(self, title, frame, voice, speed, project_dir, theme="", description=""):
+        return await self._call(
+            "start", title=title, frame=frame, voice=voice, speed=speed, project_dir=project_dir, theme=theme, description=description
+        )
 
     async def add(self, handle, markdown):
         return await self._call("add", handle=handle, markdown=markdown)

@@ -507,6 +507,18 @@ async def test_get_rejects_malformed_ids(store, wid):
     assert store.get(wid) is None and store.delete(wid) is False
 
 
+async def test_description_from_argument_or_front_matter(service, store):
+    a = await started(service, description="  How the  cache\nserves reads. ")
+    assert store.by_handle(a["handle"]).w.description == "How the cache serves reads."
+    b = await started(service)
+    await service.add(b["handle"], "---\ndescription: From the file\n---\n" + OPENING)
+    assert store.by_handle(b["handle"]).w.description == "From the file"
+    store.by_handle(b["handle"]).save_now()
+    rows = {r["handle"]: r for r in await service.list()}
+    assert rows[a["handle"]]["description"] == "How the cache serves reads."
+    assert rows[b["handle"]]["description"] == "From the file"
+
+
 # -- list and delete ---------------------------------------------------------------------------------
 
 

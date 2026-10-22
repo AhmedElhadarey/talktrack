@@ -269,6 +269,7 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
     )
     async def start_walkthrough(
         title: Annotated[str, Field(description=arg_text("start_walkthrough", "title"))],
+        description: Annotated[str, Field(description=arg_text("start_walkthrough", "description"))] = "",
         frame: Annotated[
             Literal["landscape", "square", "portrait"], Field(description=arg_text("start_walkthrough", "frame"))
         ] = "landscape",
@@ -284,7 +285,7 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
         ctx: Context = None,  # type: ignore[assignment]
     ) -> CallToolResult:
         try:
-            r = await service.start(title, frame, voice, speed, _root(shared, project_dir), theme)
+            r = await service.start(title, frame, voice, speed, _root(shared, project_dir), theme, description)
         except ValueError as e:
             return _error(str(e))
         head = reply(
@@ -444,7 +445,8 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
         if not rows:
             return _result("No walkthroughs yet.", {"walkthroughs": []})
         lines = [
-            f"- {r['title']} — {r['slides']} slides, {mmss(r['duration'])}, {r['status']}. handle: {r['handle']} link: {r['url']}"
+            f"- {r['title']}{': ' + r['description'] if r.get('description') else ''} — {r['slides']} slides, "
+            f"{mmss(r['duration'])}, {r['status']}. handle: {r['handle']} link: {r['url']}"
             for r in rows
         ]
         return _result("\n".join(lines), {"walkthroughs": rows})
@@ -557,7 +559,16 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
         if not s:
             return HTMLResponse("Walkthrough not found", status_code=404)
         return HTMLResponse(
-            render_player(s.w.title, s.w.frame, s.w.report_key, "../../static", live=True, theme=s.w.theme, tokens=s.w.tokens),
+            render_player(
+                s.w.title,
+                s.w.frame,
+                s.w.report_key,
+                "../../static",
+                live=True,
+                theme=s.w.theme,
+                tokens=s.w.tokens,
+                description=s.w.description,
+            ),
             headers={"Cache-Control": "no-store"},
         )
 
@@ -706,14 +717,26 @@ def _file(base: Path, rel: str, immutable: bool = False) -> Response:
     return FileResponse(path, headers=headers)
 
 
-def render_player(title: str, frame: str, report_key: str, static: str, live: bool, theme: str = "dark", tokens: dict | None = None) -> str:
+def render_player(
+    title: str,
+    frame: str,
+    report_key: str,
+    static: str,
+    live: bool,
+    theme: str = "dark",
+    tokens: dict | None = None,
+    description: str = "",
+) -> str:
     from .themes import THEMES, clean_tokens, style_attr
 
     page = (STATIC / "player.html").read_text()
     theme = theme if theme in THEMES else "dark"
     style = html.escape(style_attr(clean_tokens(tokens or {})[0]))
+    desc = html.escape(" ".join(description.split()))
+    meta = f'<meta name="description" content="{desc}">\n<meta property="og:description" content="{desc}">\n' if desc else ""
     return (
         page.replace("{{TITLE}}", html.escape(title))
+        .replace("{{DESCRIPTION}}\n", meta)
         .replace("{{FRAME}}", frame)
         .replace("{{THEME}}", theme)
         .replace("{{TOKENS}}", style)
@@ -729,8 +752,9 @@ def render_index(rows: list[dict], suffix: str) -> str:
     for r in rows:
         when = time.strftime("%d %b %Y, %H:%M", time.localtime(r["created"]))
         badge = '<span class="badge">writing</span>' if r["status"] != "finished" else ""
+        desc = f'<span class="desc">{html.escape(r["description"])}</span>' if r.get("description") else ""
         items.append(
-            f'<li data-id="{r["id"]}"><a href="/w/{r["id"]}/{suffix}">{html.escape(r["title"] or "Untitled")}</a>{badge}'
+            f'<li data-id="{r["id"]}"><a href="/w/{r["id"]}/{suffix}">{html.escape(r["title"] or "Untitled")}</a>{badge}{desc}'
             f'<span class="meta">{when} · {r["slides"]} slides · {mmss(r["duration"])} · {r["frame"]}</span>'
             f'<button class="del" title="Delete" aria-label="Delete {html.escape(r["title"])}">Delete</button></li>'
         )

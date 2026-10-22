@@ -31,6 +31,7 @@ MAX_SOURCE_BYTES = 1_000_000
 MAX_SLIDES = 80
 PARAGRAPH_GAP = 0.3  # matches the player's timeline
 STILL_S = 20.0  # longest stretch of narration with nothing changing on screen
+MAX_DESCRIPTION = 200  # characters
 TARGET_S = 240.0  # the guide aims for 2 to 4 minutes of narration
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
 
@@ -424,7 +425,14 @@ class Store:
         return self.data_dir / "walkthroughs" / wid
 
     def create(
-        self, title: str, frame: str = "landscape", voice: str = "", speed: float = 1.0, root: str | None = None, theme: str = ""
+        self,
+        title: str,
+        frame: str = "landscape",
+        voice: str = "",
+        speed: float = 1.0,
+        root: str | None = None,
+        theme: str = "",
+        description: str = "",
     ) -> Session:
         if frame not in FRAMES:
             raise ValueError(f"frame must be one of {', '.join(FRAMES)}")
@@ -439,6 +447,7 @@ class Store:
             key=secrets.token_urlsafe(16),
             report_key=secrets.token_urlsafe(12),
             title=(title or "Untitled walkthrough").strip()[:120],
+            description=" ".join((description or "").split())[:MAX_DESCRIPTION],
             frame=frame,
             theme=theme or project_theme or self.default_theme,
             tokens=tokens,
@@ -511,6 +520,7 @@ class Store:
                 {
                     "id": data["id"],
                     "title": data.get("title", ""),
+                    "description": data.get("description", ""),
                     "handle": f"{data['id']}.{data.get('key', '')}",
                     "created": data.get("created", 0),
                     "updated": data.get("updated", 0),

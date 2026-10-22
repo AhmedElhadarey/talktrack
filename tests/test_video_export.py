@@ -178,7 +178,7 @@ def test_mp4_export(walkthrough, tmp_path):
         "mov_text",
     )
     assert (streams["video"]["width"], streams["video"]["height"]) == (1920, 1080)
-    assert info["format"]["tags"]["encoder"].startswith("showntell ")
+    assert info["format"]["tags"]["encoder"].startswith("showntell ") and info["format"]["tags"]["title"] == w.title
 
     # Frames from the middle of the code slide and of the steps slide differ.
     starts = {}

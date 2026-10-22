@@ -196,7 +196,7 @@ def _has_cues(vtt: Path) -> bool:
     return vtt.is_file() and "-->" in vtt.read_text()
 
 
-def _mux(segs: list[Path], wav: Path, vtt: Path, out: Path, work: Path) -> None:
+def _mux(segs: list[Path], wav: Path, vtt: Path, out: Path, work: Path, title: str = "", description: str = "") -> None:
     listing = work / "segments.txt"
     listing.write_text("".join(f"file '{s.name}'\n" for s in segs))
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing), "-i", str(wav)]
@@ -205,8 +205,14 @@ def _mux(segs: list[Path], wav: Path, vtt: Path, out: Path, work: Path) -> None:
         cmd += ["-i", str(vtt)]
     cmd += ["-map", "0:v", "-map", "1:a"] + (["-map", "2:s"] if subs else [])
     cmd += ["-c:v", "copy", "-c:a", "aac", "-b:a", "128k"] + (["-c:s", "mov_text", "-metadata:s:s:0", "language=eng"] if subs else [])
-    # One tag: the encoder (©too), naming showntell and its version. libavformat always overwrites
-    # `encoder` with its own name, but the MP4 muxer prefers `encoding_tool` for that atom.
+    # Tags: the title (©nam) and description (desc) the file carries into players and chat apps, and
+    # the encoder (©too), naming showntell and its version. libavformat always overwrites `encoder`
+    # with its own name, but the MP4 muxer prefers `encoding_tool` for that atom.
+    tags = ["-metadata", f"encoding_tool=showntell {__version__}"]
+    if title:
+        tags += ["-metadata", f"title={title}"]
+    if description:
+        tags += ["-metadata", f"description={description}"]
     cmd += [
         "-map_metadata",
         "-1",
@@ -214,8 +220,7 @@ def _mux(segs: list[Path], wav: Path, vtt: Path, out: Path, work: Path) -> None:
         "-1",
         "-flags:a",
         "+bitexact",
-        "-metadata",
-        f"encoding_tool=showntell {__version__}",
+        *tags,
         "-movflags",
         "+faststart",
         str(out),
@@ -329,7 +334,7 @@ def render_mp4(
             raise SystemExit(f"the player's timeline ({stats['total']:.2f} s) and the exporter's ({total:.2f} s) disagree")
         wav = work / "narration.wav"
         clips = soundtrack(folder, n / fps, wav)
-        _mux(segs, wav, folder / "captions.vtt", out, work)
+        _mux(segs, wav, folder / "captions.vtt", out, work, w.title, w.description)
         try:
             shrunk = fit_size(out, max_bytes, work) if max_bytes else ""
         except SystemExit:

@@ -172,7 +172,9 @@ def export(
                 shutil.copyfile(src, out / "audio" / f"{key}.wav")
     data["status"] = "finished"
     (out / "data.json").write_text(json.dumps(data))
-    (out / "index.html").write_text(render_player(w.title, w.frame, "", static_href, live=False, theme=w.theme, tokens=w.tokens))
+    (out / "index.html").write_text(
+        render_player(w.title, w.frame, "", static_href, live=False, theme=w.theme, tokens=w.tokens, description=w.description)
+    )
     (out / "captions.vtt").write_text(vtt(w))
     src_md = data_dir / "walkthroughs" / wid / "source.md"
     if src_md.is_file():
@@ -324,7 +326,7 @@ def export_html(data_dir: Path, wid: str, out: Path) -> Path:
         files["vendor/rough/rough.js"] = _library("vendor/rough/rough.js")
         files["vendor/fonts/Virgil.woff2"] = _data_uri(STATIC / "vendor/fonts/Virgil.woff2")
 
-    page = render_player(w.title, w.frame, "", "__STATIC__", live=False, theme=w.theme, tokens=w.tokens)
+    page = render_player(w.title, w.frame, "", "__STATIC__", live=False, theme=w.theme, tokens=w.tokens, description=w.description)
     css = "\n".join((STATIC / n).read_text() for n in ("themes.css", "player.css"))
     # The player's own faces travel inside the stylesheet, as KaTeX's do.
     css = re.sub(r'url\("(vendor/fonts/[^"]+\.woff2)"\)', lambda m: f'url("{_data_uri(STATIC / m.group(1))}")', css)

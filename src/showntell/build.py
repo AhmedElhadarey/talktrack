@@ -140,6 +140,10 @@ class Builder(CueResolver, Checks):
             a = b.attrs
             if a.get("title"):
                 self.w.title = a["title"][:120]
+            if a.get("description"):
+                from .store import MAX_DESCRIPTION
+
+                self.w.description = " ".join(a["description"].split())[:MAX_DESCRIPTION]
             if a.get("frame"):
                 if a["frame"] in FRAMES:
                     self.w.frame = a["frame"]

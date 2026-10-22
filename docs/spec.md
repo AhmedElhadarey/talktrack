@@ -34,7 +34,7 @@ graph TB
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| **start_walkthrough** | `title`, `frame` (landscape, square, portrait), `theme` (dark, light, paper, night, ocean, studio, contrast), `voice`, `speed`, `project_dir`, `opening` | `handle`, `url`; with `opening`, the playable link and the guide |
+| **start_walkthrough** | `title`, `description`, `frame` (landscape, square, portrait), `theme` (dark, light, paper, night, ocean, studio, contrast), `voice`, `speed`, `project_dir`, `opening` | `handle`, `url`; with `opening`, the playable link and the guide |
 | **add_slides** | `handle`, `markdown` | `status`, `url` once playable, `issues`, progress, the guide on the first playable reply |
 | **revise_slide** | `handle`, `slide` (id), `markdown` (one slide) | `issues`; only changed narration is voiced again |
 | **finish_walkthrough** | `handle`, `questions` (optional list) | summary, `issues`; with Playwright, findings from drawing every slide headless |

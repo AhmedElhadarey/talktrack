@@ -49,6 +49,7 @@ class Walkthrough:
     key: str  # write key
     report_key: str
     title: str
+    description: str = ""  # one or two sentences for lists, the gallery and exported files
     frame: str = "landscape"
     theme: str = "dark"
     tokens: dict = field(default_factory=dict)  # project colour overrides, already checked
@@ -89,6 +90,7 @@ class Walkthrough:
             "format": self.format,
             "id": self.id,
             "title": self.title,
+            "description": self.description,
             "frame": self.frame,
             "theme": self.theme,
             "tokens": self.tokens,

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Description:** `start_walkthrough` takes a `description` (also front matter `description:`), shown in `list_walkthroughs` and the gallery and written into exports: `<meta name="description">` and `og:` tags on the HTML, title and description tags in the MP4. The title hint asks for keywords first, under about 50 characters.
 - **Length:** `add_slides` warns once (`too_long`) when the narration passes four minutes, the top of the guide's range, so the agent wraps up or splits the topic instead of finding out at finish.
 - **Fixes:** a daemon restarted right after another stopped kept the port (4747) instead of moving to the next one; the free-port probe now binds as the server does, past sockets left in TIME_WAIT.
 

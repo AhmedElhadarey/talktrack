@@ -69,7 +69,7 @@ async def test_start_schema_offers_frames_and_voices(mcp):
     async with mcp as client:
         (t,) = [t for t in (await client.list_tools()).tools if t.name == "start_walkthrough"]
         props = t.input_schema["properties"]
-        assert set(props) == {"title", "frame", "voice", "speed", "project_dir", "opening", "theme"}
+        assert set(props) == {"title", "description", "frame", "voice", "speed", "project_dir", "opening", "theme"}
         assert set(props["theme"]["enum"]) == {"", *themes.THEMES}
         assert "af_heart" in props["voice"]["description"]
         assert t.input_schema["required"] == ["title"]
@@ -214,6 +214,13 @@ async def test_list_walkthroughs(mcp):
         r = await client.call_tool("list_walkthroughs", {})
         (row,) = r.structured_content["walkthroughs"]
         assert row["handle"] == h["handle"] and h["url"] in text(r)
+
+
+async def test_description_shows_in_the_list(mcp):
+    async with mcp as client:
+        await client.call_tool("start_walkthrough", {"title": "Caching", "description": "A read-through cache, for backend developers."})
+        r = await client.call_tool("list_walkthroughs", {})
+        assert "- Caching: A read-through cache, for backend developers. — " in text(r)
 
 
 # -- errors --------------------------------------------------------------------------------------------
