@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.5 (unreleased)
+## 0.1.5 (2026-10-22)
 
 - **Design:** bundled faces (Inter for text, Bricolage Grotesque for titles, JetBrains Mono for code), larger titles with a kicker (slide number and part), a six-colour palette per theme (`--c1` to `--c6`) for cards, numbers, takeaways, chart series and diagram shapes, a faint dot grid on the stage, a motif behind the title slide and the part number drawn large on chapter cards.
 - **Layouts:** `.side` (takeaways beside the visual), `.pair` (two visuals on one slide, cues reach either) and `.full` (the visual edge to edge). A `>` line under a heading is shown as its takeaway, and a slide with no visual is a large statement.

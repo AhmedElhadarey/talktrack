@@ -12,7 +12,7 @@ from . import __version__, daemon
 from .config import Config
 
 # Until showntell is on PyPI, where this becomes `uvx showntell mcp`.
-INSTALL = "uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.4 showntell mcp"
+INSTALL = "uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.5 showntell mcp"
 
 OK, WARN, FAIL = "ok", "warn", "fail"
 

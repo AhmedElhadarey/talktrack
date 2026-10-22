@@ -122,10 +122,15 @@ def main() -> None:
     if args.check:
         problems += [f"{p} is out of date; run `uv run scripts/sync_version.py`" for p in drift()]
     else:
-        for path, content in expected().items():
-            if not path.is_file() or path.read_text() != content:
+        # Some files are made from others written here (the Gemini manifest from the plugin's
+        # .mcp.json), so write until nothing changes.
+        for _ in range(3):
+            stale = {path: content for path, content in expected().items() if not path.is_file() or path.read_text() != content}
+            for path, content in stale.items():
                 path.write_text(content)
                 print(f"wrote {path.relative_to(ROOT)}")
+            if not stale:
+                break
     if args.tag:
         if args.tag != f"v{version}":
             problems.append(f"tag {args.tag} does not match pyproject.toml version {version} (expected v{version})")
