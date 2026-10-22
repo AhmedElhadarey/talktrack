@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Fixes:** a daemon restarted right after another stopped kept the port (4747) instead of moving to the next one; the free-port probe now binds as the server does, past sockets left in TIME_WAIT.
+
 ## 0.1.5 (2026-10-22)
 
 - **Design:** bundled faces (Inter for text, Bricolage Grotesque for titles, JetBrains Mono for code), larger titles with a kicker (slide number and part), a six-colour palette per theme (`--c1` to `--c6`) for cards, numbers, takeaways, chart series and diagram shapes, a faint dot grid on the stage, a motif behind the title slide and the part number drawn large on chapter cards.

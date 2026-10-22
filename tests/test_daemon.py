@@ -88,6 +88,25 @@ def test_health_is_none_when_nothing_listens(free_port):
     assert daemon.health(free_port, timeout=0.2) is None
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows has no TIME_WAIT reuse; SO_REUSEADDR there lets a port be stolen")
+def test_a_port_a_stopped_daemon_left_in_time_wait_is_picked_again(free_port):
+    import socket
+
+    from showntell.app import pick_port
+
+    # The side that closes first keeps the port in TIME_WAIT, as a daemon does when it stops.
+    with socket.socket() as srv:
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind(("127.0.0.1", free_port))
+        srv.listen()
+        client = socket.create_connection(("127.0.0.1", free_port))
+        conn, _ = srv.accept()
+        conn.close()
+    time.sleep(0.1)
+    client.close()
+    assert pick_port("127.0.0.1", free_port) == free_port
+
+
 def test_ensure_passes_the_data_folder_to_the_child(cfg, monkeypatch):
     monkeypatch.delenv("SHOWNTELL_DATA", raising=False)
     seen = {}

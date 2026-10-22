@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import secrets
 import socket
 import time
@@ -109,6 +110,9 @@ async def _deny(send, status: int, text: str) -> None:
 def pick_port(host: str, preferred: int, tries: int = 20) -> int:
     for port in range(preferred, preferred + tries):
         with socket.socket(socket.AF_INET6 if ":" in host else socket.AF_INET, socket.SOCK_STREAM) as sock:
+            if os.name != "nt":
+                # As uvicorn binds: a port a stopped daemon left in TIME_WAIT is free to listen on.
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 sock.bind((host, port))
                 return port
