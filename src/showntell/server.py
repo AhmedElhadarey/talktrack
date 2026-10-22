@@ -375,18 +375,32 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
             text += "\nSlides (id, start time, look):\n" + "\n".join(
                 f"- {o['id']} {mmss(o['start_s'])}" + (f" {o['look']}" if o.get("look") else "") for o in r["outline"]
             )
+        for run in r.get("alike", []):
+            text += "\n" + reply(
+                "alike",
+                "Slides {ids} in a row look alike ({look}). Before you tell the user, give one a different look with revise_slide.",
+                ids=", ".join(f"`{x}`" for x in run["slides"]),
+                look=run["look"],
+            )
         issues = _issues_text(r["issues"], r["player_issues"])
-        return _result(
-            text + ("\n" + issues if issues else ""),
-            {
-                "url": r["url"],
-                "status": "finished",
-                "issues": r["issues"],
-                "player_issues": r["player_issues"],
-                "slides": r["slides"],
-                "outline": r.get("outline", []),
-            },
-        )
+        text += "\n" + issues if issues else ""
+        data = {
+            "url": r["url"],
+            "status": "finished",
+            "issues": r["issues"],
+            "player_issues": r["player_issues"],
+            "slides": r["slides"],
+            "outline": r.get("outline", []),
+            "alike": r.get("alike", []),
+        }
+        if not r.get("thumbs"):
+            return _result(text, data)
+        # Pictures of the alike slides; no structured content, which some clients prefer over pictures.
+        content: list = [TextContent(type="text", text=text)]
+        for th in r["thumbs"]:
+            content.append(TextContent(type="text", text=f"Slide `{th['id']}`:"))
+            content.append(ImageContent(type="image", data=th["png"], mime_type="image/png"))
+        return CallToolResult(content=content)
 
     @mcp.tool(
         title=tool_text("export_walkthrough", "title", "Export walkthrough"), description=tool_text("export_walkthrough"), annotations=WRITE

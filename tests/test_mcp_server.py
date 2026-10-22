@@ -195,6 +195,16 @@ async def test_finish_walkthrough(mcp):
         data = r.structured_content
         assert (data["status"], data["slides"], data["url"]) == ("finished", 1, h["url"])
         assert h["url"] in text(r) and "Finished" in text(r)
+        assert data["alike"] == []
+
+
+async def test_finish_names_alike_slides(mcp):
+    async with mcp as client:
+        h = await start(client)
+        code = "```python\nx = 1\n```\n\nThe [line](#L1) sets it.\n\n"
+        await client.call_tool("add_slides", {"handle": h["handle"], "markdown": OPENING + f"## A {{#a}}\n\n{code}## B {{#b}}\n\n{code}"})
+        r = await client.call_tool("finish_walkthrough", {"handle": h["handle"]})
+        assert "Slides `a`, `b` in a row look alike (code)" in text(r) and "revise_slide" in text(r)
 
 
 async def test_list_walkthroughs(mcp):

@@ -88,12 +88,17 @@ class LocalService:
     async def finish(self, handle: str, questions: list[str] | None, check: bool = True) -> dict:
         """Close the walkthrough. `check=False` skips drawing the slides headless, for callers
         that only wait for the audio (exporting a Markdown file)."""
-        from .checks import look
+        import base64
+
+        from .checks import alike_runs, look
         from .export import slide_starts, timeline_total
 
         s = self.store.by_handle(handle)
         layout = self.layout_check and check
-        unchecked = await self._check_layout(s) if layout else ""
+        runs = [[x.id for x in run] for run in alike_runs(s.w.slides)]
+        shots: dict[str, bytes] = {}
+        want = [sid for run in runs for sid in run][:ALIKE_SHOTS_MAX]
+        unchecked = await self._check_layout(s, want, shots) if layout else ""
         issues = s.finish(questions, unchecked=unchecked if layout else None) + s.take_late_issues()
         says = [x for sl in s.w.slides for x in sl.says if x.text]
         starts = slide_starts(s.w)
@@ -106,14 +111,18 @@ class LocalService:
             "issues": _dicts(issues),
             "player_issues": _dicts(s.take_player_issues()),
             "questions": s.w.questions,
+            # Runs of slides that look alike, with a small picture of each when the check drew them.
+            "alike": [{"slides": run, "look": look(next(x for x in s.w.slides if x.id == run[0]))} for run in runs],
+            "thumbs": [{"id": sid, "png": base64.b64encode(shots[sid]).decode()} for sid in want if sid in shots],
         }
 
     async def list(self) -> list[dict]:
         return self.store.list(20)
 
-    async def _check_layout(self, s) -> str:
+    async def _check_layout(self, s, shoot: list[str] = (), shots: dict | None = None) -> str:
         """Draw every slide fully revealed in headless Chromium, so the player's render and layout
-        checks report before the agent stops. Returns why it could not run, or ''."""
+        checks report before the agent stops; pictures of the slides in `shoot` go into `shots`.
+        Returns why it could not run, or ''."""
         import asyncio
 
         from .capture import Capturer, CaptureUnavailable
@@ -124,8 +133,10 @@ class LocalService:
 
         async def run() -> None:
             async with Capturer(s.url, short=360) as c:
-                for t in list(ends.values())[:LAYOUT_CHECK_MAX]:
+                for sid, t in list(ends.items())[:LAYOUT_CHECK_MAX]:
                     await c.seek(t, measure=True)
+                    if sid in shoot and shots is not None:
+                        shots[sid] = await c.shot()
                 for f in await c.page.evaluate("window.__showntell.findings || []"):
                     s.report(f)
 
@@ -284,6 +295,7 @@ EXPORT_WAIT_S = 300.0  # for the narration to finish voicing before an export
 PREVIEW_MAX = 12
 LAYOUT_CHECK_MAX = 60  # slides drawn by the finish-time layout check
 LAYOUT_CHECK_S = 25.0
+ALIKE_SHOTS_MAX = 6  # pictures of alike slides in the finish reply
 
 
 def _end_times(w) -> dict[str, float]:

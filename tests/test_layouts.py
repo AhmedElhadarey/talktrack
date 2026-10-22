@@ -153,3 +153,16 @@ def test_each_slide_has_a_look_for_the_outline(build):
         + "The [lookup](#L2) is one line.\n\n## Parts {.cards .side}\n> :zap: Fast\n\n- :database: **Store**: rows\n\nThe [store](#store) keeps rows.\n"
     )
     assert [look(s) for s in w.slides] == ["title", "code+diagram", "cards side takeaway icons"]
+
+
+def test_alike_runs_skip_drawings_statements_and_morphs(build):
+    from showntell.checks import alike_runs
+
+    code = "```python\nx = 1\n```\n\nThe [line](#L1) sets it.\n\n"
+    w, _ = build(
+        "# T\n\nA.\n\n"
+        + f"## A\n\n{code}## B\n\n{code}## C {{.side}}\n> point\n\n{code}## D {{.side}}\n> point\n\n{code}"
+        + "## Say\n> A statement.\n\nSaid.\n\n"
+        + f"## E\n\n{code}"
+    )
+    assert [[s.title for s in run] for run in alike_runs(w.slides)] == [["A", "B"], ["C", "D"]]

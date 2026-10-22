@@ -153,7 +153,7 @@ Bigger visuals render smaller: narrow `lines=`, show only the changed region, sp
 ## Finish
 
 1. **Questions:** give `finish_walkthrough` two or three specific follow-up questions ("What happens if the loader throws?", not "Any questions?"), or list them in your last `add_slides` call under `## Questions {.questions}`.
-2. **Check:** the `finish_walkthrough` reply lists render and layout problems from drawing every slide, and each slide's look; fix problems with `revise_slide`, and revise one of any run of alike looks. Call `preview_slides` only for slides it names, a picture you want to see, or when asked.
+2. **Check:** the `finish_walkthrough` reply lists render and layout problems from drawing every slide, and each slide's look, with pictures of slides in a row that look alike; fix problems with `revise_slide`, and give one slide in each alike run a different look. Call `preview_slides` only for slides it names, a picture you want to see, or when asked.
 3. {{TELL_USER}}
 
 ## Example slide

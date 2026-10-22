@@ -150,8 +150,8 @@ Findings from the server, found while parsing, building and voicing:
 | `still_slide` | warning | the screen does not change for a long stretch of narration |
 | `code_run` | info | several code slides in a row with nothing showing behaviour |
 | `plain_run` | info | several slides in a row are only lists, tables or text |
-| `same_look` | info | two slides in a row show the same kind of visual the same way |
-| `no_takeaway` | info | code, tables or formulas with no `>` line saying what to take from them |
+| `same_look` | warning | two slides in a row show the same kind of visual the same way |
+| `no_takeaway` | warning | code, tables or formulas with no `>` line saying what to take from them |
 | `layout_unused` | info | a layout class on a heading has nothing to lay out |
 | `change_as_code` | info | a code slide talks about a change but shows one version of the code |
 | `list_dates` | info | a list or table of dated events that a timeline would show |

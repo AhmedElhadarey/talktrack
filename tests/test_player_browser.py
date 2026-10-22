@@ -481,6 +481,22 @@ def test_finish_draws_every_slide_and_reports_layout(daemon):
     assert not any(i["code"] == "not_checked" and "player" in i["message"] for i in f["issues"])
 
 
+def test_finish_shows_slides_that_look_alike(daemon):
+    call = _rpc(daemon)
+    r = call("start", title="Alike", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    md = "# Alike\n\nOpening words.\n\n" + "".join(
+        f"## Part {i} {{#p{i}}}\n\n```python\nx = {i}\n```\n\nThe [line](#L1) sets it.\n\n" for i in range(3)
+    )
+    call("add", handle=r["handle"], markdown=md)
+    call("playable", handle=r["handle"], timeout=10)
+    f = call("finish", handle=r["handle"], questions=None)
+    import base64
+
+    assert f["alike"] == [{"slides": ["p0", "p1", "p2"], "look": "code"}]
+    assert [x["id"] for x in f["thumbs"]] == ["p0", "p1", "p2"]
+    assert all(base64.b64decode(x["png"])[:8] == b"\x89PNG\r\n\x1a\n" for x in f["thumbs"])
+
+
 def test_long_code_steps_that_scroll_fit_the_slide(daemon):
     call = _rpc(daemon)
     r = call("start", title="Long steps", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))

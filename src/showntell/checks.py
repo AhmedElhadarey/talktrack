@@ -35,6 +35,30 @@ def _layout(s: Slide) -> str:
     return next((x for x in LAYOUTS if x in s.classes), "")
 
 
+def _shape(s: Slide) -> tuple:
+    style = s.visual.get("style") if isinstance(s.visual, dict) else None
+    return (s.kind, style, (s.pair or {}).get("kind"), _layout(s))
+
+
+def alike_runs(slides: list[Slide]) -> list[list[Slide]]:
+    """Runs of two or more adjacent slides that show the same kind of visual the same way. Title,
+    chapter and statement slides break a run; drawings and pictures differ by nature, and a
+    `.morph` slide continues the one before on purpose."""
+    runs: list[list[Slide]] = []
+    run: list[Slide] = []
+    for s in slides:
+        if s.kind in ("title", "chapter", "text", "svg", "image"):
+            run = []
+            continue
+        if run and _shape(run[-1]) == _shape(s) and "morph" not in s.classes:
+            run.append(s)
+            if len(run) == 2:
+                runs.append(run)
+        else:
+            run = [s]
+    return runs
+
+
 def look(s: Slide) -> str:
     """A few words for how a slide looks, so an agent reading the outline sees monotony: the
     kind (a list's style, a pair's two kinds), the layout, and whether it has a takeaway or icons."""
@@ -399,20 +423,18 @@ class Checks:
         from them. Each is reported once per walkthrough, as it first happens."""
         once = self._once()
         body = [s for s in self.w.slides if s.kind not in ("title", "chapter", "text")]
-        if "same_look" not in once:
-            for a, b in zip(body, body[1:], strict=False):
-                same = a.kind == b.kind and _layout(a) == _layout(b) and "morph" not in b.classes
-                if same and self.w.slides.index(b) == self.w.slides.index(a) + 1:
-                    once.add("same_look")
-                    self._issue(
-                        "same_look",
-                        f"Slides `{a.id}` and `{b.id}` look the same: both show {NOUNS.get(a.kind, f'a {a.kind}')} the same way.",
-                        "Vary the next ones: `.side` with `>` takeaways, `.pair` with a diagram beside the code, "
-                        "`.full` for a big picture, or a different visual. Alike slides in a row slide across like pages, "
-                        "so keep the same look only for a sequence the viewer should read as one.",
-                        slide=b.id,
-                    )
-                    break
+        runs = alike_runs(self.w.slides)
+        if "same_look" not in once and runs:
+            a, b = runs[0][:2]
+            once.add("same_look")
+            self._issue(
+                "same_look",
+                f"Slides `{a.id}` and `{b.id}` look the same: both show {NOUNS.get(a.kind, f'a {a.kind}')} the same way.",
+                "Vary the next ones: `.side` with `>` takeaways, `.pair` with a diagram beside the code, "
+                "`.full` for a big picture, or a different visual. Alike slides in a row slide across like pages, "
+                "so keep the same look only for a sequence the viewer should read as one.",
+                slide=b.id,
+            )
         if "no_takeaway" not in once:
             bare = [s.id for s in body if s.kind in DENSE and not s.shown.strip()]
             if len(bare) >= 2:
