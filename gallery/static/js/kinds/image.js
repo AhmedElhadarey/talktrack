@@ -1,7 +1,8 @@
 // A screenshot or plot, optionally framed as a browser, window or phone. Region cues point at a
-// box in percent of the picture.
+// box in percent of the picture. Without them, the picture slowly pushes in towards a point picked
+// from its name, on the narration clock.
 
-import { el } from "../draw.js";
+import { el, reducedMotion } from "../draw.js";
 import { esc } from "../util.js";
 
 export default {
@@ -18,7 +19,9 @@ export default {
       f.append(img);
       wrap.append(f);
     } else {
-      wrap.append(img);
+      const kb = el("div", "kb");
+      kb.append(img);
+      wrap.append(kb);
     }
     parts.visual = img;
     body.append(wrap);
@@ -26,6 +29,17 @@ export default {
   },
 
   layout(body) { sizeImage(body); },
+
+  // A region cue's box is measured once, so a picture that points at regions holds still.
+  frame(st, slide, parts) {
+    const img = parts.visual;
+    if (img?.tagName !== "IMG" || reducedMotion() || slide.says.some((x) => (x.cues || []).some((c) => c.kind === "region"))) return "";
+    const p = Math.min(1, Math.max(0, st.sinceSlide / DRIFT_S));
+    const k = (1 + PUSH * (1 - (1 - p) ** 2)).toFixed(4);
+    if (!img.style.transformOrigin) img.style.transformOrigin = ORIGINS[hash(slide.visual?.src || slide.id) % ORIGINS.length];
+    img.style.transform = `scale(${k})`;
+    return k;
+  },
 
   target(cue, parts) {
     if (cue.kind !== "region" || parts.visual?.tagName !== "IMG") return undefined;
@@ -40,8 +54,15 @@ export default {
   },
 };
 
-// A framed screenshot: limit the picture to the slide's height so the frame hugs it.
+const DRIFT_S = 14; // seconds to push in fully
+const PUSH = 0.06; // how much larger it ends up
+const ORIGINS = ["30% 35%", "70% 35%", "50% 45%", "35% 65%", "65% 60%"];
+const hash = (s) => [...s].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
+
+// Limit the picture to the slide's height, so a frame, or the box that clips the push-in, hugs it.
 export function sizeImage(body) {
+  const kb = body.querySelector(".kb > img");
+  if (kb) kb.style.maxHeight = `${Math.max(80, body.clientHeight)}px`;
   const dev = body.querySelector(".device");
   const img = dev?.querySelector("img");
   if (!img) return;

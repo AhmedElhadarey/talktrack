@@ -276,7 +276,10 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
         speed: Annotated[float, Field(description=arg_text("start_walkthrough", "speed"))] = 1.0,
         project_dir: Annotated[str, Field(description=arg_text("start_walkthrough", "project_dir"))] = "",
         opening: Annotated[str, Field(description=arg_text("start_walkthrough", "opening"))] = "",
-        theme: Annotated[Literal["", "dark", "light", "paper", "contrast"], Field(description=arg_text("start_walkthrough", "theme"))] = "",
+        theme: Annotated[
+            Literal["", "dark", "light", "paper", "contrast", "night", "ocean", "studio"],
+            Field(description=arg_text("start_walkthrough", "theme")),
+        ] = "",
         shared: Annotated[ListRootsResult | None, Resolve(_shared_folders)] = None,
         ctx: Context = None,  # type: ignore[assignment]
     ) -> CallToolResult:
@@ -369,7 +372,9 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
         if r["pending"]:
             text += f"\n{r['pending']} paragraph(s) are still being voiced; the player fills them in as they finish."
         if r.get("outline"):
-            text += "\nSlides (id at start time): " + ", ".join(f"{o['id']} {mmss(o['start_s'])}" for o in r["outline"])
+            text += "\nSlides (id, start time, look):\n" + "\n".join(
+                f"- {o['id']} {mmss(o['start_s'])}" + (f" {o['look']}" if o.get("look") else "") for o in r["outline"]
+            )
         issues = _issues_text(r["issues"], r["player_issues"])
         return _result(
             text + ("\n" + issues if issues else ""),

@@ -27,6 +27,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from showntell.checks import _layout, look  # noqa: E402
 from showntell.model import Walkthrough  # noqa: E402
 
 URL_RE = re.compile(r"http://(?:localhost|127\.0\.0\.1):\d+/w/[A-Za-z0-9_-]+/?")
@@ -338,6 +339,7 @@ def summarize(w: Walkthrough | None, expect: list[str] | None = None) -> dict:
         for style in (c.get("style") or "").split():
             used.add(style)
     content = [s for s in w.slides if s.kind not in ("title", "chapter")]
+    shapes = [(s.kind, s.visual.get("style"), s.pair.get("kind"), _layout(s)) for s in content]
     return {
         "features": sorted(used),
         "slides": len(w.slides),
@@ -352,6 +354,15 @@ def summarize(w: Walkthrough | None, expect: list[str] | None = None) -> dict:
         "builds": sum(1 for s in w.slides if "build" in s.classes),
         "from_disk": sum(1 for s in w.slides if s.visual.get("file")),
         "status": w.status,
+        # How varied the slides look: distinct kind/style/layout shapes per content slide, slides
+        # with a layout, a takeaway or icons, and back-to-back slides of the same shape.
+        "variety": round(len(set(shapes)) / len(shapes), 2) if shapes else None,
+        "layouts": sum(1 for s in content if _layout(s)),
+        "takeaways": sum(1 for s in content if s.kind != "text" and s.shown.strip()),
+        "statements": sum(1 for s in content if s.kind == "text"),
+        "icons": sum(1 for s in w.slides for _ in s.icons),
+        "alike": sum(1 for a, b in zip(shapes, shapes[1:], strict=False) if a == b and a[0] not in ("text", "svg")),
+        "looks": [look(s) for s in w.slides],
     }
 
 
@@ -365,15 +376,18 @@ async def main() -> None:
     ap.add_argument("--no-play", action="store_true")
     ap.add_argument("--no-asr", action="store_true")
     ap.add_argument("--keep", action="store_true", help="keep the data folder")
-    ap.add_argument("--rescore", help="recompute speech checks for this results file (needs --data)")
+    ap.add_argument("--rescore", help="recompute the summary and speech checks for this results file (needs --data)")
     ap.add_argument("--data", help="data folder of the run being rescored")
     args = ap.parse_args()
     if args.rescore:
         results = json.loads(Path(args.rescore).read_text())
+        expect = {p["id"]: p.get("expect") for p in json.loads(Path(args.prompts).read_text())}
         for r in results:
             w = walkthrough_for(Path(args.data), r.get("url"))
             if w:
-                r["asr"] = asr_checks(w, Path(args.data) / "audio")
+                r["summary"] = summarize(w, expect.get(r["id"]))
+                if not args.no_asr:
+                    r["asr"] = asr_checks(w, Path(args.data) / "audio")
         Path(args.rescore).write_text(json.dumps(results, indent=1, default=str))
         print_table(results)
         return
@@ -425,7 +439,7 @@ async def main() -> None:
 def print_table(results: list[dict]) -> None:
     head = (
         "| run | model | link s | total s | cost | slides | min | issues | render err | stalls | cue acc | missing/min | preview "
-        "| plain | fit | features |"
+        "| plain | fit | variety | layouts | takeaways | icons | alike | features |"
     )
     print("\n" + head + "\n|" + "---|" * (head.count("|") - 1))
     for r in sorted(results, key=lambda r: (r["model"], r["id"])):
@@ -436,7 +450,8 @@ def print_table(results: list[dict]) -> None:
             f"{len(pl.get('render_errors', [])) if pl else '-'} | {pl.get('stalls', '-') if pl else '-'} | "
             f"{a.get('cue_accuracy', '-')} | {a.get('missing_per_min', '-')} | "
             f"{sum(1 for _, n in r.get('tool_calls', []) if n == 'preview_slides')} | {s.get('plain_share', '-')} | "
-            f"{'-' if s.get('fit') is None else 'yes' if s['fit'] else 'no'} | {', '.join(s.get('features', [])) or '-'} |"
+            f"{'-' if s.get('fit') is None else 'yes' if s['fit'] else 'no'} | {s.get('variety', '-')} | {s.get('layouts', '-')} | "
+            f"{s.get('takeaways', '-')} | {s.get('icons', '-')} | {s.get('alike', '-')} | {', '.join(s.get('features', [])) or '-'} |"
         )
 
 

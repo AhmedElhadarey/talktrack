@@ -87,13 +87,20 @@ function move(el, transform, cueKey) {
 
 // Where a cue points: a list of DOMRect-like boxes, plus side effects (active classes, highlights).
 // The slide's kind answers first (image regions, diagram nodes); then lines, items, rows and text.
-export function cueTarget(cue, slide) {
+export function cueTarget(cue, slide, strict = false) {
   if (!cue) return null;
-  // On a `.pair` slide a cue points into the pane it names.
+  // On a `.pair` slide a cue points into the pane it names; quoted text is looked for in both.
+  if (cue.kind === "text" && cue.pane === undefined && S.view.panes?.length > 1) {
+    for (const k of [0, 1]) {
+      const r = cueTarget({ ...cue, pane: k }, slide, true);
+      if (r) return r;
+    }
+    return wholeVisual(S.view.panes[0].parts);
+  }
   const pane = S.view.panes?.[cue.pane || 0];
   const p = pane?.parts || S.view.parts;
   if (pane) slide = pane.slide;
-  const whole = () => wholeVisual(p);
+  const whole = () => (strict ? null : wholeVisual(p));
   if (cue.kind === "step" || cue.kind === "edge") return null; // the code's change, or the moving dot, is the pointer
   const own = kindOf(slide).target?.(cue, p, { wholeVisual: whole });
   if (own !== undefined) return own;

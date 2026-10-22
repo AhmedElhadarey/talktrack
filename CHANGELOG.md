@@ -7,6 +7,11 @@
 - **Icons:** the Lucide set is bundled: `:name:` before a list item, stat label or `>` line, `{icon=name}` on a heading, `<use href="icon:name"/>` in a drawing. `icon_unknown` names close ones.
 - **Filling the slide:** code, tables, lists, numbers and exchanges grow into the space they have, and diagrams up to 2.2 times their drawn size.
 - **Motion:** slides rise in, alike slides in a row slide across like pages, title and chapter slides zoom in, and cards, numbers, rows and takeaways arrive one after another. `.morph` makes a drawing glide from the previous slide's. All of it follows the narration's clock, so MP4 export shows it.
+- **Charts and pictures move:** bars grow from the axis and lines draw in as the slide arrives; a picture without region cues slowly pushes in.
+- **Themes:** `night` (indigo, pink), `ocean` (teal, coral) and `studio` (bright, violet) join dark, light, paper and contrast.
+- **Seeing the deck:** the `finish_walkthrough` reply lists each slide's look (kind, layout, takeaway, icons) so the agent can spot runs of alike slides; `scripts/eval.py` scores the same (variety, layouts, takeaways, icons, alike pairs).
+- **`diagram_shape`:** a top-to-bottom flowchart left narrow on a wide slide, or the reverse, is reported with the direction to use.
+- **Fixes:** quoted-text cues on a `.pair` slide find text in either visual; seeking or an export worker landing inside a transition now shows the slide going out too.
 - **Findings:** `same_look` (two alike slides in a row), `no_takeaway` (dense slides with no `>` line) and `layout_unused` (a layout class with nothing to lay out). The guide has a section on giving each slide its look.
 
 ## 0.1.4 (2026-10-18)

@@ -69,6 +69,10 @@ export default {
       report(`Slide ${slide.id}: the diagram had to shrink until its labels are about ${Math.round(px)} px high, too small to read.`
         + " Split it, or use fewer nodes or a top-to-bottom layout.", "text_too_small", slide.id);
     }
+    // Beside code or takeaways, a narrow diagram is the point of the layout.
+    const beside = ["side", "pair"].some((c) => slide.classes?.includes(c));
+    const shape = !beside && shapeMismatch(slide.visual?.source, parts.svg, body);
+    if (shape) report(`Slide ${slide.id}: ${shape}`, "diagram_shape", slide.id);
     return true;
   },
 };
@@ -156,6 +160,26 @@ export function sizeDiagram(svg, body) {
   const k = Math.min(bw / vb.width, bh / vb.height, 2.2);
   svg.setAttribute("width", Math.floor(vb.width * k));
   svg.setAttribute("height", Math.floor(vb.height * k));
+}
+
+// A flowchart whose direction fights the frame: a top-to-bottom chain that fills the height of a
+// wide slide but less than half its width, or the reverse. Other diagrams have no direction to change.
+export function shapeMismatch(source, svg, body) {
+  const dir = /^\s*(?:flowchart|graph)\s+(TB|TD|BT|LR|RL)\b/m.exec(source || "")?.[1];
+  if (!dir || !svg) return "";
+  const w = parseFloat(svg.getAttribute("width")), h = parseFloat(svg.getAttribute("height"));
+  const bw = body.clientWidth, bh = body.clientHeight;
+  if (!w || !h || !bw || !bh) return "";
+  const down = dir === "TB" || dir === "TD" || dir === "BT";
+  if (down && h >= bh - 2 && w < bw * 0.5) {
+    return `the top-to-bottom diagram fills the slide's height but only ${Math.round((100 * w) / bw)}% of its width, so it is drawn small.`
+      + " Use `flowchart LR`, or put it beside the code or takeaways with `.pair` or `.side`.";
+  }
+  if (!down && w >= bw - 2 && h < bh * 0.5) {
+    return `the left-to-right diagram fills the slide's width but only ${Math.round((100 * h) / bh)}% of its height, so it is drawn small.`
+      + " Use `flowchart TB`, or wrap the chain into rows with subgraphs.";
+  }
+  return "";
 }
 
 // Mermaid flowchart nodes: map node id -> <g> element.

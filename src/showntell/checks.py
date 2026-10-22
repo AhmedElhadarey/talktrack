@@ -35,6 +35,25 @@ def _layout(s: Slide) -> str:
     return next((x for x in LAYOUTS if x in s.classes), "")
 
 
+def look(s: Slide) -> str:
+    """A few words for how a slide looks, so an agent reading the outline sees monotony: the
+    kind (a list's style, a pair's two kinds), the layout, and whether it has a takeaway or icons."""
+    kind = s.visual.get("style", "list") if s.kind == "list" and isinstance(s.visual, dict) else s.kind
+    if s.pair:
+        kind += "+" + s.pair.get("kind", "")
+    parts = [kind]
+    lay = _layout(s)
+    if lay and lay != "pair":
+        parts.append(lay)
+    if "morph" in s.classes:
+        parts.append("morph")
+    if s.shown.strip() and s.kind not in ("title", "chapter", "text"):
+        parts.append("takeaway")
+    if s.icons:
+        parts.append("icons")
+    return " ".join(parts)
+
+
 # Narration that describes a change rather than code as it is.
 CHANGE_RE = re.compile(
     r"\b(?:this (?:change|commit|pull request|PR|diff)|the (?:old|previous|new) (?:code|version|behaviou?r)|used to|previously"

@@ -74,6 +74,7 @@ CODES: dict[str, tuple[str, str]] = {
     "overflow": ("warning", "a visual still overflows the slide after shrinking"),
     "pointer_offstage": ("warning", "a cue's target is outside the visible slide"),
     "drawing_overlap": ("warning", "a line runs through a label in a drawing, or two labels overlap"),
+    "diagram_shape": ("info", "a flowchart's direction leaves it small in the slide's shape"),
     "slow_render": ("info", "a slide took longer to draw than the player waits"),
     "viewer_waited": ("info", "the viewer caught up with the writer and waited"),
     # coverage
@@ -90,6 +91,7 @@ PLAYER_CODES = {
     "slow_render",
     "viewer_waited",
     "drawing_overlap",
+    "diagram_shape",
 }
 MAX_PER_REPLY = 12
 MAX_PER_CODE = 3

@@ -156,7 +156,7 @@ def test_one_page_plays_every_kind_offline(tmp_path):
         seen = {}
         for k in range(80):
             page.evaluate("(t) => window.__showntell.seek(t)", dur * k / 80)
-            kind = page.evaluate("[...document.querySelector('.slide').classList].find((c) => c.startsWith('k-')).slice(2)")
+            kind = page.evaluate("[...document.querySelector('.slide:not(.leaving)').classList].find((c) => c.startsWith('k-')).slice(2)")
             if kind == "diagram":
                 seen[kind] = page.evaluate("document.querySelectorAll('.diagram svg g.node').length")
             elif kind == "math":

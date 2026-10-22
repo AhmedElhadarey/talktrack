@@ -354,6 +354,8 @@ body.portrait .slide.k-chapter .big-n { font-size: 320px; right: 30px; }
 .math .katex-display { margin: 0; }
 .image { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
 .image img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px; }
+.image .kb { display: flex; max-width: 100%; max-height: 100%; overflow: hidden; border-radius: 12px; }
+.image .kb img { display: block; border-radius: 0; }
 
 /* entering: cards, numbers, rows and takeaways arrive one after another (view.js drives --in) */
 .slide .entering { filter: opacity(var(--in, 1)); translate: 0 calc((1 - var(--in, 1)) * 16px); }

@@ -1,12 +1,18 @@
 // Bar, horizontal bar and line charts, drawn as SVG with notes as callouts. Bars and series are
-// the parts cues point at.
+// the parts cues point at. On the narration clock, bars grow from the axis one after another and
+// lines draw left to right; values and callouts follow.
 
-import { el } from "../draw.js";
+import { el, reducedMotion } from "../draw.js";
 import { esc } from "../util.js";
 
 // Drawing size per frame, in SVG units: close to the slide body's shape, so text keeps its size.
 const SIZES = { landscape: [1100, 600], square: [900, 820], portrait: [660, 940] };
 const PALETTE = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)", "var(--c5)", "var(--c6)"];
+const DELAY_S = 0.35; // after the slide arrives
+const GROW_S = 0.8; // per bar or line
+const STAGGER_S = 0.09; // between bars
+const ease = (x) => 1 - (1 - x) ** 3;
+const clamp = (x) => Math.max(0, Math.min(1, x));
 
 export default {
   render(slide, body, parts, ctx) {
@@ -19,6 +25,37 @@ export default {
     parts.visual = c;
     parts.svg = null;
     body.append(c);
+  },
+
+  // Fully drawn when everything shows at once (previews, the layout check, a slide revealed by
+  // `.build`, reduced motion); otherwise by seconds since the slide began.
+  frame(st, slide, parts) {
+    const svg = parts.visual?.querySelector("svg");
+    if (!svg) return "";
+    const still = st.revealAll || reducedMotion() || slide.classes?.includes("build");
+    const at = (i) => (still ? 1 : ease(clamp((st.sinceSlide - DELAY_S - i * STAGGER_S) / GROW_S)));
+    const key = [];
+    svg.querySelectorAll("g.entry.bar").forEach((g, i) => {
+      const p = at(i);
+      for (const r of g.querySelectorAll("rect")) r.style.transform = p < 1 ? (svg.classList.contains("hbar") ? `scaleX(${p})` : `scaleY(${p})`) : "";
+      for (const v of g.querySelectorAll(".vlabel")) v.style.opacity = p < 1 ? clamp((p - 0.85) / 0.15) : "";
+      key.push(p.toFixed(3));
+    });
+    const lines = [...svg.querySelectorAll("g.entry.series")];
+    lines.forEach((g) => {
+      const p = at(0), line = g.querySelector(".line");
+      const len = +(line.dataset.len ||= Math.ceil(line.getTotalLength()));
+      line.style.strokeDasharray = p < 1 ? `${len}` : "";
+      line.style.strokeDashoffset = p < 1 ? `${len * (1 - p)}` : "";
+      const dots = g.querySelectorAll(".dot"), n = dots.length;
+      dots.forEach((d, i) => { d.style.opacity = p < 1 && (n < 2 ? 0 : i / (n - 1)) > p ? 0 : ""; });
+      const label = g.querySelector(".slabel");
+      if (label) label.style.opacity = p < 1 ? clamp((p - 0.8) / 0.2) : "";
+      key.push(p.toFixed(3));
+    });
+    const done = at(Math.max(0, svg.querySelectorAll("g.entry.bar").length - 1));
+    for (const n of svg.querySelectorAll("g.entry.note")) n.style.opacity = done < 1 ? 0 : "";
+    return key.join(",");
   },
 };
 
@@ -89,7 +126,7 @@ function drawChart(v, [W, H]) {
       c.values.forEach((val, si) => {
         const x0 = m.l + ci * band + gap / 2 + si * bw;
         const y0 = y(Math.max(0, val)), h = Math.abs(y(val) - y(0));
-        g += `<rect x="${x0}" y="${y0}" width="${Math.max(2, bw - 6)}" height="${Math.max(1, h)}" rx="6" style="fill:${PALETTE[(k > 1 ? si : 0) % PALETTE.length]}"/>`
+        g += `<rect x="${x0}" y="${y0}" width="${Math.max(2, bw - 6)}" height="${Math.max(1, h)}" rx="6" style="fill:${PALETTE[(k > 1 ? si : 0) % PALETTE.length]};transform-origin:0 ${y(0)}px"/>`
           + t(x0 + (bw - 6) / 2, y0 - 12, fmt(val, v.unit), "vlabel");
       });
       g += t(m.l + ci * band + band / 2, m.t + ih + 36, c.label, "tick") + "</g>";
@@ -125,10 +162,10 @@ function drawHbar(v, W, H, m, top, step, head, t) {
     const val = c.values[0] ?? 0, y0 = m.t + ci * band + (band - bh) / 2;
     marks += `<g class="entry bar" data-id="${esc(c.id)}" data-idx="${ci}">`
       + t(m.l - 14, y0 + bh / 2 + 8, c.label, "tick", "end")
-      + `<rect x="${m.l}" y="${y0}" width="${Math.max(2, x(val) - m.l)}" height="${bh}" rx="6" style="fill:${PALETTE[0]}"/>`
+      + `<rect x="${m.l}" y="${y0}" width="${Math.max(2, x(val) - m.l)}" height="${bh}" rx="6" style="fill:${PALETTE[0]};transform-origin:${m.l}px 0"/>`
       + t(x(val) + 12, y0 + bh / 2 + 8, fmt(val, v.unit), "vlabel", "start") + "</g>";
   });
-  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${head}<line x1="${m.l}" x2="${m.l}" y1="${m.t}" y2="${m.t + ih}" class="axis"/>${marks}</svg>`;
+  return `<svg class="hbar" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${head}<line x1="${m.l}" x2="${m.l}" y1="${m.t}" y2="${m.t + ih}" class="axis"/>${marks}</svg>`;
 }
 
 function legend(series, x, y) {

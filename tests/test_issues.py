@@ -358,7 +358,7 @@ async def test_finish_says_what_was_not_checked(service, store):
     await service.add(r["handle"], OPENING)
     f = await service.finish(r["handle"], None)
     assert any(i["code"] == "not_checked" and "No player" in i["message"] for i in f["issues"])
-    assert f["outline"][0] == {"id": "how-caching-works", "title": "How caching works", "start_s": 0.0}
+    assert f["outline"][0] == {"id": "how-caching-works", "title": "How caching works", "start_s": 0.0, "look": "title"}
     s = store.by_handle(r["handle"])
     q = s.subscribe()
     f = await service.finish(r["handle"], None)

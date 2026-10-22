@@ -34,7 +34,7 @@ graph TB
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| **start_walkthrough** | `title`, `frame` (landscape, square, portrait), `theme` (dark, light, paper, contrast), `voice`, `speed`, `project_dir`, `opening` | `handle`, `url`; with `opening`, the playable link and the guide |
+| **start_walkthrough** | `title`, `frame` (landscape, square, portrait), `theme` (dark, light, paper, night, ocean, studio, contrast), `voice`, `speed`, `project_dir`, `opening` | `handle`, `url`; with `opening`, the playable link and the guide |
 | **add_slides** | `handle`, `markdown` | `status`, `url` once playable, `issues`, progress, the guide on the first playable reply |
 | **revise_slide** | `handle`, `slide` (id), `markdown` (one slide) | `issues`; only changed narration is voiced again |
 | **finish_walkthrough** | `handle`, `questions` (optional list) | summary, `issues`; with Playwright, findings from drawing every slide headless |
@@ -174,6 +174,7 @@ Findings from the open player, measured after a slide has settled. Their message
 | `overflow` | warning | a visual still overflows the slide after shrinking |
 | `pointer_offstage` | warning | a cue's target is outside the visible slide |
 | `drawing_overlap` | warning | a line runs through a label in a drawing, or two labels overlap |
+| `diagram_shape` | info | a flowchart's direction leaves it small in the slide's shape |
 | `slow_render` | info | a slide took longer to draw than the player waits |
 | `viewer_waited` | info | the viewer caught up with the writer and waited |
 

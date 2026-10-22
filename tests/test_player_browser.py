@@ -324,10 +324,10 @@ def test_every_kind_renders(daemon, browser, frame):
         state = page.evaluate(
             """() => {
               const stage = document.querySelector('#stage').getBoundingClientRect();
-              const slide = document.querySelector('.slide');
+              const slide = document.querySelector('.slide:not(.leaving)');
               const ptr = document.querySelector('#pointer');
               const p = ptr.hidden ? null : ptr.getBoundingClientRect();
-              const body = document.querySelector('.slide-body');
+              const body = document.querySelector('.slide:not(.leaving) .slide-body');
               const vis = body && body.firstElementChild ? body.firstElementChild.getBoundingClientRect() : null;
               return {cls: slide && slide.className, errors: window.__showntell.renderErrors,
                       stage: stage.toJSON(), pointer: p && p.toJSON(), visual: vis && vis.toJSON()};
@@ -376,7 +376,7 @@ def test_a_range_plays_its_slides_and_stops(daemon, browser):
     page.wait_for_function("window.__showntell !== undefined && !document.querySelector('#big-play').disabled")
     page.click("#big-play")
     page.wait_for_selector("#range-note:not([hidden])", timeout=20000)
-    shown = page.evaluate("document.querySelector('.slide').className")
+    shown = page.evaluate("document.querySelector('.slide:not(.leaving)').className")
     assert "k-diagram" in shown and not page.evaluate("window.__showntell.ended")
     page.close()
 
@@ -386,7 +386,7 @@ def test_a_token_in_the_link_is_not_a_start_time(daemon, browser):
     # digits used to send the player part-way in. The start time is `at`.
     url = _make(daemon, "landscape")
     page = browser.new_page(viewport={"width": 1280, "height": 800})
-    kind = "[...document.querySelector('.slide').classList].find((c) => c.startsWith('k-'))"
+    kind = "[...document.querySelector('.slide:not(.leaving)').classList].find((c) => c.startsWith('k-'))"
     page.goto(url + "?t=9e3Xk2")
     page.wait_for_selector(".slide")
     page.wait_for_timeout(400)
@@ -660,7 +660,7 @@ def test_newer_visuals_follow_the_narration(daemon, browser):
         0.4,
         """(() => { const p = document.querySelector('#pointer').getBoundingClientRect();
         const i = document.querySelector('.device img').getBoundingClientRect();
-        return [p.left >= i.left - 12 && p.top >= i.top - 12, !!document.querySelector('.slide-body').style.transform]; })()""",
+        return [p.left >= i.left - 12 && p.top >= i.top - 12, !!document.querySelector('.slide:not(.leaving) .slide-body').style.transform]; })()""",
     )
     assert inside and zoomed
     ticked = at("ship", 1, 0.3, "[...document.querySelectorAll('.entry.ticked')].map((e) => e.dataset.id)")
@@ -854,6 +854,21 @@ The [ray](#ray) crosses [the label](#label).
     assert len(found) == 1 and "Air molecule" in found[0]
 
 
+def test_a_tall_flowchart_on_a_wide_slide_is_reported(daemon):
+    call = _rpc(daemon)
+    r = call("start", title="Tall", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
+    chain = " --> ".join(f"n{i}[Step {i}]" for i in range(7))
+    md = f"# Tall\n\nOpening words.\n\n## Chain {{#chain}}\n\n```mermaid\nflowchart TB\n  {chain}\n```\n\nThe [first step](#n0) starts it.\n\n"
+    md += (
+        f"## Wide {{#wide .side}}\n> The chain beside a point\n\n```mermaid\nflowchart TB\n  {chain}\n```\n\nThe [first step](#n0) again.\n"
+    )
+    call("add", handle=r["handle"], markdown=md)
+    call("playable", handle=r["handle"], timeout=10)
+    f = call("finish", handle=r["handle"], questions=None)
+    found = [i for i in f["player_issues"] if i["code"] == "diagram_shape"]
+    assert [i["slide"] for i in found] == ["chain"] and "flowchart LR" in found[0]["message"], found
+
+
 def test_moving_dots_and_counting_numbers_change_the_capture_key(daemon, browser):
     call = _rpc(daemon)
     r = call("start", title="Motion", frame="landscape", voice="", speed=1.0, project_dir=str(ROOT))
@@ -921,7 +936,7 @@ flowchart TB
   hit --> db[(Database)]
 ```
 
-The [lookup](#L2) is one line; [the check](#hit) decides.
+The [lookup](#L2) is one line; [the check](#hit) decides, and [the database](# "Database") answers a miss.
 
 ## Edge to edge {#full .full}
 
@@ -1005,4 +1020,79 @@ def test_layouts_render_inside_the_slide(daemon, browser, frame):
     page.wait_for_timeout(400)
     moving = page.evaluate("() => [...document.querySelectorAll('.slide:not(.leaving) .entering')].length")
     assert moving == 3
+    # Quoted text that only the second pane has is found there.
+    page.goto(f"{url}?at={_at(page, 'pair', 2, 0.3):.2f}")
+    page.wait_for_timeout(1200)
+    assert page.evaluate("() => !!document.querySelector('.slide:not(.leaving) .pane-2 .active')")
+    page.goto(f"{url}?at={starts[6][0] + 0.15:.2f}")
+    page.wait_for_timeout(400)
+    # Landing there by a jump still shows the slide before on its way out, as playing through would.
+    leaving = page.evaluate("() => [...document.querySelectorAll('.slide.leaving')].map((s) => s.className)")
+    assert len(leaving) == 1 and "k-text" in leaving[0], leaving
+    page.close()
+
+
+CHARTS_DOC = """# Charts
+
+Opening words.
+
+## Bars {#bars}
+
+```chart bar unit="ms"
+series: before, after
+read: 420, 180
+write: 610, 390
+```
+
+The bars grow from the axis while this sentence plays out over a few seconds of narration.
+
+## Line {#line}
+
+```chart line
+x: 2021, 2022, 2023, 2024
+users: 10, 20, 45, 80
+```
+
+The line draws itself from left to right while this sentence plays for a few seconds.
+
+## Picture {#picture}
+
+![A settings page](tests/js/golden/files/screen.png)
+
+The picture pushes in slowly while this sentence plays for a few seconds of narration.
+"""
+
+
+def test_charts_and_pictures_move_by_the_clock(daemon, browser):
+    url = _make(daemon, "landscape", CHARTS_DOC, "Charts")
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    page.goto(url + "?capture=1")
+    page.wait_for_function("window.__showntell !== undefined")
+    starts = page.evaluate(
+        """() => import('./' + document.body.dataset.static + '/js/timeline.js').then((m) => fetch('data.json')
+             .then((r) => r.json()).then((w) => { const tl = m.build(w); return w.slides.map((_, i) => [m.slideStart(tl, i), m.slideEnd(tl, i)]); }))"""
+    )
+
+    def look(i, dt):
+        page.evaluate("(t) => window.__showntell.seek(t)", min(starts[i][0] + dt, starts[i][1] - 0.1))
+        return page.evaluate(
+            """() => { const s = document.querySelector('.slide:not(.leaving) .chart svg');
+              return {bars: [...s.querySelectorAll('g.bar rect')].map((r) => r.style.transform),
+                      dash: s.querySelector('.line')?.style.strokeDashoffset || ''}; }"""
+        )
+
+    early = look(1, 0.6)
+    page.screenshot(path=str(ART / "chart-growing.png"))
+    late = look(1, 3.0)
+    assert all(t.startswith("scaleY(") for t in early["bars"]) and len(set(early["bars"])) > 1, early
+    assert late["bars"] == ["", "", "", ""], late
+    early, late = look(2, 0.7), look(2, 3.0)
+    assert float(early["dash"]) > 0 and late["dash"] == "", (early, late)
+    # The picture pushes in by the clock, clipped to its own box.
+    scales = []
+    for dt in (0.2, 3.0):
+        page.evaluate("(t) => window.__showntell.seek(t)", min(starts[3][0] + dt, starts[3][1] - 0.1))
+        scales.append(page.evaluate("() => document.querySelector('.slide:not(.leaving) .kb img').style.transform"))
+    a, b = (float(s[6:-1]) for s in scales)
+    assert 1 <= a < b <= 1.06, scales
     page.close()

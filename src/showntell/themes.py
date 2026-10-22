@@ -6,7 +6,7 @@ import json
 import re
 from pathlib import Path
 
-THEMES = ("dark", "light", "paper", "contrast")
+THEMES = ("dark", "light", "paper", "contrast", "night", "ocean", "studio")
 DEFAULT = "dark"
 PROJECT_FILE = "showntell.theme.json"
 CSS = Path(__file__).parent / "static" / "themes.css"

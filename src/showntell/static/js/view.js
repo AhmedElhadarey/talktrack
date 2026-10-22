@@ -30,7 +30,7 @@ export function render(force) {
   if (st.slide < 0) return;
   const slide = W.slides[st.slide];
   if (force || shown.slide !== st.slide || shown.rev !== slide.rev || shown.id !== slide.id) {
-    if (shown.slide !== st.slide || shown.rev !== slide.rev || shown.id !== slide.id) showSlide(st.slide);
+    if (shown.slide !== st.slide || shown.rev !== slide.rev || shown.id !== slide.id) showSlide(st.slide, st.sinceSlide);
   }
   const entering = applyEntrance(st);
   if (entering && st.cue) S.lastCueKey = ""; // the slide is still moving in: place the pointer where the target is now
@@ -40,7 +40,7 @@ export function render(force) {
   updateTime(st);
 }
 
-function showSlide(i) {
+function showSlide(i, since = Infinity) {
   const { W } = S;
   const slide = W.slides[i];
   const was = S.shown.slide;
@@ -48,18 +48,31 @@ function showSlide(i) {
   S.lastCueKey = S.lastReveal = S.zoomFor = "";
   clearMarks();
   const v = renderSlide(slide, { frame: W.frame, report, prev: W.slides[i - 1], ...placeOf(W, i) });
-  // Moving on by one slide, the old one stays for the transition; any other jump cuts.
-  const old = was === i - 1 ? host.querySelector(".slide:not(.leaving)") : null;
+  // Moving on by one slide, the old one stays for the transition; any other jump cuts, unless it
+  // lands inside the transition (a seek, or an export worker starting its share of the video):
+  // then the slide before is drawn again, as it ended, so the frame matches playing through.
+  let old = was === i - 1 ? host.querySelector(".slide:not(.leaving)") : null;
+  const redrawn = !old && i > 0 && since < ENTER_S && !reducedMotion()
+    ? renderSlide(W.slides[i - 1], { frame: W.frame, report, prev: W.slides[i - 2], ...placeOf(W, i - 1) }) : null;
+  if (redrawn) old = redrawn.root;
   host.querySelectorAll(".slide").forEach((e) => { if (e !== old) e.remove(); });
   if (old) old.classList.add("leaving");
+  if (redrawn) host.append(old);
   host.append(v.root);
   S.enter = { type: entranceFor(W, i, slide), root: v.root, old, done: false };
   const bodyEl = v.root.querySelector(".slide-body");
   const view = S.view = { ...v, body: bodyEl, done: false };
   const panes = v.panes || [];
-  v.ready.then(() => document.fonts?.ready).then(() => {
+  Promise.all([v.ready, redrawn?.ready]).then(() => document.fonts?.ready).then(() => {
     if (view.root !== S.view.root) return;
     for (const p of panes) (p.kind.layout || fit)(p.body, p.parts);
+    if (redrawn) {
+      const end = stateAt(W, S.TL, now() - since - 0.05);
+      (redrawn.panes || []).forEach((p, k, all) => {
+        (p.kind.layout || fit)(p.body, p.parts);
+        p.kind.frame?.(all.length > 1 ? paneState(end, k) : end, p.slide, p.parts, now() - since - 0.05);
+      });
+    }
     view.done = true;
     S.lastCueKey = S.lastReveal = "";
     render(true);

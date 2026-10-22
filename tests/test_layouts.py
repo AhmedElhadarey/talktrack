@@ -143,3 +143,13 @@ def test_dense_slides_without_a_takeaway_are_reported_once(build):
         "# T\n\nA.\n\n" + "".join(f"## S{i}\n> the point\n\n```python\nx = {i}\n```\n\nThe [line](#L1) sets it.\n\n" for i in range(3))
     )
     assert "no_takeaway" not in codes(b)
+
+
+def test_each_slide_has_a_look_for_the_outline(build):
+    from showntell.checks import look
+
+    w, _ = build(
+        PAIR
+        + "The [lookup](#L2) is one line.\n\n## Parts {.cards .side}\n> :zap: Fast\n\n- :database: **Store**: rows\n\nThe [store](#store) keeps rows.\n"
+    )
+    assert [look(s) for s in w.slides] == ["title", "code+diagram", "cards side takeaway icons"]

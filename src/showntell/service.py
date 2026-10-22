@@ -88,6 +88,7 @@ class LocalService:
     async def finish(self, handle: str, questions: list[str] | None, check: bool = True) -> dict:
         """Close the walkthrough. `check=False` skips drawing the slides headless, for callers
         that only wait for the audio (exporting a Markdown file)."""
+        from .checks import look
         from .export import slide_starts, timeline_total
 
         s = self.store.by_handle(handle)
@@ -97,7 +98,7 @@ class LocalService:
         says = [x for sl in s.w.slides for x in sl.says if x.text]
         starts = slide_starts(s.w)
         return {
-            "outline": [{"id": sl.id, "title": sl.title, "start_s": round(starts[sl.id], 1)} for sl in s.w.slides],
+            "outline": [{"id": sl.id, "title": sl.title, "start_s": round(starts[sl.id], 1), "look": look(sl)} for sl in s.w.slides],
             "url": s.url,
             "slides": len(s.w.slides),
             "duration_s": round(timeline_total(s.w), 1),

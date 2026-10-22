@@ -61,7 +61,7 @@ A heading may end with attributes in braces: `## The lookup {#lookup .build}`.
 | **`.full`** | the visual over the whole slide, the title and takeaway in a small panel in the top corner |
 | **statement** | a slide with no visual: its first `>` line as one large sentence, the heading as a kicker above it (the heading alone when there is no `>` line), and further `>` lines smaller below |
 
-On a `.pair` slide a cue points into the first visual when it has the target, else into the second; give the two visuals different ids. `.build` does not apply to a pair, and only the first visual may have `step` versions.
+On a `.pair` slide a cue points into the first visual when it has the target, else into the second; give the two visuals different ids. Quoted text (`[label](# "text")`) is looked for in both. `.build` does not apply to a pair, and only the first visual may have `step` versions.
 
 Every content slide has a kicker above its title: its number among the content slides and the part it belongs to. Slides come in by the narration's clock, so seeking and MP4 export show the same motion: they rise in, a slide that shows the same kind of visual in the same layout as the one before slides across like a page, title and chapter slides zoom in, and cards, numbers, rows, messages and takeaways arrive one after another (except on `.build` slides).
 
@@ -196,6 +196,8 @@ A path is read from the project folder and copied into the walkthrough. An `http
 
 `{frame=browser url="shop.example.com"}` after the image draws it in browser chrome with that address; `frame=window` and `frame=phone` work too. A cue can point at part of the picture with `#@left,top,width,height`, in percent of the picture: `[the search box](#@5,17,54,8)`.
 
+A picture that no cue points into slowly pushes in while the slide plays; one with region cues holds still, so the pointer stays on its box.
+
 ### Chart
 
 ````markdown
@@ -212,7 +214,7 @@ write: 610, 390
 | **`hbar`** | as `bar`, one series, drawn horizontally for long labels | `#label` |
 | **`line`** | an `x: …` line first, then one `name: v1, v2, …` line per series with as many values as x values | `#name`: the series |
 
-Options: `title=`, `unit=` (shown after values), `x=` and `y=` (axis labels). Values may carry a unit suffix such as `ms` or `%`. At most 12 bars or series read well. The player draws the chart in the theme's colours.
+Options: `title=`, `unit=` (shown after values), `x=` and `y=` (axis labels). Values may carry a unit suffix such as `ms` or `%`. At most 12 bars or series read well. The player draws the chart in the theme's colours: bars grow from the axis one after another and lines draw left to right as the slide arrives, then values and callouts appear.
 
 A `note` line adds a callout: `note 400: tail grows here` at that x value (every series), `note p99/400: …` on one series, or `note write: …` above a bar. Cue notes as `#note-1`, `#note-2` in the order written.
 
@@ -389,6 +391,9 @@ These are the sizes that still render at a comfortable reading size, measured wi
 | **`dark`** | the default |
 | **`light`** | white slides |
 | **`paper`** | warm off-white slides |
+| **`night`** | deep indigo, pink accent |
+| **`ocean`** | deep teal, coral accent |
+| **`studio`** | bright lavender-white, violet accent |
 | **`contrast`** | black slides, white text, yellow pointer |
 
 The walkthrough's theme comes from `start_walkthrough`'s `theme`, else front matter `theme:`, else the project's `showntell.theme.json`, else `dark`. Viewers can switch with `?theme=` or the player menu. A project file can also replace single colours:

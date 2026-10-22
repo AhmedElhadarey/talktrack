@@ -8,6 +8,7 @@ import re
 import pytest
 from mcp.client import Client
 
+from showntell import themes
 from showntell.build import LIMITS
 from showntell.server import create_mcp
 
@@ -69,7 +70,7 @@ async def test_start_schema_offers_frames_and_voices(mcp):
         (t,) = [t for t in (await client.list_tools()).tools if t.name == "start_walkthrough"]
         props = t.input_schema["properties"]
         assert set(props) == {"title", "frame", "voice", "speed", "project_dir", "opening", "theme"}
-        assert set(props["theme"]["enum"]) == {"", "dark", "light", "paper", "contrast"}
+        assert set(props["theme"]["enum"]) == {"", *themes.THEMES}
         assert "af_heart" in props["voice"]["description"]
         assert t.input_schema["required"] == ["title"]
 
