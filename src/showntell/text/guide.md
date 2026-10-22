@@ -14,6 +14,7 @@ Settle the arc before the next call: a viewer cannot skim back.
 - **Read first:** open the files and diffs before writing; if playback catches up, the player pauses.
 - **Show behaviour.** After two or three code or diff slides, show the code running: a Mermaid sequence or state diagram, or a terminal (`code_run`).
 - **Show the thing.** A concept explainer draws what it explains: the sun, the ray, the lens. Mermaid is for flows, structure and states, not objects.
+- **Change in place.** When the same drawn thing changes state between two slides (before and after, a part moving, a value growing), draw it again on the next slide with `{.morph}` on the heading and the same `id`s on the elements that move, so the picture glides instead of cutting.
 - **Every topic gets pictures.** History, business, economics: dated events as a `.timeline` list; causes and consequences as a Mermaid flowchart (not Mermaid's `timeline`: it can't be cued); money and growth as charts; places and objects as drawings.
 - **Words last.** Lists, tables and text alone are the last resort, for words with no shape: at most about a third of the slides, never three in a row (`plain_run`). A table of numbers is a chart (`table_numbers`). A stat counts up from zero: `before -> after` only for a real change (`stat_no_change`).
 
