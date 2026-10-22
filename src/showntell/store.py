@@ -521,6 +521,7 @@ class Store:
                     "id": data["id"],
                     "title": data.get("title", ""),
                     "description": data.get("description", ""),
+                    "poster": (d / "poster.png").is_file(),
                     "handle": f"{data['id']}.{data.get('key', '')}",
                     "created": data.get("created", 0),
                     "updated": data.get("updated", 0),

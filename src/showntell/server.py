@@ -568,6 +568,7 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
                 theme=s.w.theme,
                 tokens=s.w.tokens,
                 description=s.w.description,
+                poster=f"{s.url}/poster.png" if (store.walk_dir(s.w.id) / "poster.png").is_file() else "",
             ),
             headers={"Cache-Control": "no-store"},
         )
@@ -639,6 +640,12 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
             s._changed({hit[0].id})
             return Response("Being voiced again", status_code=404)
         return _file(store.narrator.cache_dir, f"{key}.wav", immutable=True)
+
+    @mcp.custom_route("/w/{wid}/poster.png", methods=["GET"])
+    async def poster(request: Request) -> Response:
+        if not session_or_404(request):
+            return Response("Not found", status_code=404)
+        return _file(store.walk_dir(request.path_params["wid"]), "poster.png")
 
     @mcp.custom_route("/w/{wid}/assets/{name}", methods=["GET"])
     async def assets(request: Request) -> Response:
@@ -726,6 +733,7 @@ def render_player(
     theme: str = "dark",
     tokens: dict | None = None,
     description: str = "",
+    poster: str = "",
 ) -> str:
     from .themes import THEMES, clean_tokens, style_attr
 
@@ -734,6 +742,8 @@ def render_player(
     style = html.escape(style_attr(clean_tokens(tokens or {})[0]))
     desc = html.escape(" ".join(description.split()))
     meta = f'<meta name="description" content="{desc}">\n<meta property="og:description" content="{desc}">\n' if desc else ""
+    if poster:
+        meta += f'<meta property="og:image" content="{html.escape(poster)}">\n'
     return (
         page.replace("{{TITLE}}", html.escape(title))
         .replace("{{DESCRIPTION}}\n", meta)
@@ -753,8 +763,9 @@ def render_index(rows: list[dict], suffix: str) -> str:
         when = time.strftime("%d %b %Y, %H:%M", time.localtime(r["created"]))
         badge = '<span class="badge">writing</span>' if r["status"] != "finished" else ""
         desc = f'<span class="desc">{html.escape(r["description"])}</span>' if r.get("description") else ""
+        thumb = f'<img class="thumb" src="/w/{r["id"]}/poster.png" alt="">' if r.get("poster") else '<span class="thumb"></span>'
         items.append(
-            f'<li data-id="{r["id"]}"><a href="/w/{r["id"]}/{suffix}">{html.escape(r["title"] or "Untitled")}</a>{badge}{desc}'
+            f'<li data-id="{r["id"]}">{thumb}<a href="/w/{r["id"]}/{suffix}">{html.escape(r["title"] or "Untitled")}</a>{badge}{desc}'
             f'<span class="meta">{when} · {r["slides"]} slides · {mmss(r["duration"])} · {r["frame"]}</span>'
             f'<button class="del" title="Delete" aria-label="Delete {html.escape(r["title"])}">Delete</button></li>'
         )

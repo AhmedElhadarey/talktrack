@@ -495,6 +495,16 @@ def test_finish_shows_slides_that_look_alike(daemon):
     assert f["alike"] == [{"slides": ["p0", "p1", "p2"], "look": "code"}]
     assert [x["id"] for x in f["thumbs"]] == ["p0", "p1", "p2"]
     assert all(base64.b64decode(x["png"])[:8] == b"\x89PNG\r\n\x1a\n" for x in f["thumbs"])
+    # Finishing also kept the title slide as the poster, served next to the player and shown in the gallery.
+    import httpx
+
+    poster = httpx.get(f"{r['url']}/poster.png")
+    assert poster.status_code == 200 and poster.content[:8] == b"\x89PNG\r\n\x1a\n"
+    w, h = int.from_bytes(poster.content[16:20], "big"), int.from_bytes(poster.content[20:24], "big")
+    assert (w, h) == (640, 360)
+    base = r["url"].rsplit("/w/", 1)[0]
+    assert f'<img class="thumb" src="/w/{r["url"].rsplit("/", 1)[1]}/poster.png" alt="">' in httpx.get(f"{base}/").text
+    assert f'<meta property="og:image" content="{r["url"]}/poster.png">' in httpx.get(f"{r['url']}/").text
 
 
 def test_long_code_steps_that_scroll_fit_the_slide(daemon):

@@ -84,6 +84,8 @@ class LocalService:
     async def revise(self, handle: str, slide: str, markdown: str) -> dict:
         s = self.store.by_handle(handle)
         r = s.revise(slide, markdown)
+        if s.w.slides and s.w.slides[0].id == slide:  # the poster shows the title slide; finish draws a new one
+            (self.store.walk_dir(s.w.id) / "poster.png").unlink(missing_ok=True)
         r["issues"] = _dicts(r["issues"] + s.take_late_issues())
         return {**r, "url": s.url, "player_issues": _dicts(s.take_player_issues())}
 
@@ -135,8 +137,10 @@ class LocalService:
 
         async def run() -> None:
             async with Capturer(s.url, short=360) as c:
-                for sid, t in list(ends.items())[:LAYOUT_CHECK_MAX]:
+                for i, (sid, t) in enumerate(list(ends.items())[:LAYOUT_CHECK_MAX]):
                     await c.seek(t, measure=True)
+                    if i == 0:  # the settled title slide: the poster for the gallery and link previews
+                        (self.store.walk_dir(s.w.id) / "poster.png").write_bytes(await c.shot())
                     if sid in shoot and shots is not None:
                         shots[sid] = await c.shot()
                 for f in await c.page.evaluate("window.__showntell.findings || []"):

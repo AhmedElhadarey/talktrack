@@ -7,7 +7,7 @@
     out/static/         player code and the bundled libraries
     out/captions.vtt    captions on the walkthrough's single timeline
     out/source.md       the Markdown the walkthrough was written in
-    out/poster.png      the title slide, for link previews (only when Playwright is installed)
+    out/poster.png      the title slide, for link previews (drawn here with Playwright, else the one finish kept)
 
 An output path ending in `.mp4` renders a video instead (video.py), and one ending in `.html`
 writes a single self-contained page (export_html) that plays offline from a double-click.
@@ -179,7 +179,7 @@ def export(
     src_md = data_dir / "walkthroughs" / wid / "source.md"
     if src_md.is_file():
         (out / "source.md").write_text(src_md.read_text())
-    if poster and copy_static and write_poster(out):
+    if poster and copy_static and (write_poster(out) or _copy_poster(data_dir / "walkthroughs" / wid, out)):
         page = (out / "index.html").read_text()
         meta = (
             '<meta property="og:image" content="poster.png">\n'
@@ -376,6 +376,15 @@ def write_poster(folder: Path) -> bool:
         print(f"warning: no poster.png: {e}", file=sys.stderr)
         return False
     (folder / "poster.png").write_bytes(png)
+    return True
+
+
+def _copy_poster(folder: Path, out: Path) -> bool:
+    """The poster finish_walkthrough kept (640 wide), when no browser is here to draw a larger one."""
+    src = folder / "poster.png"
+    if not src.is_file():
+        return False
+    shutil.copyfile(src, out / "poster.png")
     return True
 
 

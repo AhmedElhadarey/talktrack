@@ -364,6 +364,9 @@ async def test_finish_layout_check_passes_player_findings_on(store, monkeypatch)
             seen.append((t, measure))
             return ""
 
+        async def shot(self):
+            return b"\x89PNG poster"
+
     monkeypatch.setattr(capture, "Capturer", Fake)
     service = LocalService(store, layout_check=True)
     r = await started(service)
@@ -372,6 +375,7 @@ async def test_finish_layout_check_passes_player_findings_on(store, monkeypatch)
     assert seen and all(m for _, m in seen)
     assert [i["code"] for i in f["player_issues"]] == ["overflow"]
     assert not any(i["code"] == "not_checked" and "player" in i["message"] for i in f["issues"])
+    assert (store.walk_dir(r["handle"].split(".")[0]) / "poster.png").read_bytes() == b"\x89PNG poster"
 
 
 async def test_adding_after_finish_reopens(service, store):
@@ -517,6 +521,26 @@ async def test_description_from_argument_or_front_matter(service, store):
     rows = {r["handle"]: r for r in await service.list()}
     assert rows[a["handle"]]["description"] == "How the cache serves reads."
     assert rows[b["handle"]]["description"] == "From the file"
+
+
+async def test_poster_is_listed_reused_by_export_and_dropped_when_the_title_slide_changes(service, store, tmp_path, monkeypatch):
+    import showntell.export as export
+
+    r = await started(service)
+    await service.add(r["handle"], OPENING + "\n" + BODY)
+    s = store.by_handle(r["handle"])
+    s.save_now()
+    assert store.list()[0]["poster"] is False
+    png = b"\x89PNG\r\n\x1a\n" + b"\0" * 16
+    (store.walk_dir(s.w.id) / "poster.png").write_bytes(png)
+    assert store.list()[0]["poster"] is True
+    monkeypatch.setattr(export, "write_poster", lambda folder: False)  # no browser here
+    out = export.export(store.data_dir, s.w.id, tmp_path / "site", poster=True)
+    assert (out / "poster.png").read_bytes() == png and 'content="poster.png"' in (out / "index.html").read_text()
+    await service.revise(r["handle"], "lookup", "The lookup, reworded.\n")
+    assert (store.walk_dir(s.w.id) / "poster.png").is_file()
+    await service.revise(r["handle"], "how-caching-works", "# How caching works\n\nA new opening line.\n")
+    assert not (store.walk_dir(s.w.id) / "poster.png").is_file()
 
 
 # -- list and delete ---------------------------------------------------------------------------------

@@ -216,6 +216,19 @@ async def test_player_page_carries_the_description(http, service, store):
     assert '<meta property="og:title" content="Caching">' in page and "{{DESCRIPTION}}" not in page
 
 
+async def test_poster_route_page_and_gallery(http, walk, store):
+    png = b"\x89PNG\r\n\x1a\n" + b"\0" * 16
+    async with http() as c:
+        assert (await c.get(f"/w/{walk.w.id}/poster.png")).status_code == 404
+        assert "og:image" not in (await c.get(f"/w/{walk.w.id}/")).text
+        assert '<span class="thumb"></span>' in (await c.get("/")).text
+        (store.walk_dir(walk.w.id) / "poster.png").write_bytes(png)
+        r = await c.get(f"/w/{walk.w.id}/poster.png")
+        assert r.status_code == 200 and r.content == png
+        assert f'<meta property="og:image" content="{walk.url}/poster.png">' in (await c.get(f"/w/{walk.w.id}/")).text
+        assert f'<img class="thumb" src="/w/{walk.w.id}/poster.png" alt="">' in (await c.get("/")).text
+
+
 async def test_unknown_player_is_404(http):
     async with http() as c:
         assert (await c.get(f"/w/{'Z' * 22}/")).status_code == 404
