@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Length:** `add_slides` warns once (`too_long`) when the narration passes four minutes, the top of the guide's range, so the agent wraps up or splits the topic instead of finding out at finish.
 - **Fixes:** a daemon restarted right after another stopped kept the port (4747) instead of moving to the next one; the free-port probe now binds as the server does, past sockets left in TIME_WAIT.
 
 ## 0.1.5 (2026-10-22)

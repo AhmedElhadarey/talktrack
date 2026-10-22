@@ -124,6 +124,17 @@ async def test_add_reports_progress_and_issues(service, store, voiced):
     assert a["narration_s"] > 0 and a["total_says"] == 4
 
 
+async def test_add_warns_once_when_narration_passes_the_target(service, store):
+    r = await started(service)
+    await service.add(r["handle"], OPENING)
+    para = " ".join(["word"] * 60) + ".\n\n"  # about 22 s unvoiced
+    a = await service.add(r["handle"], "".join(f"## Part {i}\n\n{para}{para}" for i in range(6)))  # about 4.5 minutes
+    codes = [i["code"] for i in a["issues"]]
+    assert codes.count("too_long") == 1 and a["narration_s"] > 240
+    b = await service.add(r["handle"], "## More\n\n" + para)
+    assert "too_long" not in [i["code"] for i in b["issues"]]
+
+
 # -- revising ----------------------------------------------------------------------------------------
 
 

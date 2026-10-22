@@ -9,7 +9,7 @@ Settle the arc before the next call: a viewer cannot skim back.
 - **Open with the point.** Say what the change or system does for the viewer, in plain words, no backticked names (`opening_code_names`).
 - **Arc:** purpose (the problem solved, or what changed and why), then mechanism (in the order control or data flows), then consequences (edge cases, trade-offs, what to check next). The last slide answers the opening's question; those two alone say why it matters.
 - **One idea per slide.** If a slide needs "and also", split it.
-- **Length:** 6 to 12 slides, 2 to 4 minutes: 300 to 600 spoken words, two to four short paragraphs a slide.
+- **Length:** 6 to 12 slides, 2 to 4 minutes: 300 to 600 spoken words, two to four short paragraphs a slide. Each add_slides reply gives the running length; past four minutes it warns (`too_long`): finish, or leave the rest for a second walkthrough.
 - **Chapters:** past about ten slides, open each part with a `## Title {.chapter}` card; narration optional.
 - **Read first:** open the files and diffs before writing; if playback catches up, the player pauses.
 - **Show behaviour.** After two or three code or diff slides, show the code running: a Mermaid sequence or state diagram, or a terminal (`code_run`).

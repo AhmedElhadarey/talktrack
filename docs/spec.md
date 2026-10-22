@@ -119,6 +119,7 @@ Findings from the server, found while parsing, building and voicing:
 | `code_body_ignored` | info | a `file=` block had a body, which was ignored |
 | `image_no_alt` | warning | an image has no alt text |
 | `too_many_slides` | warning | the walkthrough is over the slide limit |
+| `too_long` | warning | narration is past the length the guide aims for |
 | `revise_kept_first` | warning | revise_slide got more than one slide and kept the first |
 | `code_too_tall` | warning | code has more lines than the frame shows comfortably |
 | `code_too_wide` | warning | code lines are wider than the frame shows comfortably |

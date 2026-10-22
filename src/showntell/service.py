@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .issues import as_dict
-from .store import Store
+from .store import Store, narration_seconds
 
 
 def _dicts(items) -> list[dict]:
@@ -51,7 +51,7 @@ class LocalService:
             "total_slides": len(s.w.slides),
             "total_says": len(says),
             "voiced": sum(1 for x in says if x.status == "ready"),
-            "narration_s": round(sum(x.duration or len(x.text.split()) / 2.7 for x in says), 1),
+            "narration_s": round(narration_seconds(s.w), 1),
             "player_issues": _dicts(s.take_player_issues()),
             "slide_ids": [sl.id for sl in s.w.slides],
             "speech": self.speech_status(),

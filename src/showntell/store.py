@@ -31,6 +31,7 @@ MAX_SOURCE_BYTES = 1_000_000
 MAX_SLIDES = 80
 PARAGRAPH_GAP = 0.3  # matches the player's timeline
 STILL_S = 20.0  # longest stretch of narration with nothing changing on screen
+TARGET_S = 240.0  # the guide aims for 2 to 4 minutes of narration
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
 
 
@@ -70,6 +71,14 @@ class Session:
                 "too_many_slides",
                 f"This walkthrough has {len(self.w.slides)} slides; keep it under {MAX_SLIDES}.",
                 "Split it into a series.",
+            )
+        spoken = narration_seconds(self.w)
+        if spoken > TARGET_S and "too_long" not in self.reported:
+            self.reported.add("too_long")
+            b._issue(
+                "too_long",
+                f"Narration is {int(spoken // 60)}:{int(spoken % 60):02d} so far; the guide aims for 2 to 4 minutes.",
+                "Finish soon, or leave the rest for a second walkthrough.",
             )
         for slide, say in b.new_says:
             self._voice(slide, say)
@@ -376,6 +385,11 @@ class Session:
     @property
     def handle(self) -> str:
         return f"{self.w.id}.{self.w.key}"
+
+
+def narration_seconds(w: Walkthrough) -> float:
+    """Spoken length so far: measured where voiced, else about 2.7 words a second."""
+    return sum(x.duration or len(x.text.split()) / 2.7 for sl in w.slides for x in sl.says if x.text)
 
 
 def _on_loop(loop: asyncio.AbstractEventLoop) -> bool:
