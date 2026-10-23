@@ -5,9 +5,11 @@ stdio shim, watch its event stream, open the player in headless Chromium the mom
 is playable, and play at 1x while the agent keeps writing. Afterwards, check cue timing and
 pronunciation against speech recognition.
 
-    uv run --with playwright --with mlx-whisper python scripts/eval.py --models sonnet --runs all
-    uv run --with playwright --with mlx-whisper python scripts/eval.py --models haiku --runs dns,tcp
+    uv run --with mlx-whisper python scripts/eval.py --models sonnet --runs tcp,csrf,arch,speedup,money,seasons
+    uv run --with mlx-whisper python scripts/eval.py --models haiku --runs dns,tcp
 
+Playwright comes from the project environment: `--with playwright` would resolve a newer release
+whose browser build is not installed, and the player watch would fail on launch.
 Results go to eval/results/<time>.json and a summary table is printed.
 """
 
@@ -21,6 +23,7 @@ import shutil
 import sys
 import tempfile
 import time
+import traceback
 from collections import Counter
 from pathlib import Path
 
@@ -171,7 +174,15 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
 
 
 async def play_live(url: str) -> dict:
-    """Play from the start at 1x in headless Chromium, as a viewer who clicked the link at once."""
+    """Play from the start at 1x in headless Chromium, as a viewer who clicked the link at once.
+    A browser that fails to launch is recorded as an error rather than raised into the batch."""
+    try:
+        return await _play_live(url)
+    except Exception as e:  # noqa: BLE001
+        return {"error": f"{type(e).__name__}: {e}".strip()[:300]}
+
+
+async def _play_live(url: str) -> dict:
     from playwright.async_api import async_playwright
 
     async with async_playwright() as p:
@@ -419,11 +430,16 @@ async def main() -> None:
     async def one(p, m):
         async with sem:
             print(f"run {p['id']} on {m}", flush=True)
-            r = await run_agent(p, m, data_dir, args.port, not args.no_play)
-            w = walkthrough_for(data_dir, r.get("url"))
-            r.update(id=p["id"], model=m, kind=p["kind"], summary=summarize(w, p.get("expect")))
-            if w and not args.no_asr:
-                r["asr"] = await asyncio.to_thread(asr_checks, w, data_dir / "audio")
+            r = {"id": p["id"], "model": m, "kind": p["kind"], "issues": 0}
+            try:
+                r.update(await run_agent(p, m, data_dir, args.port, not args.no_play))
+                w = walkthrough_for(data_dir, r.get("url"))
+                r["summary"] = summarize(w, p.get("expect"))
+                if w and not args.no_asr:
+                    r["asr"] = await asyncio.to_thread(asr_checks, w, data_dir / "audio")
+            except Exception:  # noqa: BLE001 - one failed run is a row, not the end of the batch
+                r["error"] = traceback.format_exc()[-2000:]
+                print(f"failed {p['id']} on {m}:\n{r['error']}", flush=True)
             results.append(r)
             flag = " (timed out)" if r.get("timed_out") else ""
             print(f"done {p['id']} on {m}{flag}: link {r.get('link_after_start')}s after start, cost ${r.get('cost') or 0:.3f}", flush=True)
