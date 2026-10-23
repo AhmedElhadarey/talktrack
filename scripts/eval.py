@@ -425,6 +425,9 @@ async def main() -> None:
     data_dir = Path(tempfile.mkdtemp(prefix="showntell-eval-"))
     jobs = [(p, m) for m in args.models.split(",") for p in prompts]
     sem = asyncio.Semaphore(args.parallel)
+    # Speech recognition runs one deck at a time: mlx-whisper's numba layer aborts the whole
+    # process when two threads enter it at once.
+    asr_lock = asyncio.Lock()
     results = []
 
     async def one(p, m):
@@ -436,7 +439,8 @@ async def main() -> None:
                 w = walkthrough_for(data_dir, r.get("url"))
                 r["summary"] = summarize(w, p.get("expect"))
                 if w and not args.no_asr:
-                    r["asr"] = await asyncio.to_thread(asr_checks, w, data_dir / "audio")
+                    async with asr_lock:
+                        r["asr"] = await asyncio.to_thread(asr_checks, w, data_dir / "audio")
             except Exception:  # noqa: BLE001 - one failed run is a row, not the end of the batch
                 r["error"] = traceback.format_exc()[-2000:]
                 print(f"failed {p['id']} on {m}:\n{r['error']}", flush=True)
