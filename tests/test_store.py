@@ -336,9 +336,11 @@ async def test_finish_layout_check_reports_why_it_could_not_run(store, monkeypat
     r = await started(service)
     await service.add(r["handle"], OPENING)
     f = await service.finish(r["handle"], None)
-    unchecked = [i["message"] for i in f["issues"] if i["code"] == "not_checked"]
-    assert any("Playwright is not installed" in m for m in unchecked)
-    assert not any("No player has opened" in m for m in unchecked)
+    missing = [i for i in f["issues"] if i["code"] == "no_browser"]
+    assert len(missing) == 1 and missing[0]["severity"] == "warning"
+    assert "Playwright is not installed" in missing[0]["message"] and "not drawn" in missing[0]["message"]
+    assert "showntell doctor" in missing[0]["fix"]
+    assert not any(i["code"] == "not_checked" and "No player has opened" in i["message"] for i in f["issues"])
 
 
 async def test_finish_layout_check_passes_player_findings_on(store, monkeypatch):

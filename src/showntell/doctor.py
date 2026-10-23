@@ -13,6 +13,12 @@ from .config import Config
 
 # Until showntell is on PyPI, where this becomes `uvx showntell mcp`.
 INSTALL = "uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.6 showntell mcp"
+# The same install with the browser that draws slides: the `video` extra adds Playwright, and
+# `playwright install chromium` fetches its Chromium, about 100 MB, once.
+VIDEO_FROM = "'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.6'"
+INSTALL_VIDEO = f"uvx --from {VIDEO_FROM} showntell mcp"
+INSTALL_BROWSER = f"uvx --from {VIDEO_FROM} playwright install chromium"
+BROWSER_HINT = f"start showntell with the video extra and fetch the browser once:\n    {INSTALL_VIDEO}\n    {INSTALL_BROWSER}"
 
 OK, WARN, FAIL = "ok", "warn", "fail"
 
@@ -36,14 +42,27 @@ def _chromium() -> str:
     return path if Path(path).is_file() else ""
 
 
-def _video_check() -> tuple[str, str, str]:
-    """MP4 export needs ffmpeg and Chromium; a missing one is a warning, as only exports need it."""
+def _browser_check() -> tuple[str, str, str]:
+    """finish_walkthrough draws every slide in Playwright's Chromium. Without it the layout check,
+    the pictures of alike slides, the poster and MP4 export are off; the rest works, so a warning."""
+    if _chromium():
+        return OK, "slide checks", "Playwright Chromium found: finish_walkthrough draws every slide; MP4 export can render"
+    return (
+        WARN,
+        "slide checks",
+        (
+            "Playwright Chromium not found: finish_walkthrough does not draw the slides, so the agent gets no layout "
+            "findings, no pictures of alike slides and no poster, and MP4 export is off. To add it, " + BROWSER_HINT
+        ),
+    )
+
+
+def _ffmpeg_check() -> tuple[str, str, str]:
+    """MP4 export needs ffmpeg and ffprobe; HTML and folder exports do not."""
     missing = [x for x in ("ffmpeg", "ffprobe") if not shutil.which(x)]
-    if not _chromium():
-        missing.append("Playwright Chromium (the `video` extra, then `playwright install chromium`)")
     if missing:
-        return WARN, "video export", "MP4 export and slide checks need " + ", ".join(missing) + "; HTML export works without"
-    return OK, "video export", "ffmpeg and Chromium found: MP4 export works"
+        return WARN, "mp4 export", "needs " + " and ".join(missing) + " (for example `brew install ffmpeg`); HTML export works without"
+    return OK, "mp4 export", "ffmpeg and ffprobe found"
 
 
 def doctor(cfg: Config, args) -> None:
@@ -64,8 +83,9 @@ def doctor(cfg: Config, args) -> None:
     # git, used for diffs read from the project
     _row(OK if shutil.which("git") else WARN, "git", shutil.which("git") or "not found: diffs from git revisions will not work")
 
-    # MP4 export and the finish-time layout check
-    _row(*_video_check())
+    # the finish-time layout check, and MP4 export
+    _row(*_browser_check())
+    _row(*_ffmpeg_check())
 
     # speech backend and models
     from .speech import Status, make_backend
@@ -141,5 +161,6 @@ def doctor(cfg: Config, args) -> None:
     print("Connect an MCP client:")
     print(f"  Claude Code   claude mcp add --scope user showntell -- {INSTALL}")
     print(f"  any client    command: {INSTALL}   (stdio)")
+    print(f"  with browser  {INSTALL_VIDEO}   then once: {INSTALL_BROWSER}")
     print(f"  over HTTP     {cfg.base_url}/mcp   (after `showntell serve`)")
     sys.exit(1 if problems else 0)

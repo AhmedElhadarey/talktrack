@@ -30,6 +30,15 @@ The tag after `@` installs that release; leave it off for the latest commit. Onc
 
 The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model. The first walkthrough takes a few seconds longer while they load. After that, everything works offline.
 
+The base install leaves out the browser that draws slides. With it, `finish_walkthrough` checks every slide's layout and shows the agent pictures of slides that look alike, each walkthrough gets a poster in the gallery, and MP4 export works. To add it, use the `video` extra in place of the command above and fetch Chromium (about 100 MB) once:
+
+```zsh
+uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.6' showntell mcp
+uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.6' playwright install chromium
+```
+
+`showntell doctor` says whether the browser was found. Without it, finish tells the agent the slides were not drawn.
+
 Or paste this into your agent and let it set itself up:
 
 ```text

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **A missing browser is loud:** the base install has no Playwright Chromium, so `finish_walkthrough` was skipping its layout check and saying so only in an info line. It now reports `no_browser` as a warning naming what the reply lacks (layout findings, pictures of alike slides, the poster); `showntell doctor` has a `slide checks` row with the two commands that add the browser; the daemon logs it once; the README's install section says how to install with it.
+
 ## 0.1.6 (2026-10-22)
 
 - **Poster:** finishing keeps a picture of the title slide as `/w/{id}/poster.png`: the gallery shows it as a thumbnail, the live page carries it as `og:image`, and a folder export without a browser reuses it. Revising the title slide drops it until the next finish.

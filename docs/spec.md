@@ -179,7 +179,7 @@ Findings from the open player, measured after a slide has settled. Their message
 | `slow_render` | info | a slide took longer to draw than the player waits |
 | `viewer_waited` | info | the viewer caught up with the writer and waited |
 
-`finish_walkthrough` draws every slide fully revealed in headless Chromium when Playwright is installed (up to 60 slides, 25 s at most; `SHOWNTELL_FINISH_CHECK=0` turns it off), so render and layout findings reach the agent before it stops, not only when someone opens the link. It adds `not_checked` findings for checks that could not run: Playwright is missing and no player has opened the walkthrough, or some narration has no audio yet.
+`finish_walkthrough` draws every slide fully revealed in headless Chromium (up to 60 slides, 25 s at most; `SHOWNTELL_FINISH_CHECK=0` turns it off), so render and layout findings reach the agent before it stops, not only when someone opens the link. The base install has no browser: then finish reports `no_browser` (warning), the reply carries no layout findings, pictures of alike slides or poster, and `showntell doctor` prints the two commands that add it (the `video` extra, then `playwright install chromium`). `not_checked` (info) covers the rest: the drawing failed or timed out, no player has opened the walkthrough, or some narration has no audio yet.
 
 ## Install and daemon
 

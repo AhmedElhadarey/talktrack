@@ -23,21 +23,27 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from .model import FRAMES
 
-INSTALL_HINT = (
-    "run it with the video extra, for example `uvx --from 'showntell[video]' showntell export ...`, "
-    "and install the browser once with `uvx --from 'showntell[video]' playwright install chromium`"
-)
+
+def install_hint() -> str:
+    """The two commands that add the browser, pinned to this release by `showntell doctor`."""
+    from .doctor import BROWSER_HINT
+
+    return BROWSER_HINT
 
 
 class CaptureUnavailable(RuntimeError):
-    """Playwright or its Chromium is not installed."""
+    """Playwright or its Chromium is not installed. `reason` is the short form, without the hint."""
+
+    def __init__(self, reason: str, hint: str = ""):
+        self.reason = reason
+        super().__init__(f"{reason}: {hint}" if hint else reason)
 
 
 def require_playwright():
     try:
         from playwright.async_api import async_playwright
     except ImportError as e:
-        raise CaptureUnavailable(f"capturing frames needs Playwright, which is not installed: {INSTALL_HINT}") from e
+        raise CaptureUnavailable("Playwright is not installed", install_hint()) from e
     return async_playwright
 
 
@@ -177,7 +183,7 @@ async def launch(pw):
         return await pw.chromium.launch()
     except Exception as e:
         if "Executable doesn't exist" in str(e) or "playwright install" in str(e):
-            raise CaptureUnavailable(f"Playwright's Chromium is not installed: {INSTALL_HINT}") from e
+            raise CaptureUnavailable("Playwright's Chromium is not installed", install_hint()) from e
         raise
 
 

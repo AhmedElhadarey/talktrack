@@ -186,19 +186,29 @@ class Session:
             self.w.slides[idx] = new
             self._changed({slide_id})
 
-    def finish(self, questions: list[str] | None, unchecked: str | None = None) -> list[str]:
-        """Close the walkthrough. `unchecked` is None when no layout check ran at finish, '' when
-        it ran, or why it could not run."""
+    def finish(self, questions: list[str] | None, unchecked: tuple[str, str] | None = None) -> list[str]:
+        """Close the walkthrough. `unchecked` is None when no layout check was attempted at finish,
+        ('', '') when it ran, or (finding, reason) when it could not run: 'no_browser' for a missing
+        Playwright or Chromium, 'not_checked' for a drawing that failed or timed out."""
         b = self.builder
         b.issues = []
         b.check_all()
         if b.parser.pending.strip():
             b._issue("block_dropped", "A code block was never closed; it was dropped.", "Close it and send the slide with revise_slide.")
             b.parser.pending = ""
-        if unchecked:
+        code, why = unchecked or ("", "")
+        if code == "no_browser":
+            b._issue(
+                "no_browser",
+                f"The slides were not drawn: {why}. This reply has no layout findings, no pictures of alike slides and no poster.",
+                "Tell the user that `showntell doctor` prints the two commands that add the browser. "
+                "Meanwhile, open the link in a browser; what it finds arrives with your next call to this walkthrough.",
+                slide="",
+            )
+        elif code:
             b._issue(
                 "not_checked",
-                f"Render and layout checks could not run: {unchecked}.",
+                f"Render and layout checks could not run: {why}.",
                 "Open the link to run them in your browser; what it finds arrives with your next call to this walkthrough.",
                 slide="",
             )

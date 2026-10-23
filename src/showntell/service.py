@@ -7,12 +7,16 @@ MCP client shares one daemon and one loaded voice model.
 
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 from typing import Any
 
 from .issues import as_dict
 from .store import Store, narration_seconds
+
+log = logging.getLogger("showntell")
+_browser_warned = False
 
 
 def _dicts(items) -> list[dict]:
@@ -102,8 +106,8 @@ class LocalService:
         runs = [[x.id for x in run] for run in alike_runs(s.w.slides)]
         shots: dict[str, bytes] = {}
         want = [sid for run in runs for sid in run][:ALIKE_SHOTS_MAX]
-        unchecked = await self._check_layout(s, want, shots) if layout else ""
-        issues = s.finish(questions, unchecked=unchecked if layout else None) + s.take_late_issues()
+        unchecked = await self._check_layout(s, want, shots) if layout else None
+        issues = s.finish(questions, unchecked=unchecked) + s.take_late_issues()
         says = [x for sl in s.w.slides for x in sl.says if x.text]
         starts = slide_starts(s.w)
         return {
@@ -123,17 +127,19 @@ class LocalService:
     async def list(self) -> list[dict]:
         return self.store.list(20)
 
-    async def _check_layout(self, s, shoot: list[str] = (), shots: dict | None = None) -> str:
+    async def _check_layout(self, s, shoot: list[str] = (), shots: dict | None = None) -> tuple[str, str]:
         """Draw every slide fully revealed in headless Chromium, so the player's render and layout
         checks report before the agent stops; pictures of the slides in `shoot` go into `shots`.
-        Returns why it could not run, or ''."""
+        Returns ('', '') when it ran, or the finding to raise and why: ('no_browser', reason) when
+        Playwright or its Chromium is missing, ('not_checked', reason) when drawing failed."""
         import asyncio
 
         from .capture import Capturer, CaptureUnavailable
 
+        global _browser_warned
         ends = _end_times(s.w)
         if not ends:
-            return ""
+            return "", ""
 
         async def run() -> None:
             async with Capturer(s.url, short=360) as c:
@@ -149,12 +155,15 @@ class LocalService:
         try:
             await asyncio.wait_for(run(), LAYOUT_CHECK_S)
         except CaptureUnavailable as e:
-            return str(e)
+            if not _browser_warned:  # once per daemon, so the log says why finish never draws
+                _browser_warned = True
+                log.warning("finish_walkthrough does not draw the slides: %s", e)
+            return "no_browser", e.reason
         except TimeoutError:
-            return f"drawing the slides took over {LAYOUT_CHECK_S} s"
+            return "not_checked", f"drawing the slides took over {LAYOUT_CHECK_S} s"
         except Exception as e:  # a broken page or browser must not fail finish
-            return f"the headless player failed: {str(e).splitlines()[0][:200]}"
-        return ""
+            return "not_checked", f"the headless player failed: {str(e).splitlines()[0][:200]}"
+        return "", ""
 
     async def preview(self, handle: str, slides: list[str] | None = None, short: int = 360) -> dict:
         """Pictures of slides as the viewer sees them once fully revealed, for the agent to check."""

@@ -79,6 +79,7 @@ CODES: dict[str, tuple[str, str]] = {
     "slow_render": ("info", "a slide took longer to draw than the player waits"),
     "viewer_waited": ("info", "the viewer caught up with the writer and waited"),
     # coverage
+    "no_browser": ("warning", "Playwright's Chromium is not installed, so finish did not draw the slides"),
     "not_checked": ("info", "a check could not run"),
 }
 
