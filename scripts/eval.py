@@ -31,6 +31,8 @@ from showntell.checks import _layout, look  # noqa: E402
 from showntell.model import Walkthrough  # noqa: E402
 
 URL_RE = re.compile(r"http://(?:localhost|127\.0\.0\.1):\d+/w/[A-Za-z0-9_-]+/?")
+RUN_TIMEOUT = 600  # seconds for one agent run; the longest so far took about 70
+
 ALLOWED = [
     "mcp__showntell",
     "Read",
@@ -73,75 +75,91 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
         *ALLOWED,
     ]
     t0 = time.time()
+    # stderr goes to a file: an unread pipe would block the agent once it filled.
+    err_file = (data_dir / f"claude-{prompt['id']}-{model}.stderr").open("wb")
     proc = await asyncio.create_subprocess_exec(
-        *cmd, cwd=ROOT, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, stdin=asyncio.subprocess.DEVNULL, limit=1 << 24
+        *cmd, cwd=ROOT, stdout=asyncio.subprocess.PIPE, stderr=err_file, stdin=asyncio.subprocess.DEVNULL, limit=1 << 24
     )
     marks: dict = {"tool_calls": [], "issues": 0, "player_issues": 0, "issue_codes": {}}
     player_task = None
     url = None
     tool_names: dict[str, str] = {}
     tool_inputs: dict[str, dict] = {}
-    async for raw in proc.stdout:
-        now = time.time() - t0
-        try:
-            ev = json.loads(raw)
-        except json.JSONDecodeError:
-            continue
-        if ev.get("type") == "assistant":
-            for block in ev["message"].get("content", []):
-                if block.get("type") == "tool_use":
-                    name = block["name"].split("__")[-1]
-                    tool_names[block["id"]] = name
-                    tool_inputs[block["id"]] = block.get("input", {})
-                    marks["tool_calls"].append((round(now, 2), name))
-                    if name == "start_walkthrough":
-                        marks.setdefault("start_call", now)
-                elif block.get("type") == "text" and URL_RE.search(block.get("text", "")) and "link_shared" not in marks:
-                    marks["link_shared"] = now
-        elif ev.get("type") == "user":
-            for block in ev["message"].get("content", []):
-                if block.get("type") != "tool_result":
-                    continue
-                name = tool_names.get(block.get("tool_use_id"), "")
-                text = (
-                    block["content"]
-                    if isinstance(block["content"], str)
-                    else " ".join(c.get("text", "") for c in block["content"] if isinstance(c, dict))
-                )
-                # Claude Code passes the structured content (JSON) when a tool returns some.
+    try:
+        # One hung agent must not hold the whole batch: kill it and record the timeout.
+        async with asyncio.timeout(RUN_TIMEOUT):
+            async for raw in proc.stdout:
+                now = time.time() - t0
                 try:
-                    data = json.loads(text)
-                except ValueError:
-                    data = None
-                if isinstance(data, dict):
-                    text = data.get("message", text)
-                    for d in data.get("issues", []) + data.get("player_issues", []):
-                        if isinstance(d, dict):
-                            marks["issue_codes"][d.get("code", "other")] = marks["issue_codes"].get(d.get("code", "other"), 0) + 1
-                    marks["issues"] += len(data.get("issues", []))
-                    marks["player_issues"] += len(data.get("player_issues", []))
-                else:
-                    marks["issues"] += len(re.findall(r"^- ", text.split("The open player reported")[0], re.M)) if "Problems" in text else 0
-                    for code in re.findall(r"^- .*\((\w+)\)$", text, re.M):
-                        marks["issue_codes"][code] = marks["issue_codes"].get(code, 0) + 1
-                    if "The open player reported" in text:
-                        marks["player_issues"] += text.split("The open player reported")[1].count("\n- ")
-                if name in ("start_walkthrough", "add_slides") and "playable_at" not in marks and re.search(r"playable", text, re.I):
-                    m = URL_RE.search(text)
-                    if m:
-                        marks["playable_at"] = now
-                        url = m.group(0).rstrip("/") + "/"
-                        if play:
-                            player_task = asyncio.create_task(play_live(url))
-                if name == "finish_walkthrough":
-                    marks["finished_at"] = now
-                if name == "start_walkthrough":
-                    marks["opening_in_start"] = "opening" in str(tool_inputs.get(block.get("tool_use_id"), {}))
-        elif ev.get("type") == "result":
-            marks["cost"] = ev.get("total_cost_usd")
-            marks["turns"] = ev.get("num_turns")
-            marks["result_text"] = (ev.get("result") or "")[-400:]
-    await proc.wait()
+                    ev = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if ev.get("type") == "assistant":
+                    for block in ev["message"].get("content", []):
+                        if block.get("type") == "tool_use":
+                            name = block["name"].split("__")[-1]
+                            tool_names[block["id"]] = name
+                            tool_inputs[block["id"]] = block.get("input", {})
+                            marks["tool_calls"].append((round(now, 2), name))
+                            if name == "start_walkthrough":
+                                marks.setdefault("start_call", now)
+                        elif block.get("type") == "text" and URL_RE.search(block.get("text", "")) and "link_shared" not in marks:
+                            marks["link_shared"] = now
+                elif ev.get("type") == "user":
+                    for block in ev["message"].get("content", []):
+                        if block.get("type") != "tool_result":
+                            continue
+                        name = tool_names.get(block.get("tool_use_id"), "")
+                        text = (
+                            block["content"]
+                            if isinstance(block["content"], str)
+                            else " ".join(c.get("text", "") for c in block["content"] if isinstance(c, dict))
+                        )
+                        # Claude Code passes the structured content (JSON) when a tool returns some.
+                        try:
+                            data = json.loads(text)
+                        except ValueError:
+                            data = None
+                        if isinstance(data, dict):
+                            text = data.get("message", text)
+                            for d in data.get("issues", []) + data.get("player_issues", []):
+                                if isinstance(d, dict):
+                                    marks["issue_codes"][d.get("code", "other")] = marks["issue_codes"].get(d.get("code", "other"), 0) + 1
+                            marks["issues"] += len(data.get("issues", []))
+                            marks["player_issues"] += len(data.get("player_issues", []))
+                        else:
+                            marks["issues"] += (
+                                len(re.findall(r"^- ", text.split("The open player reported")[0], re.M)) if "Problems" in text else 0
+                            )
+                            for code in re.findall(r"^- .*\((\w+)\)$", text, re.M):
+                                marks["issue_codes"][code] = marks["issue_codes"].get(code, 0) + 1
+                            if "The open player reported" in text:
+                                marks["player_issues"] += text.split("The open player reported")[1].count("\n- ")
+                        if (
+                            name in ("start_walkthrough", "add_slides")
+                            and "playable_at" not in marks
+                            and re.search(r"playable", text, re.I)
+                        ):
+                            m = URL_RE.search(text)
+                            if m:
+                                marks["playable_at"] = now
+                                url = m.group(0).rstrip("/") + "/"
+                                if play:
+                                    player_task = asyncio.create_task(play_live(url))
+                        if name == "finish_walkthrough":
+                            marks["finished_at"] = now
+                        if name == "start_walkthrough":
+                            marks["opening_in_start"] = "opening" in str(tool_inputs.get(block.get("tool_use_id"), {}))
+                elif ev.get("type") == "result":
+                    marks["cost"] = ev.get("total_cost_usd")
+                    marks["turns"] = ev.get("num_turns")
+                    marks["result_text"] = (ev.get("result") or "")[-400:]
+            await proc.wait()
+    except TimeoutError:
+        marks["timed_out"] = True
+        proc.kill()
+        await proc.wait()
+    err_file.close()
     marks["exit"] = proc.returncode
     marks["wall"] = round(time.time() - t0, 1)
     marks["url"] = url
@@ -407,7 +425,8 @@ async def main() -> None:
             if w and not args.no_asr:
                 r["asr"] = await asyncio.to_thread(asr_checks, w, data_dir / "audio")
             results.append(r)
-            print(f"done {p['id']} on {m}: link {r.get('link_after_start')}s after start, cost ${r.get('cost') or 0:.3f}", flush=True)
+            flag = " (timed out)" if r.get("timed_out") else ""
+            print(f"done {p['id']} on {m}{flag}: link {r.get('link_after_start')}s after start, cost ${r.get('cost') or 0:.3f}", flush=True)
 
     await asyncio.gather(*(one(p, m) for p, m in jobs))
     out = ROOT / "eval" / "results"
