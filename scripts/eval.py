@@ -211,6 +211,20 @@ async def _play_live(url: str) -> dict:
         }
 
 
+async def check_browser() -> None:
+    """Stop before spending on agents when headless Chromium is missing: without it the daemon's
+    finish-time layout check and the player watch both fail, and the table says little."""
+    from playwright.async_api import async_playwright
+
+    try:
+        async with async_playwright() as p:
+            b = await p.chromium.launch()
+            await b.close()
+    except Exception as e:  # noqa: BLE001
+        first = str(e).strip().splitlines()[0] if str(e).strip() else type(e).__name__
+        sys.exit(f"headless Chromium does not launch ({first}); run `uv run playwright install chromium` first")
+
+
 def walkthrough_for(data_dir: Path, url: str | None) -> Walkthrough | None:
     if not url:
         return None
@@ -420,6 +434,7 @@ async def main() -> None:
         Path(args.rescore).write_text(json.dumps(results, indent=1, default=str))
         print_table(results)
         return
+    await check_browser()
     all_prompts = json.loads(Path(args.prompts).read_text())
     prompts = all_prompts if args.runs == "all" else [p for p in all_prompts if p["id"] in args.runs.split(",")]
     data_dir = Path(tempfile.mkdtemp(prefix="showntell-eval-"))
