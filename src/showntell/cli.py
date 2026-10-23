@@ -201,9 +201,10 @@ def play(cfg: Config, args) -> None:
         a = await svc.add(r["handle"], text)
         await svc.playable(r["handle"], 60)
         f = await svc.finish(r["handle"], None)
-        # `play` opens the player itself, so notes about checks that have not run yet do not apply.
+        # `play` opens the player itself, which runs the render and layout checks, so notes about
+        # checks that have not run here (no browser, or not yet) do not apply.
         for issue in a["issues"] + f["issues"]:
-            if issue.get("code") != "not_checked":
+            if issue.get("code") not in ("not_checked", "no_browser"):
                 print(line_text(issue), file=sys.stderr)
         print(f["url"])
         if not args.no_open:
