@@ -1,0 +1,118 @@
+name: showntell walkthrough
+description: Voice a showntell Markdown walkthrough on the runner and attach it to the run and the pull request. No API keys; the voice runs locally.
+author: Rahim Nathwani
+branding:
+  icon: play-circle
+  color: yellow
+
+inputs:
+  markdown:
+    description: The walkthrough's Markdown file, relative to the repository root. `file=` and `rev=` paths in it resolve against the repository.
+    required: true
+  format:
+    description: "`html` (one page that plays offline), `mp4` (a video), or `both`."
+    default: html
+  name:
+    description: Name of the uploaded artifact.
+    default: walkthrough
+  comment:
+    description: On a pull request, post (or update) one comment with the outline, the transcript and the download link. Needs `pull-requests write` permission.
+    default: "true"
+  token:
+    description: Token for the pull request comment.
+    default: ${{ github.token }}
+
+outputs:
+  folder:
+    description: Folder holding walkthrough.html and/or walkthrough.mp4, plus summary.md.
+    value: ${{ steps.voice.outputs.folder }}
+  artifact-url:
+    description: Download link of the uploaded artifact.
+    value: ${{ steps.upload.outputs.artifact-url }}
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v6
+
+    - name: Cache the voice model
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/huggingface
+        key: showntell-voice-${{ runner.os }}-${{ runner.arch }}-v1
+
+    - name: Install showntell
+      shell: bash
+      env:
+        FORMAT: ${{ inputs.format }}
+        SRC: ${{ github.action_path }}
+      run: |
+        venv="$RUNNER_TEMP/showntell-venv"
+        uv venv -q --python 3.12 "$venv"
+        # The versions in this release's lockfile, the ones its tests ran against.
+        extra=(); [[ "$FORMAT" != html ]] && extra=(--extra video)
+        uv export -q --project "$SRC" --frozen --no-dev --no-hashes --no-emit-project "${extra[@]}" > "$RUNNER_TEMP/showntell-req.txt"
+        uv pip install -q --python "$venv/bin/python" -r "$RUNNER_TEMP/showntell-req.txt"
+        uv pip install -q --python "$venv/bin/python" --no-deps "$SRC"
+        echo "$venv/bin" >> "$GITHUB_PATH"
+        if [[ "$FORMAT" != html ]]; then
+          "$venv/bin/playwright" install --with-deps chromium
+          command -v ffmpeg >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q ffmpeg; }
+        fi
+
+    - name: Voice the walkthrough
+      id: voice
+      shell: bash
+      env:
+        MD: ${{ inputs.markdown }}
+        FORMAT: ${{ inputs.format }}
+        SRC: ${{ github.action_path }}
+      run: |
+        out="$RUNNER_TEMP/showntell-out"
+        rm -rf "$out" && mkdir -p "$out"
+        export SHOWNTELL_DATA="$RUNNER_TEMP/showntell-data"
+        # The folder export voices the Markdown and keeps data.json, which the summary reads;
+        # the page and the video are then made from the same walkthrough, without voicing it again.
+        showntell export "$MD" "$out/site"
+        id="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$out/site/data.json")"
+        [[ "$FORMAT" != mp4 ]] && showntell export "$id" "$out/walkthrough.html"
+        [[ "$FORMAT" != html ]] && showntell export "$id" "$out/walkthrough.mp4"
+        python "$SRC/action/summary.py" "$out/site/data.json" > "$out/summary.md"
+        rm -rf "$out/site"
+        showntell stop || true
+        # The artifact is uploaded next; the job summary links to the run's artifact list.
+        sed "s|{{ARTIFACT_URL}}|$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID#artifacts|" "$out/summary.md" >> "$GITHUB_STEP_SUMMARY"
+        echo "folder=$out" >> "$GITHUB_OUTPUT"
+
+    - name: Upload
+      id: upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.name }}
+        path: |
+          ${{ steps.voice.outputs.folder }}/walkthrough.html
+          ${{ steps.voice.outputs.folder }}/walkthrough.mp4
+        if-no-files-found: error
+
+    - name: Comment on the pull request
+      if: inputs.comment == 'true' && github.event.pull_request.number
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        PR: ${{ github.event.pull_request.number }}
+        URL: ${{ steps.upload.outputs.artifact-url }}
+        NAME: ${{ inputs.name }}
+        FOLDER: ${{ steps.voice.outputs.folder }}
+      run: |
+        marker="<!-- showntell:$NAME -->"
+        {
+          echo "$marker"
+          sed "s|{{ARTIFACT_URL}}|$URL|" "$FOLDER/summary.md"
+        } > "$RUNNER_TEMP/showntell-comment.md"
+        # One comment per artifact name, updated on each push.
+        existing="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n1)"
+        if [[ -n "$existing" ]]; then
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -F "body=@$RUNNER_TEMP/showntell-comment.md" >/dev/null
+        else
+          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F "body=@$RUNNER_TEMP/showntell-comment.md" >/dev/null
+        fi

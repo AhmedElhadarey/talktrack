@@ -61,6 +61,18 @@ jobs:
         run: uv run showntell doctor --speech mlx
       - run: uv run pytest -m mlx -rs
 
+  action:
+    name: The GitHub Action, on its own example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          markdown: action/example.md
+          format: both
+          name: action-example
+          comment: "false"
+
   wheel:
     name: Built wheel, installed outside the repo
     runs-on: ubuntu-latest

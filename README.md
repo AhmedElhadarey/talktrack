@@ -300,6 +300,16 @@ uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0
 
 Needs [FFmpeg](https://ffmpeg.org/) on PATH and the `video` extra (Playwright). Without Playwright, folder exports still work and skip `poster.png`.
 
+### In pull requests
+
+The repository is also a GitHub Action: it voices a walkthrough's Markdown on the runner, with no API key, and posts the outline, the transcript and a download link on the pull request. See [docs/github-action.md](docs/github-action.md).
+
+```yaml
+- uses: rahimnathwani/showntell@v0.1.7
+  with:
+    markdown: .showntell/pr.md
+```
+
 ## In the player
 
 | Feature | How |
