@@ -18,7 +18,12 @@ INSTALL = "uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.6 show
 VIDEO_FROM = "'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.6'"
 INSTALL_VIDEO = f"uvx --from {VIDEO_FROM} showntell mcp"
 INSTALL_BROWSER = f"uvx --from {VIDEO_FROM} playwright install chromium"
-BROWSER_HINT = f"start showntell with the video extra and fetch the browser once:\n    {INSTALL_VIDEO}\n    {INSTALL_BROWSER}"
+INSTALL_EXPORT = f"uvx --from {VIDEO_FROM} showntell export <id> talk.mp4"
+# Shown by finish (where the daemon runs `mcp`) and by MP4 export from the command line alike.
+BROWSER_HINT = (
+    "run showntell with the video extra and fetch the browser once:\n"
+    f"    {INSTALL_VIDEO}   (or, to export: {INSTALL_EXPORT})\n    {INSTALL_BROWSER}"
+)
 
 OK, WARN, FAIL = "ok", "warn", "fail"
 

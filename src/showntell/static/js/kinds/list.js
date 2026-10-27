@@ -62,7 +62,8 @@ function quizChoice(item, it, i, parts) {
     item.setAttribute("aria-pressed", item.classList.contains("picked"));
   };
   item.addEventListener("click", pick);
-  item.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  // Stopped here, so Space picks a choice without also playing or pausing.
+  item.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); pick(); } });
 }
 
 // The answer shows once a cue points at a correct choice, or when the narration ends if none

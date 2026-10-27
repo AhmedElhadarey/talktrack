@@ -255,7 +255,7 @@ class Checks:
             None,
         )
         if first is None or (spoken and first == spoken[0]):
-            letter = next(chr(65 + i) for i, it in enumerate(items) if it["id"] in right)
+            letter, rid = next((chr(65 + i), it["id"]) for i, it in enumerate(items) if it["id"] in right)
             self._issue(
                 "quiz_reveal",
                 f"Slide `{s.id}`: "
@@ -264,7 +264,7 @@ class Checks:
                     if first is None
                     else "the right answer is pointed at in the first paragraph, while the question is still being asked."
                 ),
-                f"Ask in the first paragraph, give thinking time with a `{{pause=3}}` paragraph, then point at the answer with a link, [{letter}](#{letter.lower()}), and say why it is right; naming it aloud without a link does not show it.",
+                f"Ask in the first paragraph, give thinking time with a `{{pause=3}}` paragraph, then point at the answer with a link, [{letter}](#{rid}), and say why it is right; naming it aloud without a link does not show it.",
                 slide=s.id,
                 line=s.line,
             )

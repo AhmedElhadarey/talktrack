@@ -82,6 +82,7 @@ def write_lock(cfg: Config, token: str) -> None:
                 "version": _version(),
                 "build": build_id(),
                 "built": built_at(),
+                "video": has_video(),
                 "token": token,
                 "url": cfg.base_url,
                 "started": time.time(),
@@ -162,9 +163,13 @@ def ensure(cfg: Config, log=print) -> dict:
 
 def _ensure(cfg: Config, log) -> dict:
     lock = running(cfg)
-    if lock and not same_build(lock):
-        old = f"{lock.get('version')} ({str(lock.get('build') or 'no build id')[:8]})"
-        if not newer_than(lock):
+    # The same code installed with the video extra: it can draw slides at finish, which the
+    # running daemon cannot, so it takes over. Without this, adding the extra changed nothing
+    # until the old daemon happened to stop.
+    gains_video = bool(lock) and same_build(lock) and lock.get("video") is False and has_video()
+    if lock and (not same_build(lock) or gains_video):
+        old = f"{lock.get('version')} ({str(lock.get('build') or 'no build id')[:8]}{', no browser' if gains_video else ''})"
+        if not gains_video and not newer_than(lock):
             # Two installs (a plugin and a checkout, say) would otherwise replace each other's
             # daemon on every start, reloading the voice model and cutting off open players.
             log(
@@ -199,6 +204,13 @@ def _ensure(cfg: Config, log) -> dict:
             return lock
         time.sleep(0.15)
     raise RuntimeError(f"the showntell daemon did not start; see {cfg.data_dir / 'daemon.log'}")
+
+
+def has_video() -> bool:
+    """Whether this install has Playwright, for the layout check at finish and MP4 export."""
+    import importlib.util
+
+    return importlib.util.find_spec("playwright") is not None
 
 
 def same_build(lock: dict) -> bool:

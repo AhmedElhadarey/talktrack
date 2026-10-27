@@ -369,3 +369,28 @@ def test_concurrent_clients_share_one_daemon(tmp_path):
             os.environ.pop("SHOWNTELL_SPEECH", None)
         else:
             os.environ["SHOWNTELL_SPEECH"] = old
+
+
+@pytest.mark.parametrize("ours", [True, False])
+def test_ensure_replaces_a_daemon_without_the_browser_when_this_copy_has_it(cfg, monkeypatch, ours):
+    """Adding the video extra must take effect: the same code with Playwright takes over from a
+    daemon started without it, and a copy without it keeps the running daemon."""
+    old = {
+        "pid": 999999,
+        "port": cfg.port,
+        "token": "t",
+        "version": __version__,
+        "build": daemon.build_id(),
+        "video": False,
+        "health": {"busy": False},
+    }
+    new = {**old, "pid": 1, "token": "t2", "video": True}
+    calls = iter([old, new])
+    stopped = []
+    monkeypatch.setattr(daemon, "has_video", lambda: ours)
+    monkeypatch.setattr(daemon, "running", lambda c: next(calls))
+    monkeypatch.setattr(daemon, "_shutdown", stopped.append)
+    monkeypatch.setattr(daemon, "_alive", lambda pid: False)
+    monkeypatch.setattr(daemon.subprocess, "Popen", lambda *a, **k: None)
+    assert daemon.ensure(cfg, log=lambda m: None) is (new if ours else old)
+    assert stopped == ([old] if ours else [])
