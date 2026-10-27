@@ -1,1 +1,1 @@
-Asked to review commit 8db41e4 in this repo for another developer: what problem it fixes in the player, how the fix works, and anything to watch.
+Asked to review commit dbb81ae as a careful code reviewer: is it correct, what could go wrong, and what to change.

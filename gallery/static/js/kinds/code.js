@@ -50,13 +50,16 @@ export default {
   layout(body, parts) {
     if (parts.steps > 1) {
       const box = parts.visual, was = parts.step;
-      box.style.minWidth = box.style.minHeight = "";
+      box.style.minWidth = box.style.minHeight = box.style.width = "";
+      box.classList.remove("wrapped");
       let w = 0, h = 0;
+      parts.measuring = true; // natural sizes: fit() runs once, after
       for (let n = 1; n <= parts.steps; n++) {
         parts.setStep(n, false);
         w = Math.max(w, box.offsetWidth);
         h = Math.max(h, box.offsetHeight);
       }
+      parts.measuring = false;
       box.style.minWidth = `${w}px`;
       if (!box.classList.contains("scroll")) box.style.minHeight = `${h}px`; // scrolling code takes the slide's height
       parts.setStep(was, false);
@@ -82,7 +85,7 @@ export function morphCode(parts, box, v, n, animate) {
   parts.lines.new = fresh.lines;
   parts.step = n;
   const bodyEl = box.closest(".slide-body");
-  if (bodyEl) fit(bodyEl);
+  if (bodyEl && !parts.measuring) fit(bodyEl);
   if (!animate) return;
   // Pair unchanged lines in order; the rest are new.
   const keptOld = oldEls.map((_, i) => i).filter((i) => !d.removed[i]);

@@ -1,0 +1,1 @@
+Asked to explain how CSRF attacks work and how SameSite cookies prevent them.

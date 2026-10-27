@@ -1,104 +1,104 @@
-# Review: commit 8db41e4
-> Transform-based fit, exact pointer placement, browser tests
+# Review: a missing browser is loud
+> Commit dbb81ae in showntell
 
-This commit fixes three player bugs: clipped code, a pointer that misses its words, and a play button drawn over the wrong slide. We'll walk the real diff, then cover what to watch.
-## Three symptoms {#symptoms .cards}
+The change makes finish_walkthrough warn when Chromium is missing. It is mostly right, but one fix probably won't work for the user who follows it.
+## Verdict: sound, fix one thing first {#verdict}
+> Approve once the stale-daemon gap is closed
 
-- **Clipping**: long code lines cut off at the slide edge {#clip}
-- **Drift**: pointer box lands beside the words it names {#drift}
-- **Stray button**: title play button shown over later slides {#button}
+The core change is correct. A missing browser now raises a warning, `no_browser`, instead of an info line, and the tests cover it.
 
-Before this commit, [long code lines](#clip) were clipped instead of shrunk. The [pointer](#drift) drifted off the words it pointed at. And the [play button](#button) sat over the title area even when you resumed mid-walkthrough.
-
-## Fit: zoom becomes transform {#fit}
-
-```diff file=src/showntell/static/js/render.js rev=8db41e4~1..8db41e4
-```
-
-The old code used [CSS zoom](#-L12). Under zoom, text-range bounding boxes come back in the wrong coordinate space, so the pointer missed. The new code [clears the transform](#+L13), then [measures the natural size](#+L15) with the larger of offset and scroll width. It computes [a scale](#+L18), snaps near-one values [to exactly one](#+L19), and [applies scale](#+L22) as a transform. The scale is also [stored in a data attribute](#+L21) so tools can read it.
-
-<!-- revised fit -->
-## Fit: zoom becomes transform {#fit}
+But the fix it tells users to follow can silently fail. That is the one should-fix. The rest is minor.
+## What it gets right {#correct}
+> Return value now carries a code and a reason
 
 ```diff
--  content.style.zoom = 1;
-+  content.style.transform = "";
-   const bw = body.clientWidth, bh = body.clientHeight;
--  const cw = content.scrollWidth, ch = content.scrollHeight;
-+  const cw = Math.max(content.offsetWidth, content.scrollWidth), ch = Math.max(content.offsetHeight, content.scrollHeight);
-   if (!cw || !ch) return;
--  const z = Math.min(grow, bw / cw, bh / ch) * 0.98;
--  if (Math.abs(z - 1) > 0.02) content.style.zoom = Math.max(0.35, z);
-+  let k = Math.min(grow, bw / cw, bh / ch) * 0.98;
-+  if (Math.abs(k - 1) <= 0.02) k = 1;
-+  k = Math.max(0.3, k);
-+  content.dataset.scale = k.toFixed(3);
-+  if (k !== 1) content.style.transform = `scale(${k})`;
+@@ _check_layout @@
+         except CaptureUnavailable as e:
+-            return str(e)
++            log_once(e)
++            return "no_browser", e.reason
+         except TimeoutError:
+-            return f"drawing took over {S} s"
++            return "not_checked", f"over {S} s"
 ```
 
-> src/showntell/static/js/render.js, function fit
+`_check_layout` used to return one string. Now it returns [a code and a reason](#+L4 "no_browser"), so a missing browser and a failed drawing can be told apart.
 
-The old code [reset and applied](# "zoom") CSS zoom. Under zoom, text-range bounding boxes come back in the wrong coordinate space, so the pointer missed. The new code [clears the transform](# "transform = \"\""), then [measures the natural size](# "Math.max(content.offsetWidth"), taking the larger of offset and scroll width. It computes [a scale](# "let k"), snaps near-one values [to exactly one](# "k = 1;"), clamps at [zero point three](# "Math.max(0.3, k)"), and [applies it](# "scale(${k})") as a transform. The scale is also [stored on the element](# "dataset.scale") so the measure script can read it.
-## CSS that makes it work {#css}
+[The timeout](#+L6 "not_checked") stays an info finding. That split is right: a missing install is the user's to fix, a timeout is not.
 
-```diff
-+.slide-body > * { flex: none; transform-origin: center center; }
-+.slide-body > .codebox, .slide-body > table.data { max-width: none; }
-+.slide-body > .diagram, .slide-body > .image { flex: 1 1 auto; }
+The log line fires once per daemon, so it can't flood. I also checked that `None` still means the check was off, so `SHOWNTELL_FINISH_CHECK=0` stays quiet.
+
+## Should-fix: the fix may not take effect {#stale-daemon .side}
+> :triangle-alert: The hint never mentions `showntell stop`
+> Same version and build means the old daemon is reused
+> The `video` extra changes dependencies, not the build id
+
+```python
+def same_build(lock: dict) -> bool:
+    return (
+        lock.get("version") == _version()
+        and lock.get("build") == build_id()
+    )
 ```
 
-> src/showntell/static/player.css
+Suspected from reading the code, not run. [The build check](#L3 "lock.get(\"version\")") compares [the version](#L3) and [a hash of showntell's own files](#L4 "build_id()").
 
-A transform doesn't change layout, so the content must keep its natural size. [Flex none](# "flex: none") stops the flexbox squeezing it, and [max width none](# "max-width: none") lets a long code line run wide so it gets measured and shrunk instead of clipped. Scaling from [the centre](# "center center") keeps it centred in the slide body. Diagrams and images [still flex](# "flex: 1 1 auto"), because they size themselves.
+So a running base-install daemon [counts as current](#L1 "same_build") and is reused. It never imported Playwright, so finish still says `no_browser`.
 
-## Pointer and play button {#mainjs}
+Name `showntell stop` in the hint, or have `ensure` check whether Playwright imports.
 
-```diff
-+  v.root.addEventListener("animationend", () => { if (view?.root === v.root) { lastCueKey = ""; render(true); } }, { once: true });
-+  const atTitle = (TL.segs[pos.seg]?.slide ?? 0) === 0;
--  o.classList.toggle("over-title", titleSlide);
-+  o.classList.toggle("over-title", titleSlide && atTitle);
+The author may say a fresh machine has no daemon. True, but this warning appears mid-session.
+
+## Should-fix: the hint now misleads export {#export-hint .pair}
+> The shared hint says to start `mcp`; export users ran `export`
+
+```python
+# before: capture.py
+INSTALL_HINT = (
+    "run it with the video extra, e.g. "
+    "`uvx --from 'showntell[video]' "
+    "showntell export ...`"
+)
 ```
 
-> src/showntell/static/js/main.js
-
-Each slide eases in from a few pixels below, so a pointer measured at once is slightly off. Now, on [animation end](# "animationend"), if this slide is [still current](# "view?.root === v.root"), the cue key is cleared and the pointer re-measured. In the overlay, [at title](# "atTitle") checks the current segment, so the button only sits over the title when the title slide is showing.
-## Browser tests {#tests}
-
-```python file=tests/test_player_browser.py lines=166-185
+```python
+# after: capture.py
+def install_hint() -> str:
+    from .doctor import BROWSER_HINT
+    return BROWSER_HINT  # "...showntell mcp"
 ```
 
-The new test file starts a daemon with fake speech, builds one walkthrough with every slide kind, and [runs it in three frames](#L166). For each slide it [seeks to a cue time](#L177-L183), then asserts the slide class, no render errors, the visual inside the stage, and the pointer within twenty pixels of it. Screenshots go to a git-ignored artifacts folder.
+The old hint was written for export. The new one reuses [the doctor text](# "BROWSER_HINT"), which tells you to start `showntell mcp`.
 
-## What to watch {#watch}
+So `showntell export --mp4` without Playwright now prints a command for the MCP server. The install and Chromium steps still apply, so it's confusing rather than wrong.
 
-| Area | Risk |
-|---|---|
-| Layout box | unscaled size still overflows {#row-layout} |
-| Clamp | below 0.3 still clips {#row-clamp} |
-| animationend | bubbles from children |
-| Test seek | uses last cue, named first |
-| CI | needs Chromium installed |
+Also, `capture` now imports `doctor` for a string. Move the constants somewhere neutral, like `config`, so the dependency points one way.
 
-Five things to watch. [First](#row-1): a transform leaves the layout box at full size, so a wide box still overflows the slide body; it's hidden today only because the slide has overflow hidden. [Second](#row-2): the floor dropped from zero point three five to zero point three, and anything needing less still clips. [Third](#row-3): animation end bubbles, so a child animation added later would trigger the re-measure early; checking the event target would harden it. With reduced motion there is no animation, which is fine. [Fourth](#row-4): the test's variable is called first but takes the last cue; harmless, but misleading. [Fifth](#row-5): the browser tests skip unless Playwright's Chromium is installed, so CI won't run them by default.
+## Minor findings {#minor .cards}
+> Each is small; none blocks the merge
 
-<!-- revised tests -->
-## Browser tests {#tests}
+- :pin: **Version pin**: `v0.1.6` is hardcoded in doctor and the README. The test guards doctor only.
+- :message-square: **Commands missing**: the finding tells the agent to relay `showntell doctor`, not the commands themselves.
+- :flask-conical: **Test gaps**: nothing covers the log-once flag or the `not_checked` tuple path.
+- :globe: **Global flag**: `_browser_warned` is module state, so tests can leak into each other.
 
-```python file=tests/test_player_browser.py lines=205-217
-```
+Four small things. [The version pin](#version-pin) is the one most likely to bite: the next release leaves stale commands in the README.
 
-The new test file starts a daemon with fake speech, builds one walkthrough with every slide kind, and runs it in landscape, square and portrait. For each slide it seeks to just after a cue, takes [a screenshot](#L205) into a git-ignored folder, then asserts [the slide kind](#L206), [no render errors](#L207), [the visual inside the stage](#L209-L212), and [the pointer](#L213-L216) within twenty pixels of it.
+[The missing commands](#commands-missing) cost the user a step; the message could carry them.
 
-<!-- revised watch -->
-## What to watch {#watch}
+[The test gaps](#test-gaps) and [the global flag](#global-flag) go together: add a fixture that resets the flag, then test the log-once path.
 
-| Area | Risk |
-|---|---|
-| Layout box | unscaled size still overflows |
-| Clamp | below 0.3 still clips |
-| animationend | bubbles from children |
-| Test seek | uses last cue, named first |
-| CI | needs Chromium installed |
+## What I'd ask the author to change {#ranked}
+> Ranked by severity
 
-Five things to watch. [First](#row-1): a transform leaves the layout box at full size, so a wide box still overflows the slide body; it's hidden today only because the slide has overflow hidden. [Second](#row-2): the floor dropped from zero point three five to zero point three, and anything needing less still clips. [Third](#row-3): animation end bubbles, so a child animation added later would trigger the re-measure early; checking the event target would harden it. With reduced motion there is no animation, which is fine. [Fourth](#row-4): the test's variable is called first but takes the last cue; harmless, but misleading. [Fifth](#row-5): the browser tests skip unless Playwright's Chromium is installed, so CI won't run them by default.
+| Finding | Severity | Ask |
+|---|---|---|
+| Stale daemon reused | should-fix | Name `showntell stop`, or detect Playwright |
+| Export hint says `mcp` | should-fix | Give export its own hint; move the constants |
+| Version pin in README | minor | Test it, as doctor's is |
+| Commands not in finding | minor | Put them in the message |
+| Test gaps and global flag | minor | Reset fixture, then log-once test |
+
+The change does what it says, and the tests pass for what they cover. [The stale daemon](#row-1) comes first, because it decides whether the warning leads anywhere. [The export hint](#row-2) is next.
+
+The rest are [small clean-ups](#row-3) that can follow in another commit.

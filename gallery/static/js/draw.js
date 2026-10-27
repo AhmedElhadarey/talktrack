@@ -155,6 +155,9 @@ const codeFont = (content) => parseFloat(getComputedStyle(content.querySelector(
 function fitCode(content, bw, bh, grow, k) {
   const floor = CODE_PX / codeFont(content);
   if (k >= floor) return k;
+  // Too many lines, not too long ones: stacking and wrapping would only make it taller.
+  const cw = Math.max(content.offsetWidth, content.scrollWidth), ch = Math.max(content.offsetHeight, content.scrollHeight);
+  if (bh / ch <= bw / cw) return k;
   if (content.matches(".diff")) {
     content.classList.add("stacked");
     const stacked = fitScale(content, bw, bh, grow);
@@ -163,6 +166,9 @@ function fitCode(content, bw, bh, grow, k) {
     if (k >= floor) return k;
   }
   // Wrapping trades width for height: try the reading size first, then smaller ones.
+  // Code that changes in steps is held at its widest step's width; wrapping replaces that.
+  const minWidth = content.style.minWidth;
+  content.style.minWidth = "";
   content.classList.add("wrapped");
   for (let g = Math.min(grow, Math.max(floor, 1)); g > k + 0.01; g -= 0.04) {
     content.style.width = `${Math.floor((bw / g) * 0.98)}px`;
@@ -171,6 +177,7 @@ function fitCode(content, bw, bh, grow, k) {
   }
   content.classList.remove("wrapped");
   content.style.width = "";
+  content.style.minWidth = minWidth;
   return k;
 }
 

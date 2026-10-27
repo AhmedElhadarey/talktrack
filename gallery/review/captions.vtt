@@ -1,197 +1,265 @@
 WEBVTT
 
 1
-00:00:00.275 --> 00:00:04.950
-This commit fixes three player bugs: clipped code, a pointer that misses
+00:00:00.170 --> 00:00:03.275
+The change makes finish_walkthrough warn when Chromium is
 
 2
-00:00:04.800 --> 00:00:08.200
-its words, and a play button drawn over the wrong slide.
+00:00:03.275 --> 00:00:04.120
+missing.
 
 3
-00:00:08.200 --> 00:00:11.225
-We'll walk the real diff, then cover what to watch.
+00:00:04.120 --> 00:00:05.545
+It is mostly right,
 
 4
-00:00:12.200 --> 00:00:16.500
-Before this commit, long code lines were clipped instead of shrunk.
+00:00:05.545 --> 00:00:07.575
+but one fix probably won't work for the
 
 5
-00:00:16.475 --> 00:00:19.400
-The pointer drifted off the words it pointed at.
+00:00:07.575 --> 00:00:09.550
+user who follows it.
 
 6
-00:00:19.350 --> 00:00:22.550
-And the play button sat over the title area even when you
+00:00:09.970 --> 00:00:11.708
+The core change is correct.
 
 7
-00:00:22.400 --> 00:00:24.150
-resumed mid-walkthrough.
+00:00:11.708 --> 00:00:14.158
+A missing browser now raises a warning,
 
 8
-00:00:25.125 --> 00:00:28.250
-The old code reset and applied CSS zoom.
+00:00:14.158 --> 00:00:16.570
+no_browser, instead of an info line,
 
 9
-00:00:28.225 --> 00:00:32.450
-Under zoom, text-range bounding boxes come back in the wrong coordinate space,
+00:00:16.570 --> 00:00:18.625
+and the tests cover it.
 
 10
-00:00:32.375 --> 00:00:33.900
-so the pointer missed.
+00:00:18.745 --> 00:00:20.675
+But the fix it tells users to follow
 
 11
-00:00:33.875 --> 00:00:37.988
-The new code [clears the transform](# "transform = """), then measures the natural size, taking
+00:00:20.675 --> 00:00:22.107
+can silently fail.
 
 12
-00:00:37.838 --> 00:00:40.300
-the larger of offset and scroll width.
+00:00:22.107 --> 00:00:23.795
+That is the one should-fix.
 
 13
-00:00:40.275 --> 00:00:44.813
-It computes a scale, snaps near-one values to exactly one, clamps at
+00:00:23.795 --> 00:00:25.775
+The rest is minor.
 
 14
-00:00:44.663 --> 00:00:47.900
-zero point three, and applies it as a transform.
+00:00:26.220 --> 00:00:28.870
+_check_layout used to return one string.
 
 15
-00:00:47.887 --> 00:00:51.100
-The scale is also stored on the element so the measure script
+00:00:28.870 --> 00:00:31.182
+Now it returns a code and a reason,
 
 16
-00:00:50.950 --> 00:00:51.925
-can read it.
+00:00:31.182 --> 00:00:33.425
+so a missing browser and a failed drawing
 
 17
-00:00:52.900 --> 00:00:56.850
-A transform doesn't change layout, so the content must keep its natural
+00:00:33.425 --> 00:00:35.250
+can be told apart.
 
 18
-00:00:56.700 --> 00:00:57.675
-size.
+00:00:35.370 --> 00:00:37.582
+The timeout stays an info finding.
 
 19
-00:00:57.675 --> 00:01:01.775
-Flex none stops the flexbox squeezing it, and max width none lets
+00:00:37.582 --> 00:00:39.008
+That split is right:
 
 20
-00:01:01.625 --> 00:01:05.025
-a long code line run wide so it gets measured and shrunk
+00:00:39.008 --> 00:00:41.400
+a missing install is the user's to fix,
 
 21
-00:01:04.875 --> 00:01:06.300
-instead of clipped.
+00:00:41.400 --> 00:00:43.375
+a timeout is not.
 
 22
-00:01:06.338 --> 00:01:09.725
-Scaling from the centre keeps it centred in the slide body.
+00:00:43.495 --> 00:00:45.695
+The log line fires once per daemon,
 
 23
-00:01:09.750 --> 00:01:13.950
-Diagrams and images still flex, because they size themselves.
+00:00:45.695 --> 00:00:47.145
+so it can't flood.
 
 24
-00:01:14.950 --> 00:01:18.575
-Each slide eases in from a few pixels below, so a pointer
+00:00:47.145 --> 00:00:49.187
+I also checked that None still means the
 
 25
-00:01:18.425 --> 00:01:20.650
-measured at once is slightly off.
+00:00:49.187 --> 00:00:52.400
+check was off, so SHOWNTELL_FINISH_CHECK=0
 
 26
-00:01:20.650 --> 00:01:24.712
-Now, on animation end, if this slide is still current, the cue
+00:00:52.400 --> 00:00:54.075
+stays quiet.
 
 27
-00:01:24.562 --> 00:01:27.400
-key is cleared and the pointer re-measured.
+00:00:54.520 --> 00:00:56.125
+Suspected from reading the code,
 
 28
-00:01:27.412 --> 00:01:31.175
-In the overlay, at title checks the current segment, so the button
+00:00:56.125 --> 00:00:57.170
+not run.
 
 29
-00:01:31.025 --> 00:01:34.450
-only sits over the title when the title slide is showing.
+00:00:57.170 --> 00:00:59.450
+The build check](#L3 "lock.get("version")") compares the version and a
 
 30
-00:01:35.425 --> 00:01:39.250
-The new test file starts a daemon with fake speech, builds one
+00:00:59.450 --> 00:01:02.025
+hash of showntell's own files.
 
 31
-00:01:39.100 --> 00:01:43.450
-walkthrough with every slide kind, and runs it in landscape, square and
+00:01:02.170 --> 00:01:04.988
+So a running base-install daemon counts as current
 
 32
-00:01:43.300 --> 00:01:44.500
-portrait.
+00:01:04.988 --> 00:01:06.295
+and is reused.
 
 33
-00:01:44.537 --> 00:01:47.488
-For each slide it seeks to just after a cue, takes a
+00:01:06.295 --> 00:01:08.045
+It never imported Playwright,
 
 34
-00:01:47.338 --> 00:01:52.250
-screenshot into a git-ignored folder, then asserts the slide kind, no render
+00:01:08.045 --> 00:01:10.775
+so finish still says no_browser.
 
 35
-00:01:52.100 --> 00:01:56.338
-errors, the visual inside the stage, and the pointer within twenty pixels
+00:01:10.970 --> 00:01:12.870
+Name showntell stop in the hint,
 
 36
-00:01:56.188 --> 00:01:56.875
-of it.
+00:01:12.870 --> 00:01:15.975
+or have ensure check whether Playwright imports.
 
 37
-00:01:57.900 --> 00:01:59.400
-Five things to watch.
+00:01:16.095 --> 00:01:18.000
+The author may say a fresh machine has
 
 38
-00:01:59.400 --> 00:02:03.137
-First: a transform leaves the layout box at full size, so a
+00:01:18.000 --> 00:01:18.995
+no daemon.
 
 39
-00:02:02.987 --> 00:02:07.063
-wide box still overflows the slide body; it's hidden today only because
+00:01:18.995 --> 00:01:22.425
+True, but this warning appears mid-session.
 
 40
-00:02:06.913 --> 00:02:08.950
-the slide has overflow hidden.
+00:01:22.845 --> 00:01:25.157
+The old hint was written for export.
 
 41
-00:02:08.975 --> 00:02:12.725
-Second: the floor dropped from zero point three five to zero point
+00:01:25.157 --> 00:01:27.395
+The new one reuses the doctor text,
 
 42
-00:02:12.575 --> 00:02:15.175
-three, and anything needing less still clips.
+00:01:27.395 --> 00:01:30.750
+which tells you to start showntell mcp.
 
 43
-00:02:15.175 --> 00:02:19.713
-Third: animation end bubbles, so a child animation added later would trigger
+00:01:30.870 --> 00:01:34.075
+So showntell export --mp4 without
 
 44
-00:02:19.563 --> 00:02:23.050
-the re-measure early; checking the event target would harden it.
+00:01:34.075 --> 00:01:36.712
+Playwright now prints a command for the MCP
 
 45
-00:02:23.000 --> 00:02:26.625
-With reduced motion there is no animation, which is fine.
+00:01:36.712 --> 00:01:37.632
+server.
 
 46
-00:02:27.025 --> 00:02:30.900
-Fourth: the test's variable is called first but takes the last cue;
+00:01:37.632 --> 00:01:40.558
+The install and Chromium steps still apply,
 
 47
-00:02:30.912 --> 00:02:32.800
-harmless, but misleading.
+00:01:40.558 --> 00:01:43.425
+so it's confusing rather than wrong.
 
 48
-00:02:32.837 --> 00:02:38.262
-Fifth: the browser tests skip unless Playwright's Chromium is installed, so CI
+00:01:43.570 --> 00:01:46.882
+Also, capture now imports doctor for a string.
 
 49
-00:02:38.112 --> 00:02:39.750
-won't run them by default.
+00:01:46.882 --> 00:01:48.800
+Move the constants somewhere neutral,
+
+50
+00:01:48.800 --> 00:01:52.625
+like config, so the dependency points one way.
+
+51
+00:01:53.095 --> 00:01:54.545
+Four small things.
+
+52
+00:01:54.545 --> 00:01:56.600
+The version pin is the one most likely
+
+53
+00:01:56.600 --> 00:01:59.537
+to bite: the next release leaves stale commands
+
+54
+00:01:59.537 --> 00:02:01.075
+in the README.
+
+55
+00:02:01.195 --> 00:02:03.495
+The missing commands cost the user a step;
+
+56
+00:02:03.495 --> 00:02:05.650
+the message could carry them.
+
+57
+00:02:05.770 --> 00:02:07.800
+The test gaps and the global flag go
+
+58
+00:02:07.800 --> 00:02:10.720
+together: add a fixture that resets the flag,
+
+59
+00:02:10.720 --> 00:02:13.300
+then test the log-once path.
+
+60
+00:02:13.720 --> 00:02:15.250
+The change does what it says,
+
+61
+00:02:15.250 --> 00:02:17.520
+and the tests pass for what they cover.
+
+62
+00:02:17.520 --> 00:02:19.300
+The stale daemon comes first,
+
+63
+00:02:19.300 --> 00:02:22.245
+because it decides whether the warning leads anywhere.
+
+64
+00:02:22.245 --> 00:02:24.725
+The export hint is next.
+
+65
+00:02:24.870 --> 00:02:27.225
+The rest are small clean-ups that can follow
+
+66
+00:02:27.225 --> 00:02:28.950
+in another commit.

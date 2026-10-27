@@ -101,7 +101,9 @@ function measure(slide, bodyEl, parts) {
   const px = parseFloat(getComputedStyle(sample).fontSize) * k;
   if (px < READABLE_PX) {
     // Long lines already wrap (fit in draw.js), so small code means too many lines.
-    const lines = content.querySelectorAll(".ln").length;
+    // Rows on screen: a side-by-side diff's panes share theirs; stacked ones add up.
+    const panes = [...content.querySelectorAll(".code")].map((c) => c.querySelectorAll(".ln").length);
+    const lines = content.matches(".diff:not(.stacked)") && !document.body.classList.contains("portrait") ? Math.max(0, ...panes) : panes.reduce((a, b) => a + b, 0);
     const fix = lines ? ` It shows ${lines} lines and about ${Math.max(4, Math.floor((lines * px) / READABLE_PX))} fit at reading size: keep only the lines the narration is about, or split the slide.`
       : " Show less on this slide, or split it.";
     report(`Slide ${id}: the ${slide.kind}${k < 0.999 ? ` was shrunk to ${Math.round(k * 100)}% to fit, so its` : "'s"} text is about ${Math.round(px)} px high.${fix}`,
