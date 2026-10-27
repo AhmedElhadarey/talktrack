@@ -104,3 +104,11 @@ def test_a_word_misaki_cannot_say_does_not_shift_the_rest(backend):
     assert [t.text for t in tokens] == ["Say", "now", "then", "stop"]  # the unknown word is skipped
     starts = [t.start for t in tokens]
     assert all(b > a for a, b in zip(starts, starts[1:], strict=False)), starts
+
+
+def test_freed_gpu_buffers_are_given_back_after_each_chunk(backend):
+    import mlx.core as mx
+
+    for n in (3, 11, 27, 40):  # chunks of different lengths leave buffers of different sizes
+        backend.synth(" ".join(["the token is checked against the session"] * (n // 7 + 1)), "af_heart", 1.0)
+    assert mx.get_cache_memory() < 200_000_000

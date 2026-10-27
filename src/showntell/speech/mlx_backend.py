@@ -61,8 +61,16 @@ class MlxBackend(KokoroEngine):
 
     def _run(self, ids: list[int], style, speed: float) -> tuple[np.ndarray, np.ndarray]:
         # The model takes phonemes as text and looks each one up in the same vocabulary.
+        import mlx.core as mx
+
         out = self._model("".join(self._phoneme[i] for i in ids), style, speed, return_output=True)
         frames = np.asarray(out.pred_dur).reshape(-1)  # whole frames, pads included
+        audio = np.asarray(out.audio, dtype=np.float32).reshape(-1)
+        del out
+        # MLX keeps freed GPU buffers for reuse, and chunks of every length leave buffers of every
+        # size: kept, they grow to most of the Mac's memory (25 GB of 32 after ten sentences) and
+        # the machine swaps. Copied out to numpy, nothing here is needed again.
+        mx.clear_cache()
         if len(frames) != len(ids) + 2:
             raise RuntimeError(f"mlx-audio returned {len(frames)} durations for {len(ids)} phonemes")
-        return np.asarray(out.audio, dtype=np.float32).reshape(-1), frames
+        return audio, frames
