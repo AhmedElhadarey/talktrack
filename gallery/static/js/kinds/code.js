@@ -13,6 +13,7 @@ export function codeBox(code, lang, start, title, tag, side, marks) {
   }
   const body = el("div", "code hljs");
   const lines = new Map();
+  const raw = code.split("\n");
   splitLines(highlight(code, lang)).forEach((html, i) => {
     const n = start + i;
     const change = marks ? (marks[i] ? (side === "old" ? "del" : "add") : "") : "";
@@ -20,6 +21,8 @@ export function codeBox(code, lang, start, title, tag, side, marks) {
     const ln = el("div", `ln${change ? ` ${change}` : ""}`,
       `<span class="no" aria-hidden="true">${n}</span><span class="sign" aria-hidden="true">${sign}</span><span class="tx">${html || " "}</span>`);
     ln.dataset.n = n;
+    const indent = (raw[i] || "").replace(/\t/g, "    ").match(/^ */)[0].length;
+    if (indent) ln.style.setProperty("--ind", indent); // a wrapped line continues under its own indent
     body.append(ln);
     lines.set(n, ln);
   });

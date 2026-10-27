@@ -180,5 +180,13 @@
    "chart"
   ],
   "prompt": "Use showntell to explain how compound interest works."
+ },
+ {
+  "id": "review",
+  "kind": "review",
+  "expect": [
+   "diff"
+  ],
+  "prompt": "Use showntell to review commit dbb81ae in this repo as a careful code reviewer: is it correct, what could go wrong, and what would you ask the author to change?"
  }
 ]

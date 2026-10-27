@@ -5,6 +5,9 @@
 export const GAP = 0.3; // silence after a paragraph
 export const SLIDE_GAP = 0.6; // silence after a slide's last paragraph
 export const WORDS_PER_SECOND = 2.7;
+// Cues fire this long before their word is spoken: the pointer takes about as long to glide
+// over, so it lands as the word is heard instead of after it.
+export const CUE_LEAD = 0.3;
 
 export function estimate(say) {
   if (say.pause) return say.pause;
@@ -62,7 +65,7 @@ export function firedCues(w, tl, segIndex, local) {
     const s = tl.segs[k];
     if (s.say < 0) continue;
     for (const c of slide.says[s.say].cues || []) {
-      if (k < segIndex || (c.t ?? 0) <= local + 0.05) out.push({ ...c, _say: s.say, _at: s.start + (c.t ?? 0) });
+      if (k < segIndex || (c.t ?? 0) <= local + CUE_LEAD) out.push({ ...c, _say: s.say, _at: s.start + (c.t ?? 0) });
     }
   }
   return out;

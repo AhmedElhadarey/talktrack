@@ -184,10 +184,10 @@ All Phase 1 items are done and the evaluation meets the launch criteria.
 
 | Area | Items |
 |---|---|
-| **Slide kinds** | camera (zoom and pan on a cue), scene animation (manim-web tested 16 October 2026 and not ready: wrong frames after seeking; SVG with a seekable timeline worked 5 of 5), quiz, formula-part pointer |
+| **Slide kinds** | pan across one large picture on a cue (zoom on a cue shipped with 0.1.5; quiz slides after 0.1.6), scene animation in a vocabulary models already write well (manim-web tested 16 October 2026 and not ready: wrong frames after seeking; SVG with a seekable timeline worked 5 of 5), formula-part pointer |
 | **Trust** | citations with a sources panel, open-in-editor links, stale-code marks, syntax checks on code blocks |
 | **Voice** | Kokoro's other languages (check which give word timings), voice blends, per-slide voice and speed, second speaker, sentence-level audio for slow CPUs, recording your own voice |
-| **Sharing** | MP3 and podcast feed, read view, CI recipe for pull requests |
+| **Sharing** | MP3 and podcast feed, read view; the pull request action (after 0.1.6) could host the page on GitHub Pages per pull request instead of a zip |
 | **Player** | audio-only mode with lock-screen controls, live parameters |
 | **Product** | courses, teaching styles, asking a question from the player, MCP Apps inline player, retention and compressed audio, generated images |
 

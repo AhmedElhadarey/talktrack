@@ -112,11 +112,19 @@ export function fit(body) {
   if (!content || content.matches(".diagram, .image, .chart")) return;
   content.style.transform = "";
   content.style.width = "";
+  content.classList.remove("wrapped", "stacked");
   const bw = body.clientWidth, bh = body.clientHeight;
   if (content.matches(".codebox.scroll")) {
     // Long code keeps its size and scrolls: fit the width only, and the box to the slide's height.
+    // Lines too long for the reading size wrap.
     content.style.maxHeight = "";
-    const k = Math.max(0.6, Math.min(1.15, (bw / Math.max(content.offsetWidth, content.scrollWidth)) * 0.98));
+    let k = Math.min(1.15, (bw / Math.max(content.offsetWidth, content.scrollWidth)) * 0.98);
+    const floor = CODE_PX / codeFont(content);
+    if (k < floor) {
+      content.classList.add("wrapped");
+      content.style.width = `${Math.floor((bw / floor) * 0.98)}px`;
+      k = floor;
+    }
     content.dataset.scale = k.toFixed(3);
     content.style.maxHeight = `${Math.floor(bh / k)}px`;
     content.style.transform = `scale(${k})`;
@@ -124,6 +132,7 @@ export function fit(body) {
   }
   const grow = GROW.find(([sel]) => content.matches(sel))?.[1] || 1;
   let k = fitScale(content, bw, bh, grow);
+  if (content.matches(".codebox, .diff")) k = fitCode(content, bw, bh, grow, k);
   // A list spans the body's width, so it can only grow by laying out narrower and scaling up:
   // try sizes from the largest down until its height fits.
   if (content.matches(".list:not(.timeline)") && grow > 1 && k >= 0.97) {
@@ -135,6 +144,34 @@ export function fit(body) {
   }
   content.dataset.scale = k.toFixed(3);
   if (k !== 1) content.style.transform = `scale(${k})`;
+}
+
+// Code keeps a reading size. Shrinking a whole block to fit its longest line leaves every line
+// too small to read, so first a side-by-side diff stacks its panes, then long lines wrap at the
+// largest size whose wrapped height still fits. Only code with too many lines ends up small.
+export const CODE_PX = 17; // smallest code text on the stage before long lines wrap
+const codeFont = (content) => parseFloat(getComputedStyle(content.querySelector(".code") || content).fontSize) || 22;
+
+function fitCode(content, bw, bh, grow, k) {
+  const floor = CODE_PX / codeFont(content);
+  if (k >= floor) return k;
+  if (content.matches(".diff")) {
+    content.classList.add("stacked");
+    const stacked = fitScale(content, bw, bh, grow);
+    if (stacked > k) k = stacked;
+    else content.classList.remove("stacked");
+    if (k >= floor) return k;
+  }
+  // Wrapping trades width for height: try the reading size first, then smaller ones.
+  content.classList.add("wrapped");
+  for (let g = Math.min(grow, Math.max(floor, 1)); g > k + 0.01; g -= 0.04) {
+    content.style.width = `${Math.floor((bw / g) * 0.98)}px`;
+    const h = Math.max(content.offsetHeight, content.scrollHeight);
+    if (content.scrollWidth <= (bw / g) * 0.98 + 1 && h * g <= bh * 0.98) return g;
+  }
+  content.classList.remove("wrapped");
+  content.style.width = "";
+  return k;
 }
 
 function fitScale(content, bw, bh, grow) {

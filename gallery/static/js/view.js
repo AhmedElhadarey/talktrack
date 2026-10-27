@@ -99,9 +99,13 @@ function measure(slide, bodyEl, parts) {
   const k = parseFloat(content.dataset.scale || "1");
   const sample = content.querySelector(".tx, td, .entry-text p, .entry-text h3, .katex") || content;
   const px = parseFloat(getComputedStyle(sample).fontSize) * k;
-  if (k < 0.999 && px < READABLE_PX) {
-    report(`Slide ${id}: the ${slide.kind} was shrunk to ${Math.round(k * 100)}% to fit, so its text is about ${Math.round(px)} px high.`
-      + " Show less on this slide or split it.", "text_too_small", id);
+  if (px < READABLE_PX) {
+    // Long lines already wrap (fit in draw.js), so small code means too many lines.
+    const lines = content.querySelectorAll(".ln").length;
+    const fix = lines ? ` It shows ${lines} lines and about ${Math.max(4, Math.floor((lines * px) / READABLE_PX))} fit at reading size: keep only the lines the narration is about, or split the slide.`
+      : " Show less on this slide, or split it.";
+    report(`Slide ${id}: the ${slide.kind}${k < 0.999 ? ` was shrunk to ${Math.round(k * 100)}% to fit, so its` : "'s"} text is about ${Math.round(px)} px high.${fix}`,
+      "text_too_small", id);
   }
   const b = bodyEl.getBoundingClientRect(), c = content.getBoundingClientRect(), s = scale();
   if ((c.width - b.width) / s > 4 || (c.height - b.height) / s > 4) {
