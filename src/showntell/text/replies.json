@@ -7,6 +7,7 @@
   "voice_error": "Slides saved, but voicing failed: {error}\nLink: {url}. Continue with the next add_slides call. If the error repeats, stop and ask the user to run `showntell doctor`.",
   "need_opening": "Nothing to play yet: no narration so far. Send one or two spoken sentences next, as plain paragraphs without a heading; they join the last slide you sent. A > line is shown, not spoken.",
   "finished": "Finished: {slides} slides, {duration}. {url}\nTell the user the walkthrough is finished and give them the link. Do not repeat the script.",
+  "finished_fix": "Finished: {slides} slides, {duration}. {url}\nNot ready for the user yet: the findings below name slides {fix}. Fix each with revise_slide now; its reply re-checks the slide, and for a layout finding (text_too_small, overflow, drawing_overlap) preview_slides on that slide draws it again. No need to finish again. Once they are fixed, tell the user the walkthrough is finished and give them the link. Do not repeat the script.",
   "loading": "The voice model is not ready yet: {status}. Send the opening with add_slides anyway; that reply may take longer, and it gives the link either way.",
   "guide_send_link": "If the user lacks the link, send it now, then keep writing.",
   "guide_tell_user": "**Tell the user** it is finished, with the link, in a line or two; don't repeat the script.",

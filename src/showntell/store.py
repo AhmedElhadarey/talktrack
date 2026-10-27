@@ -78,7 +78,7 @@ class Session:
             self.reported.add("too_long")
             b._issue(
                 "too_long",
-                f"Narration is {int(spoken // 60)}:{int(spoken % 60):02d} so far; the guide aims for 2 to 4 minutes.",
+                f"Narration is {int(spoken // 60)}:{int(spoken % 60):02d} so far; the guide aims for 1 to 2 minutes for a concept, 2 to 4 for a code change or review.",
                 "Finish soon, or leave the rest for a second walkthrough.",
             )
         for slide, say in b.new_says:

@@ -198,6 +198,18 @@ async def test_finish_walkthrough(mcp):
         assert data["alike"] == []
 
 
+async def test_finish_with_findings_asks_for_fixes_before_telling_the_user(mcp, store):
+    """A list of findings after "tell the user" gets skipped, so the reply leads with the fixes."""
+    async with mcp as client:
+        h = await start(client)
+        await client.call_tool("add_slides", {"handle": h["handle"], "markdown": OPENING + BODY})
+        store.by_handle(h["handle"]).report({"code": "text_too_small", "slide": "lookup", "message": "Slide lookup: text is 9 px."})
+        r = await client.call_tool("finish_walkthrough", {"handle": h["handle"]})
+        t = text(r)
+        assert h["url"] in t and "slides `lookup`" in t
+        assert t.index("revise_slide") < t.index("tell the user") and "No need to finish again" in t
+
+
 async def test_finish_names_alike_slides(mcp):
     async with mcp as client:
         h = await start(client)
@@ -266,7 +278,7 @@ async def test_unknown_slide_is_a_tool_error(mcp):
 async def test_prompts_exist_with_one_required_argument(mcp):
     async with mcp as client:
         prompts = {p.name: p for p in (await client.list_prompts()).prompts}
-        assert set(prompts) >= {"diff", "file", "topic"}
+        assert set(prompts) >= {"diff", "review", "file", "topic"}
         assert [a.name for a in prompts["diff"].arguments] == ["target"]
         assert all(p.title and p.arguments[0].required for p in prompts.values())
 
@@ -275,6 +287,7 @@ async def test_prompts_exist_with_one_required_argument(mcp):
     "name,arg,value",
     [
         ("diff", "target", "main..HEAD"),
+        ("review", "target", "main...feature"),
         ("file", "path", "src/showntell/store.py"),
         ("topic", "topic", "consistent hashing"),
     ],

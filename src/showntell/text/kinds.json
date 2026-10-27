@@ -7,7 +7,7 @@
       "point": "#L12, #L12-18, [label](#L12 \"exact text\"); with steps, #step-2 moves to that version and later line cues count in it",
       "reveal": "lines up to the last range pointed at",
       "example": "```python step\ndef total(xs):\n    t = 0\n    for x in xs:\n        t += x\n    return t\n```\n```python step\ndef total(xs):\n    return sum(xs)\n```",
-      "format": "`scroll` keeps long code (up to 400 lines) at reading size and scrolls to each cued range, dimming the rest. Consecutive blocks marked `step` are versions of one piece of code on one slide; `#step-N` morphs to version N."
+      "format": "`scroll` keeps long code (up to 400 lines) at reading size and scrolls to each cued range, dimming the rest. Consecutive blocks marked `step` are versions of one piece of code on one slide; `#step-N` morphs to version N. Code keeps its reading size: lines too long for it wrap, continuing under their own indent, so only too many lines make code small (text_too_small). Wrapped lines still read worse than an excerpt that fits (code_too_wide)."
     },
     {
       "kind": "diff",
@@ -15,6 +15,7 @@
       "use": "a change",
       "point": "#-L5 old side, #+L7 or #L7 new side",
       "reveal": "none",
+      "format": "The two sides show next to each other, stacked in portrait. A diff too wide to show side by side at reading size stacks, before above after, and lines still too long wrap under their own indent; both read worse than a hunk that fits (diff_too_wide).",
       "example": "```diff file=src/stats.py rev=HEAD~1\n```"
     },
     {
@@ -43,10 +44,11 @@
     },
     {
       "kind": "list",
-      "fence": "- items, 1. items, - [x] / - [ ] checklist items; .cards, .steps, .stack or .timeline (dates as bold titles) on the heading; `- :icon: **Title**: text` leads an item with an icon",
-      "use": "parallel parts, options, a procedure, layers of a stack, a checklist, dated events",
-      "point": "#id from {#id}, or the bold title lowercased with hyphens",
-      "reveal": "items up to the last one pointed at; checklist ticks draw as their item is pointed at",
+      "fence": "- items, 1. items, - [x] / - [ ] checklist items; .cards, .steps, .stack, .timeline (dates as bold titles) on the heading, or .quiz there to ask the viewer to pick one answer; `- :icon: **Title**: text` leads an item with an icon",
+      "use": "parallel parts, options, a procedure, layers of a stack, a checklist, dated events, a question that checks the viewer understood",
+      "point": "#id from {#id}, or the bold title lowercased with hyphens; quiz choices #a, #b, #c, #d unless an item has its own {#id}",
+      "reveal": "items up to the last one pointed at; checklist ticks draw as their item is pointed at; a quiz shows its answer when a written cue points at the right choice",
+      "format": "Quiz: `.quiz` on the heading and two to four `- [ ]` choices with exactly one `- [x]` (quiz_shape), shown lettered A to D; the viewer can click one. Only a written cue at the right choice, such as [B](#b), shows the answer (the right choice turns green, the others dim, a wrong pick is marked); cues inferred from saying the choices aloud do not, and with no cue it shows as the narration ends. Ask in the first paragraph, then a {pause=3} paragraph, during which a bar runs down, then point at the answer and say why the tempting wrong choice is wrong (quiz_reveal). Example: `## Which call retries? {.quiz}`, then `- [ ] fetch`, `- [x] send`, `- [ ] close`.",
       "example": "- :zap: **Memory**: fast, gone on restart {#memory}\n- :hard-drive: **Disk**: survives restarts {#disk}"
     },
     {
@@ -140,7 +142,7 @@
       "underline": "a hand-drawn line under it",
       "arrow": "an arrow pointing at it",
       "highlight": "a marker stroke behind it",
-      "zoom": "the camera zooms onto the target until the next cue; combine with another style"
+      "zoom": "the camera zooms onto the target until the next cue; combine with another style. On a dense drawing, draw.io diagram or screenshot, zoom onto each part as it is named, then cue # to pull back to the whole"
     }
   },
   "layouts": {

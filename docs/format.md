@@ -41,6 +41,7 @@ A heading may end with attributes in braces: `## The lookup {#lookup .build}`.
 | **`.cards`** | show a list as a grid of cards |
 | **`.timeline`** | show a list of dated events on a timeline |
 | **`.steps`** | show a list as numbered steps (same as writing `1.` items) |
+| **`.quiz`** | show a `- [ ]` / `- [x]` list as a multiple-choice question |
 | **`.build`** | step reveal: parts appear as narration points at them |
 | **`.side`** | the visual with the slide's `>` lines beside it as takeaways |
 | **`.pair`** | two visuals side by side |
@@ -103,6 +104,8 @@ Line numbers in the gutter are the file's own line numbers, and cues use the sam
 
 **Long code:** `scroll` in the info string (```` ```python file=src/app.py lines=1-200 scroll ````) keeps the code at reading size, however long (up to 400 lines), shows as much as fits, scrolls so the latest cued range sits in the middle, and dims the other lines.
 
+**Reading size:** code is never shrunk to fit its longest line. A line too long for the reading size wraps, its continuation indented under the line's own indentation, so code text gets small only when a block has too many lines (`text_too_small`, whose message gives the line count and a target). The limits under Frames and limits still apply: wrapped lines are readable, but read worse than a narrow excerpt (`code_too_wide`).
+
 **Code that evolves:** consecutive code blocks marked `step` become versions of one piece of code on one slide. `#step-2` moves to the second version: lines that stay glide to their new place and new lines fade in. Line cues after a step cue count lines in that version.
 
 ````markdown
@@ -150,6 +153,8 @@ total = sum(xs)
 
 With `file=` and `rev=`, the server reads both versions from git: `rev=A` compares commit `A` with the working tree, `rev=A..B` compares two commits, and `rev=A...B` compares `B` with the commit where it branched from `A`, as a pull request does. It shows the changed region with a few lines of context; `lines=` narrows the new side to that range instead. A pasted `diff` block is numbered from its first `@@` header, so send one hunk per slide.
 
+The two sides sit next to each other, or stacked in portrait. A diff too wide to show side by side at reading size stacks its panes, before above after, and lines still too long wrap as code does (`diff_too_wide` warns of both).
+
 ### Diagram
 
 ````markdown
@@ -185,6 +190,26 @@ A GitHub-style pipe table. Cells may hold inline code and emphasis. Rows are `#r
 ```
 
 Bullets give a bulleted list and `1.` items give numbered steps; add `.cards` to the heading for cards, `.stack` for layers drawn as a stack (top item on top), or `.timeline` for dated events: each item's bold title is its date (`- **1989**: the first proposal`), drawn on a line across a landscape slide and down a square or portrait one, or any slide with more than six dates. Items starting with `[x]` or `[ ]` make a checklist: a ticked item's tick draws in when narration points at it, or at once if the slide has no item cues; `[ ]` stays empty. An item may start with a bold title, followed by `:` or a dash and a description. A trailing `{#id}` names the item for cues; without one, the id is the title in lowercase with hyphens (`**Hot path**` becomes `#hot-path`). Nested lists are flattened.
+
+### Quiz
+
+````markdown
+## Which call retries? {.quiz}
+
+- [ ] `fetch`
+- [x] `send`
+- [ ] `close`
+
+Which of these retries a failed request?
+
+{pause=3}
+
+It's [B](#b), `send`. `fetch` makes the request, but it hands a failure straight back.
+````
+
+`.quiz` on the heading turns a checklist into a multiple-choice question: two to four choices, exactly one marked `[x]` (otherwise `quiz_shape`). Choices are lettered A, B, C, D on the slide and their ids are `a`, `b`, `c`, `d`, unless an item ends in its own `{#id}`. A viewer can click a choice to commit to it.
+
+The answer shows (the right choice turns green, the others dim, a wrong pick is marked) when a written cue points at the right choice. Cues inferred from narration that reads the choices aloud do not show it. If no cue ever points at it, it shows when the slide's narration ends. A `{pause=3}` paragraph between the question and the answer is thinking time, shown as a bar running down under the choices. `quiz_reveal` reports an answer never pointed at, or pointed at in the first paragraph, while the question is being asked.
 
 ### Image
 
@@ -326,7 +351,7 @@ Narration is plain prose written to be heard. Markdown inside it is used like th
 
 ## Cues
 
-A cue is a Markdown link inside narration. The label is spoken normally. The pointer moves when the first word of the label is spoken, so put the link a little before the moment you want the viewer to look.
+A cue is a Markdown link inside narration. The label is spoken normally. The player fires each cue 0.3 s before the label's first word is spoken, about the time the pointer takes to glide over, so it lands as the word is heard: link the words that name the target, no earlier.
 
 | Target | Points at |
 |---|---|
@@ -334,7 +359,7 @@ A cue is a Markdown link inside narration. The label is spoken normally. The poi
 | **`#L12-18`** | lines 12 to 18 |
 | **`#-L5`** | line 5 of the old side of a diff |
 | **`#+L7`**, **`#L7`** | line 7 of the new side of a diff |
-| **`#id`** | a list item, card, diagram node, table row, chart bar or series, or file-tree entry with that id |
+| **`#id`** | a list item, card, quiz choice (`#a`, `#b`), diagram node, table row, chart bar or series, or file-tree entry with that id |
 | **`#a->b->c`** | a flowchart path: a dot travels along those edges, one hop at a time |
 | **`#A->>B`** | a message in a sequence diagram, from participant `A` to `B`: the pointer goes to its text (the first such message; quoted text picks another) |
 | **`#@10,20,30,15`** | part of an image: left, top, width and height in percent |
@@ -355,6 +380,8 @@ A style after the link changes how the pointer looks: `[the guard](#L12){.circle
 | **`.arrow`** | an arrow pointing at the target |
 | **`.highlight`** | a marker stroke behind the target |
 | **`.zoom`** | the camera zooms onto the target until the next cue; combine with another style, as in `{.zoom .circle}` |
+
+On one dense drawing, draw.io diagram or screenshot, zoom onto each part as the narration names it and end with a cue to `#`, which pulls the camera back to the whole: a run of readable close-ups instead of one picture too small to read.
 
 When narration has no cues at all, showntell infers some by matching its words against code identifiers, node labels and list titles.
 
@@ -382,7 +409,7 @@ Everything is visible once the slide's narration ends.
 | **square** | 960 × 960 | 26 | 68 | 22 | 32 |
 | **portrait** | 720 × 1280 | 34 | 48 | 18 | 52 |
 
-These are the sizes that still render at a comfortable reading size, measured with `scripts/measure_limits.py`. Larger code still renders, but smaller. Diffs show the two sides next to each other in landscape and square, and stacked in portrait.
+These are the sizes that still render at a comfortable reading size, measured with `scripts/measure_limits.py`. Code past them keeps its reading size: wider lines wrap and a diff too wide side by side stacks, and only more lines make it smaller. Diffs show the two sides next to each other in landscape and square, and stacked in portrait.
 
 ## Themes
 
@@ -408,4 +435,4 @@ Text is set in Inter, titles in Bricolage Grotesque and code in JetBrains Mono, 
 
 ## Reserved for later versions
 
-Pronunciation of other languages, citations, per-slide voice and speed, quizzes and scene animations. Parsers must ignore attributes and classes they do not know.
+Pronunciation of other languages, citations, per-slide voice and speed, and scene animations. Parsers must ignore attributes and classes they do not know.

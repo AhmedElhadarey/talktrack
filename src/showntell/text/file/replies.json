@@ -4,6 +4,7 @@
   "pending": "Slides saved; the opening audio is still being made. Keep adding slides: export_walkthrough waits for all narration before rendering. Send the user no link.",
   "voice_error": "Slides saved, but voicing failed: {error}\nContinue with the next add_slides call. If the error repeats, stop and tell the user voicing fails on this machine, with the error; `showntell doctor` diagnoses it. A silent video is no use.",
   "finished": "Finished: {slides} slides, {duration}.\nNext: fix the problems listed below with revise_slide, then call export_walkthrough and send the user the file it saves. Send no link.",
+  "finished_fix": "Finished: {slides} slides, {duration}.\nNot ready to export yet: the findings below name slides {fix}. Fix each with revise_slide now; its reply re-checks the slide, and for a layout finding (text_too_small, overflow, drawing_overlap) preview_slides on that slide draws it again. No need to finish again. Once they are fixed, call export_walkthrough and send the user the file it saves. Send no link.",
   "loading": "The voice model is not ready yet: {status}. Send the opening with add_slides anyway; that reply may take longer.",
   "guide_send_link": "The user receives this walkthrough as a video file, not a link: write it all, finish, fix, export, then send the file.",
   "guide_tell_user": "**Export and send:** call `export_walkthrough`, then attach the file it saves in your message to the user, with a line or two on what it covers. No link; don't repeat the script.",

@@ -363,12 +363,22 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
             r = await service.finish(handle, questions)
         except ValueError as e:
             return _error(str(e))
+        # Slides with errors or warnings still standing: the reply asks for fixes before the
+        # agent reports done, since a list of findings after "tell the user" gets skipped.
+        fix = list(
+            dict.fromkeys(
+                d["slide"] for d in r["issues"] + r["player_issues"] if d.get("slide") and d.get("severity") in ("error", "warning")
+            )
+        )
         text = reply(
-            "finished",
-            "Finished: {url} ({slides} slides, {duration}). Tell the user it is done, with the link.",
+            "finished_fix" if fix else "finished",
+            "Finished: {url} ({slides} slides, {duration}). Fix slides {fix} with revise_slide, then tell the user it is done, with the link."
+            if fix
+            else "Finished: {url} ({slides} slides, {duration}). Tell the user it is done, with the link.",
             url=r["url"],
             slides=r["slides"],
             duration=mmss(r["duration_s"]),
+            fix=", ".join(f"`{x}`" for x in fix),
         )
         if r["pending"]:
             text += f"\n{r['pending']} paragraph(s) are still being voiced; the player fills them in as they finish."
