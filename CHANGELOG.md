@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8 (2026-10-27)
+
+- **Memory on Apple silicon:** the MLX voice kept every freed GPU buffer for reuse, and sentences of different lengths leave buffers of different sizes, so the cache grew to most of the Mac's memory (25 GB of 32 after ten sentences) and stayed there while the daemon ran. Macs swapped and froze. It is now cleared after each chunk: the cache stays near zero, about 3 GB at peak, and synthesis is faster (80 sentences in 33 s instead of 92 s on an M1 Max).
+
 ## 0.1.7 (2026-10-26)
 
 - **Code stays readable:** code and diffs no longer shrink to fit their longest line, which left a six-line diff with one long line at about 11 px on a 1080p frame. A side-by-side diff that would be too small stacks its panes, before above after, and lines too long for the reading size wrap, continuing under their own indentation. Only too many lines make code small now, and `text_too_small` fires on the rendered size whether or not the layout shrank anything, naming how many lines fit.
