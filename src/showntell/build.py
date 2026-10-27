@@ -327,15 +327,19 @@ class Builder(CueResolver, Checks):
             if s.kind == "list" and not self.into_pair:
                 items = s.visual["items"] + items
             used = set()
+            quiz = "quiz" in s.classes
             for i, it in enumerate(items):
                 it["title"], it["body"] = inline_plain(it["title"]), inline_plain(it["body"])
                 if not it["id"]:
-                    it["id"] = slugify(it["title"] or it["body"])[:24] or f"item-{i + 1}"
+                    # A quiz's choices are lettered on screen, and pointed at by letter: #a, #b.
+                    it["id"] = chr(ord("a") + i) if quiz and i < 26 else slugify(it["title"] or it["body"])[:24] or f"item-{i + 1}"
                 while it["id"] in used:
                     it["id"] += "-2"
                 used.add(it["id"])
             style = (
-                "timeline"
+                "quiz"
+                if quiz
+                else "timeline"
                 if "timeline" in s.classes
                 else "cards"
                 if "cards" in s.classes

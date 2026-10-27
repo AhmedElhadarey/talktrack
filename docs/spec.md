@@ -46,7 +46,7 @@ graph TB
 
 All tools return structured content and a readable text version. Tools carry titles and annotations: `list_walkthroughs` is read-only, none destroy data, all work in a closed world.
 
-**Prompts:** `diff`, `file` and `topic` return a ready-made request for a walkthrough of a change, a file or a concept. Claude Code shows them as slash commands.
+**Prompts:** `diff`, `review`, `file` and `topic` return a ready-made request for a walkthrough of a change, a review of a change (verdict, one finding per slide, ranked findings), a file or a concept. Claude Code shows them as slash commands.
 
 **Resources:** `showntell://walkthroughs` lists recent walkthroughs, `showntell://walkthroughs/{id}` holds one walkthrough's Markdown source, so a later session can read and revise it, and `showntell://slide-kinds` describes every kind of visual with an example.
 
@@ -82,7 +82,7 @@ While a player is connected, a revised slide replaces the old one only once all 
 - **Backends:** one interface, two implementations. MLX (mlx-audio) on Apple silicon, ONNX Runtime elsewhere. Both run Kokoro-82M and share everything around the model: misaki for English phonemes (with espeak-ng for unknown words only when the `espeak` extra is installed), chunking, style vectors and per-word timings. From mlx-audio, showntell uses only the model loader and forward pass. On Apple silicon with `auto`, a failure to load MLX or voice a first sentence switches to ONNX; `/health` and `doctor` say why.
 - **Queue:** one worker. Jobs are ordered by their position in their walkthrough, so the opening narration of a new walkthrough jumps ahead of a backlog.
 - **Pronunciation:** narration is rewritten into speakable text before synthesis: identifiers are split, symbols, units, versions and paths are read aloud, and a user word list applies. A character map ties spoken words back to the display text, so captions and cues use what the agent wrote.
-- **Timings:** each spoken token is located in the spoken text, then mapped to display offsets. A cue fires at the start time of the first word at or after its position.
+- **Timings:** each spoken token is located in the spoken text, then mapped to display offsets. A cue's time is the start time of the first word at or after its position; the player fires it 0.3 s earlier, so the pointer lands as the word is heard.
 
 ## Player
 
@@ -159,6 +159,8 @@ Findings from the server, found while parsing, building and voicing:
 | `table_numbers` | info | a table is mostly numbers a chart would compare at a glance |
 | `stat_no_change` | warning | a stat shows a change that is not one: the same value, or every number from 0 |
 | `narration_label` | warning | narration starts with a label such as Narration: that the voice reads aloud |
+| `quiz_shape` | warning | a quiz does not have two to four choices with exactly one marked right |
+| `quiz_reveal` | warning | a quiz's answer is never pointed at, or is pointed at while the question is asked |
 
 `still_slide` needs audio, so it arrives with the first call after the slide is voiced. It fires when the screen holds still (no slide change, cue or reveal) for more than 20 s of narration.
 
@@ -171,7 +173,7 @@ Findings from the open player, measured after a slide has settled. Their message
 | `render_error` | error | a diagram, formula or image failed to render in the player |
 | `audio_error` | error | narration audio failed to load or be voiced |
 | `player_error` | error | the player hit a script error |
-| `text_too_small` | warning | the player shrank a visual below a comfortable reading size |
+| `text_too_small` | warning | a visual's text renders below a comfortable reading size; code reaches it only with too many lines, since long lines wrap |
 | `overflow` | warning | a visual still overflows the slide after shrinking |
 | `pointer_offstage` | warning | a cue's target is outside the visible slide |
 | `drawing_overlap` | warning | a line runs through a label in a drawing, or two labels overlap |

@@ -155,9 +155,14 @@
    "slide": 1,
    "seg": 1,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "lines",
+    "l0": 1,
+    "l1": 1,
+    "side": "new"
+   },
    "reveal": {
-    "line": 0
+    "line": 1
    }
   },
   {
@@ -212,12 +217,12 @@
    "inAudio": true,
    "cue": {
     "kind": "lines",
-    "l0": 1,
-    "l1": 1,
+    "l0": 10,
+    "l1": 10,
     "side": "new"
    },
    "reveal": {
-    "line": 1
+    "line": 10
    }
   },
   {
@@ -289,7 +294,12 @@
    "slide": 2,
    "seg": 2,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "lines",
+    "l0": 2,
+    "l1": 2,
+    "side": "old"
+   },
    "reveal": null
   },
   {
@@ -325,9 +335,9 @@
    "inAudio": true,
    "cue": {
     "kind": "lines",
-    "l0": 2,
-    "l1": 2,
-    "side": "old"
+    "l0": 1,
+    "l1": 1,
+    "side": "new"
    },
    "reveal": null
   },
@@ -427,9 +437,12 @@
    "slide": 3,
    "seg": 3,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "node",
+    "id": "a"
+   },
    "reveal": {
-    "nodes": 0,
+    "nodes": 1,
     "order": [
      "a",
      "b",
@@ -464,10 +477,10 @@
    "inAudio": true,
    "cue": {
     "kind": "node",
-    "id": "a"
+    "id": "b"
    },
    "reveal": {
-    "nodes": 1,
+    "nodes": 2,
     "order": [
      "a",
      "b",
@@ -540,10 +553,10 @@
    "inAudio": true,
    "cue": {
     "kind": "node",
-    "id": "b"
+    "id": "c"
    },
    "reveal": {
-    "nodes": 2,
+    "nodes": 3,
     "order": [
      "a",
      "b",
@@ -578,10 +591,10 @@
    "inAudio": true,
    "cue": {
     "kind": "node",
-    "id": "c"
+    "id": "d"
    },
    "reveal": {
-    "nodes": 3,
+    "nodes": 4,
     "order": [
      "a",
      "b",
@@ -665,9 +678,12 @@
    "slide": 4,
    "seg": 4,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "item",
+    "id": "parse"
+   },
    "reveal": {
-    "items": 0
+    "items": 1
    }
   },
   {
@@ -690,10 +706,10 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "parse"
+    "id": "build"
    },
    "reveal": {
-    "items": 1
+    "items": 2
    }
   },
   {
@@ -716,10 +732,10 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "build"
+    "id": "voice"
    },
    "reveal": {
-    "items": 2
+    "items": 3
    }
   },
   {
@@ -810,7 +826,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "mem"
+    "id": "net"
    },
    "reveal": null
   },
@@ -1022,7 +1038,9 @@
    "slide": 7,
    "seg": 7,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "visual"
+   },
    "reveal": null
   },
   {

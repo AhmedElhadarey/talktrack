@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { build, firedCues, revealLevel, segmentAt, slideEnd, slideSpans, slideStart, stateAt, steps, wordAt } from "../../src/showntell/static/js/timeline.js";
+import { build, CUE_LEAD, firedCues, revealLevel, segmentAt, slideEnd, slideSpans, slideStart, stateAt, steps, wordAt } from "../../src/showntell/static/js/timeline.js";
 
 const say = (id, dur, cues = [], extra = {}) => ({ id, status: "ready", text: "one two three", duration: dur, cues, words: [], ...extra });
 const W = {
@@ -36,6 +36,12 @@ test("cues fire by local time and persist across paragraphs of a slide", () => {
   assert.deepEqual(firedCues(W, tl, 1, 1).map((c) => c.id), ["a"]);
   assert.deepEqual(firedCues(W, tl, 2, 0).map((c) => c.id), ["a", "b"]);
   assert.deepEqual(firedCues(W, tl, 2, 1.2).map((c) => c.id), ["a", "b", "c"]);
+});
+
+test("cues fire a moment before their word, so the pointer lands as it is spoken", () => {
+  const tl = build(W);
+  assert.deepEqual(firedCues(W, tl, 1, 0.5 - CUE_LEAD - 0.01).map((c) => c.id), []);
+  assert.deepEqual(firedCues(W, tl, 1, 0.5 - CUE_LEAD).map((c) => c.id), ["a"]);
 });
 
 test("build slides reveal up to the latest item pointed at, then everything", () => {

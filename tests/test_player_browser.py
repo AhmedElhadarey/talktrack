@@ -674,7 +674,8 @@ def test_newer_visuals_follow_the_narration(daemon, browser):
     )
     assert shift not in ("none", "") and focusing
     x1 = at("path", 0, 0.2, "+document.querySelector('circle.packet').getAttribute('cx')")
-    x2 = at("path", 0, 1.2, "+document.querySelector('circle.packet').getAttribute('cx')")
+    # before the gateway cue takes over, which fires CUE_LEAD (0.3 s) ahead of its word
+    x2 = at("path", 0, 0.7, "+document.querySelector('circle.packet').getAttribute('cx')")
     assert x2 > x1 > 0  # the packet travels left to right
     assert at("path", 1, 0.3, "document.querySelector('#pointer').dataset.kind") == "circle"
     early = at("numbers", 0, 0.2, "document.querySelector('.stat .num').textContent")

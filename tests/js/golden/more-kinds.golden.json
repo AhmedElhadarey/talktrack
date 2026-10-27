@@ -176,7 +176,12 @@
    "slide": 2,
    "seg": 2,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "lines",
+    "l0": 4,
+    "l1": 4,
+    "side": "new"
+   },
    "reveal": null
   },
   {
@@ -237,10 +242,7 @@
    "seg": 2,
    "inAudio": true,
    "cue": {
-    "kind": "lines",
-    "l0": 4,
-    "l1": 4,
-    "side": "new"
+    "kind": "step"
    },
    "reveal": null
   },
@@ -280,7 +282,10 @@
    "seg": 2,
    "inAudio": true,
    "cue": {
-    "kind": "step"
+    "kind": "lines",
+    "l0": 2,
+    "l1": 2,
+    "side": "new"
    },
    "reveal": null
   },
@@ -380,7 +385,12 @@
    "slide": 3,
    "seg": 3,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "lines",
+    "l0": 9,
+    "l1": 9,
+    "side": "new"
+   },
    "reveal": null
   },
   {
@@ -429,8 +439,8 @@
    "inAudio": true,
    "cue": {
     "kind": "lines",
-    "l0": 9,
-    "l1": 9,
+    "l0": 140,
+    "l1": 140,
     "side": "new"
    },
    "reveal": null
@@ -521,7 +531,9 @@
    "slide": 4,
    "seg": 4,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "edge"
+   },
    "reveal": null
   },
   {
@@ -580,7 +592,8 @@
    "seg": 4,
    "inAudio": true,
    "cue": {
-    "kind": "edge"
+    "kind": "node",
+    "id": "g"
    },
    "reveal": null
   },
@@ -655,7 +668,10 @@
    "slide": 5,
    "seg": 5,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "item",
+    "id": "p95-latency"
+   },
    "reveal": null
   },
   {
@@ -872,7 +888,9 @@
    "slide": 6,
    "seg": 6,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "region"
+   },
    "reveal": null
   },
   {
@@ -970,7 +988,10 @@
    "slide": 7,
    "seg": 7,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "item",
+    "id": "tests"
+   },
    "reveal": null
   },
   {
@@ -1013,7 +1034,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "tests"
+    "id": "announce"
    },
    "reveal": null
   },

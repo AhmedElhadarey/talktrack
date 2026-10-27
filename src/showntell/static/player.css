@@ -204,6 +204,12 @@ tbody.has-active tr:not(.active) { opacity: 0.5; }
 body.portrait .diff { grid-template-columns: 1fr; }
 .diff .codebox { min-width: 300px; max-width: none; }
 .diff .code { font-size: 19px; }
+/* fit() in draw.js keeps code at a reading size: a diff too wide side by side stacks its panes,
+   and lines too long for the size wrap, continuations indented. */
+.diff.stacked { grid-template-columns: minmax(0, 1fr); }
+.diff.wrapped:not(.stacked) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wrapped .ln { white-space: pre-wrap; }
+.wrapped .ln .tx { min-width: 0; overflow-wrap: anywhere; padding-left: calc((var(--ind, 0) + 4) * 1ch); text-indent: calc((var(--ind, 0) + 4) * -1ch); }
 
 /* diagrams, maths, images */
 .diagram { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
@@ -334,6 +340,23 @@ body.portrait .slide.k-chapter .big-n { font-size: 320px; right: 30px; }
 .list.checklist .tick .mark { fill: none; stroke: var(--add-fg); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 0.45s var(--ease); }
 .list.checklist .entry.ticked .tick .mark { stroke-dashoffset: 0; }
 .list.checklist .entry.ticked .tick .box { stroke: var(--add-fg); }
+/* quiz: lettered choices; picked by the viewer, then the answer shows (quizFrame in kinds/list.js) */
+.list.quiz { position: relative; gap: 16px; width: min(100%, 980px); padding-bottom: 18px; }
+.list.quiz .entry { align-items: center; cursor: pointer; }
+.list.quiz .entry::before { content: attr(data-letter); flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px;
+  font-family: var(--display); font-size: 26px; font-weight: 700; color: var(--fg); background: var(--panel-2); transition: background 0.3s, color 0.3s; }
+.list.quiz .entry h3, .list.quiz .entry p { font-size: 27px; color: var(--fg); }
+.list.quiz .entry.picked { border-color: var(--accent); }
+.list.quiz .entry.picked::before { background: var(--accent); color: var(--on-accent); }
+.list.quiz::after { content: ""; position: absolute; left: 0; bottom: 0; height: 5px; border-radius: 3px; background: var(--accent);
+  width: calc(var(--think, 0) * 100%); opacity: 0; transition: opacity 0.3s; }
+.list.quiz.thinking::after { opacity: 1; }
+.list.quiz.revealed .entry { cursor: default; }
+.list.quiz.revealed .entry:not(.correct) { opacity: 0.45; }
+.list.quiz.revealed .entry.correct { border-color: var(--add-fg); background: color-mix(in srgb, var(--add-fg) 14%, var(--panel)); opacity: 1; }
+.list.quiz.revealed .entry.correct::before { content: "✓"; background: var(--add-fg); color: var(--on-accent); }
+.list.quiz.revealed .entry.picked:not(.correct) { opacity: 0.8; border-color: var(--del-fg); }
+.list.quiz.revealed .entry.picked:not(.correct)::before { content: "✕"; background: var(--del-fg); color: var(--on-accent); }
 
 /* terminal sessions */
 .codebox.terminal .file { justify-content: flex-start; }

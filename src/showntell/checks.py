@@ -131,7 +131,7 @@ class Checks:
             self._issue(
                 "code_too_wide",
                 f"{where} has lines of {width} characters; this frame reads well up to {lim['width']}.",
-                "Show a narrower excerpt or wrap long lines.",
+                "Lines this long wrap, which reads worse than code that fits: show an excerpt without the longest lines, or shorten them in inline code.",
             )
 
     def _check_diff(self, vis: dict) -> None:
@@ -150,7 +150,7 @@ class Checks:
             self._issue(
                 "diff_too_wide",
                 f"A diff has lines of {width} characters; diffs read well up to {lim['diff_width']} per side.",
-                "Use the portrait frame for wide diffs, or show the new code alone.",
+                "Lines this long stack the two sides or wrap, both harder to compare: show a hunk without the longest lines, or shorten them in a pasted diff.",
             )
 
     # -- slide-level checks -------------------------------------------------------------
@@ -214,6 +214,7 @@ class Checks:
         self._check_build_order(s)
         self._check_fit(s)
         self._check_layout(s)
+        self._check_quiz(s)
         shown = " ".join([s.shown] + [it.get("body", "") for it in s.visual.get("items", [])])
         spoken = " " + " ".join(re.findall(r"[\w'-]+", " ".join(x.text for x in s.says).lower())) + " "
         for chunk in _phrases(shown, 7):
@@ -226,6 +227,47 @@ class Checks:
                     line=s.line,
                 )
                 break
+
+    def _check_quiz(self, s: Slide) -> None:
+        """A quiz: two to four choices, one right, and the answer pointed at after the question,
+        so the viewer gets a moment to think before it shows."""
+        if s.kind != "list" or s.visual.get("style") != "quiz":
+            return
+        items = s.visual.get("items", [])
+        right = {it["id"] for it in items if it.get("check")}
+        if not 2 <= len(items) <= 4 or len(right) != 1:
+            self._issue(
+                "quiz_shape",
+                f"Slide `{s.id}`: the quiz has {len(items)} choices with {len(right)} marked right.",
+                "Give two to four choices as `- [ ]` items and mark exactly one, the right answer, `- [x]`.",
+                slide=s.id,
+                line=s.line,
+            )
+        if not right:
+            return
+        spoken = [k for k, x in enumerate(s.says) if x.text]
+        first = next(
+            (
+                k
+                for k, x in enumerate(s.says)
+                if any(c.get("kind") == "item" and not c.get("inferred") and c.get("id") in right for c in x.cues)
+            ),
+            None,
+        )
+        if first is None or (spoken and first == spoken[0]):
+            letter = next(chr(65 + i) for i, it in enumerate(items) if it["id"] in right)
+            self._issue(
+                "quiz_reveal",
+                f"Slide `{s.id}`: "
+                + (
+                    "the narration never points at the right answer, so it shows only as the slide ends."
+                    if first is None
+                    else "the right answer is pointed at in the first paragraph, while the question is still being asked."
+                ),
+                f"Ask in the first paragraph, give thinking time with a `{{pause=3}}` paragraph, then point at the answer with a link, [{letter}](#{letter.lower()}), and say why it is right; naming it aloud without a link does not show it.",
+                slide=s.id,
+                line=s.line,
+            )
 
     def _check_spoken(self, s: Slide) -> None:
         for x in s.says:

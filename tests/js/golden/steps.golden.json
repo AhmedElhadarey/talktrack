@@ -113,9 +113,12 @@
    "slide": 1,
    "seg": 1,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "node",
+    "id": "parse"
+   },
    "reveal": {
-    "nodes": 0,
+    "nodes": 1,
     "order": [
      "parse",
      "build",
@@ -256,10 +259,10 @@
    "inAudio": true,
    "cue": {
     "kind": "node",
-    "id": "parse"
+    "id": "build"
    },
    "reveal": {
-    "nodes": 1,
+    "nodes": 2,
     "order": [
      "parse",
      "build",
@@ -418,10 +421,10 @@
    "inAudio": true,
    "cue": {
     "kind": "node",
-    "id": "build"
+    "id": "voice"
    },
    "reveal": {
-    "nodes": 2,
+    "nodes": 3,
     "order": [
      "parse",
      "build",
@@ -570,9 +573,14 @@
    "slide": 2,
    "seg": 5,
    "inAudio": true,
-   "cue": null,
+   "cue": {
+    "kind": "lines",
+    "l0": 11,
+    "l1": 11,
+    "side": "new"
+   },
    "reveal": {
-    "line": 10
+    "line": 11
    }
   },
   {
@@ -627,12 +635,12 @@
    "inAudio": true,
    "cue": {
     "kind": "lines",
-    "l0": 11,
-    "l1": 11,
+    "l0": 12,
+    "l1": 12,
     "side": "new"
    },
    "reveal": {
-    "line": 11
+    "line": 12
    }
   },
   {
@@ -762,12 +770,12 @@
    "inAudio": true,
    "cue": {
     "kind": "lines",
-    "l0": 12,
-    "l1": 12,
+    "l0": 13,
+    "l1": 13,
     "side": "new"
    },
    "reveal": {
-    "line": 12
+    "line": 13
    }
   },
   {

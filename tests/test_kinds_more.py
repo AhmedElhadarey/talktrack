@@ -179,3 +179,29 @@ def test_stat_units_may_be_any_short_text():
     v, problems = parse_stat("Lens area: 1 cm² -> 20 cm²\nDistance: 147.1 million km\nTemperature: 21.5 °C", {})
     assert not problems and [i["unit"] for i in v["items"]] == ["cm²", "million km", "°C"]
     assert v["items"][0]["before"] == 1 and v["items"][1]["after"] == 147.1
+
+
+QUIZ = "## Which call retries? {.quiz}\n\n- [ ] `fetch`\n- [x] `send`\n- [ ] `close`\n\n"
+
+
+def test_quiz_choices_are_lettered_and_one_is_right(build):
+    s, codes, _ = last(build, QUIZ + "Which one retries?\n\n{pause=3}\n\nIt's [send](#b).\n")
+    assert s.visual["style"] == "quiz"
+    assert [i["id"] for i in s.visual["items"]] == ["a", "b", "c"]
+    assert [bool(i.get("check")) for i in s.visual["items"]] == [False, True, False]
+    assert not [c for c in codes if c.startswith("quiz_")]
+
+
+def test_quiz_without_one_right_answer_is_reported(build):
+    _, codes, _ = last(build, "## Q {.quiz}\n\n- [ ] one\n- [ ] two\n\nWhich? Neither, it turns out: [one](#a).\n\nOr [two](#b).\n")
+    assert "quiz_shape" in codes
+
+
+def test_quiz_answer_given_with_the_question_is_reported(build):
+    _, _, b = last(build, QUIZ + "Is it [send](#b)?\n")
+    assert any(i.code == "quiz_reveal" and "first paragraph" in i for i in b.issues)
+
+
+def test_quiz_answer_never_pointed_at_is_reported(build):
+    _, _, b = last(build, QUIZ + "Which one retries?\n\nThink about it.\n")
+    assert any(i.code == "quiz_reveal" and "never points" in i for i in b.issues)
