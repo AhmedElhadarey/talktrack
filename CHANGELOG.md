@@ -1,13 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.1.7 (2026-10-26)
 
 - **Code stays readable:** code and diffs no longer shrink to fit their longest line, which left a six-line diff with one long line at about 11 px on a 1080p frame. A side-by-side diff that would be too small stacks its panes, before above after, and lines too long for the reading size wrap, continuing under their own indentation. Only too many lines make code small now, and `text_too_small` fires on the rendered size whether or not the layout shrank anything, naming how many lines fit.
 - **Pointer lead:** cues fire 0.3 s before their word is spoken, about as long as the pointer takes to glide over, so it lands as the word is heard.
 - **Quiz slides:** `.quiz` on a heading turns `- [ ]` / `- [x]` items into a multiple-choice question, lettered A to D. Viewers can pick a choice; the answer shows when a cue points at the right one, after an optional `{pause=3}` paragraph that runs a thinking bar. Findings: `quiz_shape`, `quiz_reveal`.
 - **Fix before done:** when slides still have errors or warnings at finish, the `finish_walkthrough` reply names them and asks for fixes before telling the user.
-- **Guide:** one point per slide in one to three short paragraphs (about 8 to 20 s), concept pieces of one to two minutes, a one-sentence opening, a rule for analogies, a section on reviews that judge (verdict first, a finding per slide with cued evidence and a severity, ranked at the end), quizzes for teaching pieces, and zoom cues across one dense picture. A new `review` prompt.
+- **Guide:** one point per slide in one to three short paragraphs (about 8 to 20 s), concept pieces of one to two minutes, a one-sentence opening, a rule for analogies, a section on reviews that judge (verdict first, a finding per slide with cued evidence and a severity, ranked at the end), quizzes for teaching pieces, and zoom cues across one dense picture. A new `review` prompt. In eval round 5 (Sonnet, the six round 4 prompts) narration per content slide fell from about 21 s to 17 s and five of six pieces ended on a quiz; the new review prompt produced a verdict, two should-fix findings with evidence and a ranked table, and both findings were real (fixed below).
 - **GitHub Action:** the repository is an action (`action.yml`) that voices a walkthrough's Markdown on the runner with ONNX, uploads the page and optionally an MP4, and keeps one pull request comment with the outline, transcript and download link up to date. CI runs it on its own example. See docs/github-action.md.
+- **Adding the video extra takes effect:** a running daemon started without Playwright is replaced by the same code with it, instead of being reused until it stopped. The browser hint names the export command as well as `mcp`.
 - **Eval:** seconds of narration per slide, slides over 20 s and `text_too_small` counts per run; a `review` prompt.
 - **A missing browser is loud:** the base install has no Playwright Chromium, so `finish_walkthrough` was skipping its layout check and saying so only in an info line. It now reports `no_browser` as a warning naming what the reply lacks (layout findings, pictures of alike slides, the poster); `showntell doctor` has a `slide checks` row with the two commands that add the browser; the daemon logs it once; the README's install section says how to install with it.
 
