@@ -33,6 +33,8 @@ def walkthrough_id(ref: str) -> str | None:
 
 
 def _state(data_dir: Path, wid: str) -> dict | None:
+    if not ID_RE.match(wid or ""):  # ids read back from a playlist file go into a path
+        return None
     path = data_dir / "walkthroughs" / wid / "state.json"
     try:
         return json.loads(path.read_text())
@@ -47,13 +49,17 @@ def create(data_dir: Path, title: str, refs: list[str], description: str = "") -
     if len(refs) > MAX_ENTRIES:
         raise ValueError(f"a playlist holds at most {MAX_ENTRIES} walkthroughs; split it into parts")
     ids = [walkthrough_id(r) for r in refs]
-    unknown = [r for r, wid in zip(refs, ids, strict=True) if wid is None or _state(data_dir, wid) is None]
+    states = [_state(data_dir, wid) if wid else None for wid in ids]
+    unknown = [r for r, st in zip(refs, states, strict=True) if st is None]
     if unknown:
         raise ValueError("unknown walkthroughs: " + ", ".join(unknown) + "; use ids or links from list_walkthroughs")
+    unfinished = [r for r, st in zip(refs, states, strict=True) if st.get("status") != "finished"]
+    if unfinished:
+        raise ValueError("unfinished walkthroughs: " + ", ".join(unfinished) + "; call finish_walkthrough on each first")
     pl = {
         "version": STATE_VERSION,
         "id": secrets.token_urlsafe(16),
-        "title": (title or "Untitled playlist").strip()[:120],
+        "title": (title or "").strip()[:120] or "Untitled playlist",
         "description": " ".join((description or "").split())[:MAX_DESCRIPTION],
         "walkthroughs": ids,
         "created": time.time(),

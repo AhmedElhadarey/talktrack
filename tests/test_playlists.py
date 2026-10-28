@@ -40,6 +40,7 @@ async def walk(service, store, voiced, title: str) -> dict:
     await service.add(r["handle"], OPENING.format(t=title))
     s = store.by_handle(r["handle"])
     await voiced(s)
+    await service.finish(r["handle"], None, check=False)
     s.save_now()
     return r
 
@@ -194,3 +195,55 @@ async def test_the_command_line_exports_a_playlist_from_its_link(two, shared, tm
     assert 'id="playlist-data"' in (tmp_path / "c.html").read_text() and "plays the playlist offline" in capsys.readouterr().out
     with pytest.raises(SystemExit, match="one .html file"):
         export_cli(cfg, SimpleNamespace(source=pl["id"], out=str(tmp_path / "c.mp4"), mp3=False))
+
+
+async def test_an_unfinished_walkthrough_is_refused_by_name(two, shared, voiced):
+    service, (a, _) = two
+    r = await service.start("Still writing", "landscape", "", 1.0, None)
+    await service.add(r["handle"], OPENING.format(t="Still writing"))
+    s = shared.by_handle(r["handle"])
+    await voiced(s)
+    s.save_now()
+    with pytest.raises(ValueError, match="unfinished walkthroughs: .*" + r["handle"].split(".")[0]) as e:
+        playlists.create(shared.data_dir, "T", [a["url"], r["url"]])
+    assert a["url"] not in str(e.value) and not playlists.list_all(shared.data_dir)
+
+
+async def test_a_blank_title_becomes_untitled_and_odd_ids_in_the_file_are_skipped(two, shared):
+    _, (a, _) = two
+    pl = playlists.create(shared.data_dir, "   ", [a["url"]])
+    assert pl["title"] == "Untitled playlist"
+    pl["walkthroughs"] += ["../../etc/passwd", "x"]
+    assert [r["title"] for r in playlists.entries(shared.data_dir, pl)] == ["Part one"]
+
+
+async def test_a_title_may_say_anything_in_the_export(two, shared, tmp_path):
+    _, (a, _) = two
+    pl = playlists.create(shared.data_dir, "About __STATIC__ and {{TITLE}}", [a["url"]], "{{DATA}} __STATIC__")
+    html = export_playlist_html(shared.data_dir, pl, tmp_path / "t.html").read_text()
+    assert "About __STATIC__ and {{TITLE}}" in html
+
+
+async def test_file_mode_has_its_own_playlist_text_and_guide_line(two):
+    service, (a, _) = two
+    from talktrack.server import guide
+
+    async with Client(create_mcp(service, deliver="file")) as client:
+        (t,) = [t for t in (await client.list_tools()).tools if t.name == "create_playlist"]
+        assert "one link" not in t.description and "HTML page" in t.description and "MP4" in t.description
+        r = await client.call_tool("create_playlist", {"title": "T", "walkthroughs": [a["url"]]})
+        assert r.structured_content["url"]  # kept for clients that read it
+    assert (
+        "create_playlist" in guide("landscape")
+        and "create_playlist" not in guide("landscape", "file")
+        and "MP4" in guide("landscape", "file")
+    )
+
+
+async def test_a_playlist_page_has_no_default_size_limit_but_a_single_page_does(two, shared, tmp_path):
+    service, (a, b) = two
+    pl = playlists.create(shared.data_dir, "Course", [a["url"], b["url"]])
+    r = await service.export(pl["id"], str(tmp_path / "c.html"), "html", None, default_mb=0.001)
+    assert r["bytes"] > 100_000  # far over the 1 KB default
+    with pytest.raises(ValueError, match="over the"):
+        await service.export(a["handle"], str(tmp_path / "a.html"), "html", None, default_mb=0.001)

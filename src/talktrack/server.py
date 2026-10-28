@@ -91,6 +91,7 @@ def guide(frame: str, deliver: str = "link") -> str:
     for k, v in {
         "SEND_LINK": reply("guide_send_link", "", deliver),
         "TELL_USER": reply("guide_tell_user", "", deliver),
+        "PARTS": reply("guide_parts", "", deliver),
         "FRAME": frame,
         "LINES": lim["lines"],
         "WIDTH": lim["width"],
@@ -424,11 +425,12 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
         max_mb: Annotated[float | None, Field(description=arg_text("export_walkthrough", "max_mb"))] = None,
         shared: Annotated[ListRootsResult | None, Resolve(_shared_folders)] = None,
     ) -> CallToolResult:
-        limit = (FILE_MAX_MB if by_file else 0.0) if max_mb is None else max(0.0, max_mb)
+        default = FILE_MAX_MB if by_file else 0.0
+        limit = default if max_mb is None else max(0.0, max_mb)
         try:
             if path and Path(path).expanduser().is_absolute():
                 _check_inside(shared, path, "path")
-            r = await service.export(handle, path, format, limit)
+            r = await service.export(handle, path, format, max_mb, default_mb=default)
         except ValueError as e:
             return _error(str(e))
         text = reply(

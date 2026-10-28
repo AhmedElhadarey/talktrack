@@ -94,9 +94,9 @@ While a player is connected, a revised slide replaces the old one only once all 
 
 ## Playlists
 
-- **Storage:** `playlists/<id>.json` in the data folder: title, description and the walkthrough ids in order, written the way `state.json` is (a `.part` file, then renamed). Titles and durations are read from the walkthroughs when the page is drawn, so a deleted walkthrough drops out of the list.
-- **Page:** `/p/<id>/` shows the table of contents (titles, durations) and one frame holding the current walkthrough's own player, so the keyboard shortcuts, captions and speed are the player's. When the player reports `ended`, the next entry loads and is told to play; a click in the contents jumps to an entry. `?n=N` (from 1) opens entry N and follows the playing one in the address bar; another `?t=` token is kept.
-- **Export:** `export_walkthrough` with the playlist's id as `handle` and format `html`, or `talktrack export PLAYLIST OUT.html`, writes one offline page: the contents page with each walkthrough's single-page export inside it, loaded into the frame as it is played. Playlists have no MP4.
+- **Storage:** `playlists/<id>.json` in the data folder: title, description and the walkthrough ids in order, written the way `state.json` is (a `.part` file, then renamed). Titles and durations are read from the walkthroughs when the page is drawn, so a deleted walkthrough drops out of the list. Only finished walkthroughs can be added.
+- **Page:** `/p/<id>/` shows the table of contents (titles, durations) and one frame holding the current walkthrough's own player, so the keyboard shortcuts, captions and speed are the player's. When the player reports `ended`, the next entry loads and is told to play; a click in the contents jumps to an entry. `?n=N` (from 1) opens entry N and follows the playing one in the address bar; other query parameters, such as `?t=`, are kept. N counts the entries that still exist, so deleting a walkthrough shifts the numbers in links already shared.
+- **Export:** `export_walkthrough` with the playlist's id as `handle` and format `html`, or `talktrack export PLAYLIST OUT.html`, writes one offline page: the contents page with each walkthrough's single-page export inside it, loaded into the frame as it is played. Playlists have no MP4. With `--deliver file` the page has no size limit unless `max_mb` is given (the 16 MB default is for videos); one entry with a diagram is about 1.6 MB plus its narration.
 
 ## Checks returned to the agent
 

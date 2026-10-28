@@ -381,14 +381,21 @@ def export_playlist_html(data_dir: Path, pl: dict, out: Path) -> Path:
             if r["id"] not in docs:
                 docs[r["id"]] = export_html(data_dir, r["id"], Path(tmp) / f"{r['id']}.html").read_text()
             r["doc"] = docs[r["id"]]
+    swaps = [
+        (
+            '<link rel="icon" href="__STATIC__/icon.svg" type="image/svg+xml">',
+            f'<link rel="icon" href="{_data_uri(STATIC / "icon.svg")}" type="image/svg+xml">',
+        ),
+        ('<link rel="stylesheet" href="__STATIC__/themes.css">', f"<style>\n{(STATIC / 'themes.css').read_text()}\n</style>"),
+    ]
     page = render_playlist(pl, rows, "__STATIC__", rows[0]["theme"])
-    page = _swap(
-        page,
-        '<link rel="icon" href="__STATIC__/icon.svg" type="image/svg+xml">',
-        f'<link rel="icon" href="{_data_uri(STATIC / "icon.svg")}" type="image/svg+xml">',
-    )
-    page = _swap(page, '<link rel="stylesheet" href="__STATIC__/themes.css">', f"<style>\n{(STATIC / 'themes.css').read_text()}\n</style>")
-    if "__STATIC__" in page:
+    for old, new in swaps:
+        page = _swap(page, old, new)
+    # Check the template, not the filled page: a title may say anything.
+    bare = render_playlist({"title": "", "description": ""}, [], "__STATIC__")
+    for old, _ in swaps:
+        bare = bare.replace(old, "")
+    if "__STATIC__" in bare:
         raise RuntimeError("playlist.html references a file the single page does not carry")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page)

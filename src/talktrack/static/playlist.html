@@ -51,7 +51,7 @@ li .n, li .d { color: var(--muted); font-size: 13px; font-variant-numeric: tabul
   var data = JSON.parse(document.getElementById("playlist-data").textContent);
   var entries = data.entries, frame = document.getElementById("frame");
   var buttons = Array.prototype.slice.call(document.querySelectorAll("#entries button"));
-  var current = -1, playNext = false;
+  var current = -1, playNext = false, focusNext = true;  // focus the player on the first load and after a click, not on every auto-advance
 
   function show(i, play) {
     if (i < 0 || i >= entries.length) return;
@@ -66,8 +66,8 @@ li .n, li .d { color: var(--muted); font-size: 13px; font-variant-numeric: tabul
     else { frame.removeAttribute("srcdoc"); frame.src = entries[i].src; }
   }
 
-  buttons.forEach(function (b, k) { b.onclick = function () { show(k, true); }; });
-  frame.addEventListener("load", function () { frame.focus(); });  // the player's keys work at once
+  buttons.forEach(function (b, k) { b.onclick = function () { focusNext = true; show(k, true); }; });
+  frame.addEventListener("load", function () { if (focusNext) { focusNext = false; frame.focus(); } });  // the player's keys work at once
   window.addEventListener("message", function (e) {
     var m = e.data;
     if (e.source !== frame.contentWindow || !m || m.source !== "talktrack") return;

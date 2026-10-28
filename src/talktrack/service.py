@@ -229,7 +229,9 @@ class LocalService:
             "player_issues": _dicts(s.take_player_issues()),
         }
 
-    async def export(self, handle: str, path: str = "", format: str = "mp4", max_mb: float = 0, wait_s: float | None = None) -> dict:
+    async def export(
+        self, handle: str, path: str = "", format: str = "mp4", max_mb: float | None = 0, wait_s: float | None = None, default_mb: float = 0
+    ) -> dict:
         """Write the walkthrough to a file the agent can attach: an MP4, or one HTML page that plays
         offline. A relative or empty `path` is in the project folder. Waits for the narration first."""
         import asyncio
@@ -254,6 +256,8 @@ class LocalService:
             s = self.store.by_handle(handle)
             sessions, title, root = [s], s.w.title, s.w.root
         out = export_path(title, root, path, format)
+        # No limit given: the server's default, except for a playlist page, which goes as a document, not a video.
+        max_mb = max(0.0, max_mb) if max_mb is not None else 0.0 if pl else default_mb
         says = [x for s in sessions for sl in s.w.slides for x in sl.says if x.text]
         if not says:
             raise ValueError("nothing to export yet: the walkthrough has no narration")
@@ -361,9 +365,11 @@ class RemoteService:
     async def preview(self, handle, slides=None, short=360):
         return await self._call("preview", handle=handle, slides=slides, short=short)
 
-    async def export(self, handle, path="", format="mp4", max_mb=0):
+    async def export(self, handle, path="", format="mp4", max_mb=0, default_mb=0):
         # Rendering takes a while: about a tenth of the video's length, plus waiting for the voice.
-        return await self._call("export", http_timeout=EXPORT_WAIT_S + 900, handle=handle, path=path, format=format, max_mb=max_mb)
+        return await self._call(
+            "export", http_timeout=EXPORT_WAIT_S + 900, handle=handle, path=path, format=format, max_mb=max_mb, default_mb=default_mb
+        )
 
 
 RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list", "source", "preview", "export", "create_playlist", "playlists"}
