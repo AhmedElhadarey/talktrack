@@ -134,6 +134,7 @@ class LocalService:
         Playwright or its Chromium is missing, ('not_checked', reason) when drawing failed."""
         import asyncio
 
+        from . import browser
         from .capture import Capturer, CaptureUnavailable
 
         global _browser_warned
@@ -153,6 +154,8 @@ class LocalService:
                     s.report(f)
 
         try:
+            if browser.status.state != "ready":  # the first download must not count against the drawing's time
+                await asyncio.to_thread(browser.ensure)
             await asyncio.wait_for(run(), LAYOUT_CHECK_S)
         except CaptureUnavailable as e:
             if not _browser_warned:  # once per daemon, so the log says why finish never draws

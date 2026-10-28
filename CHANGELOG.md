@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 (unreleased)
+
+- **Chromium on first need:** Playwright is a base dependency now, and its headless Chromium downloads the first time a slide check, poster, `preview_slides` or MP4 export needs it, as the voice model does: 99 MiB in 33 s on a fast line, once, with progress on stderr and in `/health`. Before, the base install had no browser, so finish skipped its layout check until you added the `video` extra and ran `playwright install` by hand. Only the headless shell is fetched (about 100 MB, against 250 for the full Chromium), under a lock so MP4 export's four browsers share one download, and other projects' browsers in the cache are kept. A failed download (offline, a Linux image without system libraries) names the manual steps, including `--with-deps`; `TALKTRACK_AUTO_BROWSER=0` keeps the old behaviour. `talktrack[video]` installs still work. `doctor` says whether the browser is there or will be fetched.
+
 ## 0.2.0 (2026-10-28)
 
 - **Renamed to talktrack:** the package, the `talktrack` command, the `<talktrack-player>` element, the Claude Code plugin, the Gemini extension and the GitHub Action all carry the new name, and installs come from `AhmedElhadarey/talktrack`. Settings are now `TALKTRACK_*` (`TALKTRACK_PORT`, `TALKTRACK_DATA` and the rest); the old `SHOWNTELL_*` variables are no longer read. The data folder moves with the name, so the voice model downloads again on first run. Entries below keep the old name.

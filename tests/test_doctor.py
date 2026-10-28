@@ -3,19 +3,13 @@
 from talktrack import __version__, doctor
 
 
-def test_slide_checks_row_names_what_is_off_and_how_to_add_the_browser(monkeypatch):
-    monkeypatch.setattr(doctor, "_chromium", lambda: "")
-    status, name, detail = doctor._browser_check()
-    assert (status, name) == (doctor.WARN, "slide checks")
-    for part in ("not draw the slides", "layout findings", "pictures of alike slides", "poster", "MP4"):
-        assert part in detail
-    assert doctor.INSTALL_VIDEO in detail and doctor.INSTALL_BROWSER in detail
-    # the install commands are pinned to this release, like the plain one
+def test_install_commands_are_pinned_to_this_release():
     assert f"@v{__version__}" in doctor.INSTALL_BROWSER and f"@v{__version__}" in doctor.INSTALL
+    assert "--with-deps" in doctor.INSTALL_BROWSER_LINUX and "video" not in doctor.INSTALL_BROWSER
 
 
 def test_slide_checks_row_is_ok_with_the_browser(monkeypatch):
-    monkeypatch.setattr(doctor, "_chromium", lambda: "/browsers/chrome")
+    monkeypatch.setattr(doctor, "_chromium", lambda: True)
     assert doctor._browser_check()[:2] == (doctor.OK, "slide checks")
 
 

@@ -84,6 +84,8 @@ When the player runs inside an iframe it posts its events to the parent (`ready`
 
 ## Capture and video export
 
+Playwright is a base dependency. Every launch goes through `capture.launch`, which on a missing browser calls `browser.ensure`: Playwright's own installer (`playwright install --no-remove chromium-headless-shell`, the build a headless launch runs) under a process-wide lock, so the export's concurrent workers wait for one download. Progress goes to `browser.status` (`/health`, `doctor`) and stderr; `TALKTRACK_AUTO_BROWSER=0` skips the download and raises `CaptureUnavailable` with the manual steps.
+
 `capture.py` opens the player with `?capture=1`. In that mode the player plays no audio, turns CSS animation and transitions off, shows only the stage at scale 1, and exposes `window.__talktrack.duration()` and `seek(t)`. `seek` resolves once the frame for *t* is painted (slide renderers, Mermaid, KaTeX, images and fonts settled, then two animation frames) and returns a state key built from slide, revision, reveal level, cue and, with burned captions, the current word. Equal keys mean equal pictures.
 
 ```mermaid
