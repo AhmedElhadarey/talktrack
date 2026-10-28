@@ -13,7 +13,13 @@
     "args": {
       "target": "What to review: a commit range such as main..HEAD or main...HEAD, a branch name, or \"the working tree\"."
     },
-    "template": "Review the changes in {target} and present the review as a narrated talktrack walkthrough: judge the change, don't tour it. Run `git diff --shortstat` on the range, then read the whole diff and the code around it, and run the tests or commands that would confirm a problem where you can. In `rev=`, A..B compares two commits; for a branch, `rev=<base>...<branch>` (three dots) shows only what the branch changed. Open with the verdict in one sentence: ready to merge, ready after fixes, or not ready, and the main reason. Then give each finding its own slide: what is wrong, the evidence on screen as a `diff file=... rev=...` or `file=` and `lines=` block with the exact lines cued, why it matters, and a severity in the takeaway line: blocker, should-fix or minor. Give the strongest reason the author may have done it this way, and say plainly whether each finding is verified (you ran it, or the code shows it) or suspected. Never invent problems to fill slides: if the change is sound, say so and show what you checked. Close with the findings ranked most severe first, as a table or a checklist, and the next step. Keep it to 2 to 4 minutes, one point per slide. Share the link with me as soon as it is playable."
+    "optional": {
+      "spec": {
+        "description": "Optional. What the change was meant to do: an issue or pull request number or URL, ticket text, or a file path.",
+        "text": "Check it against this spec: {value}. Read the spec first: when it is an issue or pull request number or URL and `gh issue view` or `gh pr view` works, read that; otherwise take it as the requirement text, or as a file path to read. Then add whether the change does what was asked: each requirement met, partly met or missing, and anything the change does that was not asked, as findings with the same severities."
+      }
+    },
+    "template": "Review the changes in {target} and present the review as a narrated talktrack walkthrough: judge the change, don't tour it. Run `git diff --shortstat` on the range, then read the whole diff and the code around it, and run the tests or commands that would confirm a problem where you can.{spec} In `rev=`, A..B compares two commits; for a branch, `rev=<base>...<branch>` (three dots) shows only what the branch changed. Open with the verdict in one sentence: ready to merge, ready after fixes, or not ready, and the main reason. Then give each finding its own slide: what is wrong, the evidence on screen as a `diff file=... rev=...` or `file=` and `lines=` block with the exact lines cued, why it matters, and a severity in the takeaway line: blocker, should-fix or minor. Give the strongest reason the author may have done it this way, and say plainly whether each finding is verified (you ran it, or the code shows it) or suspected. Never invent problems to fill slides: if the change is sound, say so and show what you checked. Close with the findings ranked most severe first, as a table or a checklist, and the next step. Keep it to 2 to 4 minutes, one point per slide. Share the link with me as soon as it is playable."
   },
   "file": {
     "title": "Walk through a file",
@@ -30,5 +36,37 @@
       "topic": "The concept, algorithm, architecture or question to cover."
     },
     "template": "Make a narrated talktrack walkthrough of {topic}. Go from the problem it solves, to how it works, to its consequences and trade-offs, in about 1 to 2 minutes of short slides, one point each. Open with the most concrete fact or the question it answers, and end with one quiz slide on the main point. Use diagrams, formulas, tables, charts for numbers or short code examples where they help, and tie it to code in this project when there is a real example, read from disk. Share the link with me as soon as it is playable."
+  },
+  "feature": {
+    "title": "Walk through a feature",
+    "description": "Narrated walkthrough of how one feature works, following a real path through the code from its entry point.",
+    "args": {
+      "feature": "What to explain: a feature, behaviour or flow, such as \"how narration gets voiced\", or its name."
+    },
+    "template": "Make a narrated talktrack walkthrough of {feature}. Find its entry point first: where a user or a caller triggers it. Then follow one real path from there through the code, across files, in the order it runs, and read each file before you describe it. Pick the 3 to 5 places on that path that matter most, and show code only there, as short excerpts read from disk with `file=` and `lines=` of at most about 8 lines, each narrow enough to read on a phone. Carry the rest of the path on a sequence diagram or a flow of who calls whom, and show the behaviour in a terminal session. Then cover the edge cases, the limits and where you would change it. State only what the code shows, and say \"not sure\" where you cannot tell rather than guess. Open with what the user gets from it, not with code names. Keep it to 2 to 3 minutes, one point per slide. Share the link with me as soon as it is playable."
+  },
+  "course": {
+    "title": "Teach a subject as a course",
+    "description": "A course of three to six short walkthroughs on one subject, each ending in a quiz, joined in a playlist.",
+    "args": {
+      "subject": "What to teach: a codebase, a module or a topic."
+    },
+    "template": "Make a talktrack course that takes someone from no knowledge to working knowledge of {subject}, as 3 to 6 parts. Read the code and docs first, then plan one learning goal per part, in dependency order: no part leans on one that comes later. Say the plan in the opening of the first part. Make each part its own finished walkthrough of 1 to 3 minutes of short slides, one point each, that ends with one quiz slide on its goal, and call `finish_walkthrough` on each part when it is complete. Share each part's link as soon as it is playable, before you start the next. When every part is finished, call `create_playlist` with the parts in order and share the playlist link with me."
+  },
+  "bug": {
+    "title": "Walk through a bug",
+    "description": "Narrated walkthrough of a bug: the symptom, the cause with evidence, the fix, proof it works and how to prevent it.",
+    "args": {
+      "target": "The bug: a fix commit, range or pull request, an issue, or a symptom as the user saw it."
+    },
+    "template": "Make a narrated talktrack walkthrough of the bug in {target}. Read the fix and the code around it first. Tell it in this order: the symptom as the user saw it; the cause, with the evidence on screen; the fix; evidence it now works, a test or a run you did; and how to keep it from coming back. When a fix exists, show the faulty code as the old side of the fix, with `diff file=... rev=<sha>~1..<sha>` for one fix commit (a bare `rev=<sha>` compares with the working tree, and `file=` alone shows today's fixed code); a log or a failing test also counts as evidence. Use plain `file=` and `lines=` only when the bug is still unfixed. In `rev=`, A..B compares two commits. If you were given only a symptom and no fix exists yet, investigate, then present the cause and a suspected fix, and mark each as verified (you ran it, or the code shows it) or suspected; never present a guess as the cause. Keep it to 2 to 4 minutes, one point per slide. Share the link with me as soon as it is playable."
+  },
+  "_shared": {
+    "optional": {
+      "audience": {
+        "description": "Who will watch, for example product manager, new engineer, reviewer or executive. Empty: the usual walkthrough.",
+        "text": "The audience is {value}: for product, executive, sales or support people, say what it does for users, with impact and risk first, in plain words and with no code slides unless they ask; for engineers new to the code, give more context and define terms; for any other audience, tailor the depth and the vocabulary to them."
+      }
+    }
   }
 }

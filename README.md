@@ -169,7 +169,7 @@ The first command in the block above runs the fast tests. The rest of the suites
    ```
 
 2. Start a new `claude` session and run `/mcp`; `talktrack` should be listed as connected.
-3. Ask for a walkthrough, or use a built-in prompt: `/mcp__talktrack__diff HEAD~1..HEAD`, `/mcp__talktrack__file src/app.py` or `/mcp__talktrack__topic how TLS works`.
+3. Ask for a walkthrough, or use a built-in prompt: `/mcp__talktrack__diff HEAD~1..HEAD`, `/mcp__talktrack__file src/app.py`, `/mcp__talktrack__feature how login works` or `/mcp__talktrack__topic how TLS works`.
 
 **Or install the plugin** instead of step 1. You get the MCP server plus a skill: guidance on when a walkthrough beats a written answer, and how to pace one:
 
@@ -374,9 +374,14 @@ The server exposes eight tools. Their descriptions, and everything else the agen
 | Prompt | Argument | Use |
 |---|---|---|
 | **`diff`** | `target` | walk through a commit range, a branch or the working tree |
-| **`review`** | `target` | review a change |
+| **`review`** | `target`, optional `spec` | review a change; with a `spec` (issue or PR number or URL, ticket text or a file path) it also checks each requirement is met, partly met or missing, and what was done that was not asked |
 | **`file`** | `path` | walk through a file |
 | **`topic`** | `topic` | walk through a topic |
+| **`course`** | `subject` | teach a subject as 3 to 6 short walkthroughs, each ending in a quiz, joined in a playlist (sent as MP4s in order in file mode) |
+| **`bug`** | `target` | tell a bug: symptom, cause with evidence, the fix as a diff, proof it works, how to prevent it; from a fix, an issue or just a symptom |
+| **`feature`** | `feature` | follow one real path through the code, across files, to show how a feature works |
+
+Every prompt also takes an optional `audience`, such as `product manager` or `new engineer`, which tailors depth and vocabulary; left empty, the prompt is unchanged.
 
 | Resource | Contents |
 |---|---|

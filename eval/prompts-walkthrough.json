@@ -1,0 +1,118 @@
+[
+ {
+  "id": "feature-before",
+  "kind": "feature",
+  "mcp_prompt": {
+   "name": "topic",
+   "args": {
+    "topic": "how narration gets voiced: from add_slides to the audio the player plays"
+   }
+  }
+ },
+ {
+  "id": "feature-after",
+  "kind": "feature",
+  "mcp_prompt": {
+   "name": "feature",
+   "args": {
+    "feature": "how narration gets voiced: from add_slides to the audio the player plays"
+   }
+  }
+ },
+ {
+  "id": "course-before",
+  "kind": "course",
+  "mcp_prompt": {
+   "name": "topic",
+   "args": {
+    "topic": "talktrack's player and slide kinds, for a new contributor"
+   }
+  },
+  "timeout": 1500
+ },
+ {
+  "id": "course-after",
+  "kind": "course",
+  "mcp_prompt": {
+   "name": "course",
+   "args": {
+    "subject": "talktrack's player and slide kinds, for a new contributor"
+   }
+  },
+  "timeout": 1500
+ },
+ {
+  "id": "bug-before",
+  "kind": "bug",
+  "mcp_prompt": {
+   "name": "diff",
+   "args": {
+    "target": "34b942b~1..34b942b"
+   }
+  },
+  "expect": [
+   "diff"
+  ]
+ },
+ {
+  "id": "bug-after",
+  "kind": "bug",
+  "mcp_prompt": {
+   "name": "bug",
+   "args": {
+    "target": "34b942b"
+   }
+  },
+  "expect": [
+   "diff"
+  ]
+ },
+ {
+  "id": "audience-before",
+  "kind": "audience",
+  "mcp_prompt": {
+   "name": "diff",
+   "args": {
+    "target": "34b942b~1..34b942b"
+   }
+  }
+ },
+ {
+  "id": "audience-after",
+  "kind": "audience",
+  "mcp_prompt": {
+   "name": "diff",
+   "args": {
+    "target": "34b942b~1..34b942b",
+    "audience": "product manager"
+   }
+  }
+ },
+ {
+  "id": "review-spec-before",
+  "kind": "review",
+  "mcp_prompt": {
+   "name": "review",
+   "args": {
+    "target": "34b942b~1..34b942b"
+   }
+  },
+  "expect": [
+   "diff"
+  ]
+ },
+ {
+  "id": "review-spec-after",
+  "kind": "review",
+  "mcp_prompt": {
+   "name": "review",
+   "args": {
+    "target": "34b942b~1..34b942b",
+    "spec": "MLX speech must keep memory bounded while the daemon runs, whatever the sentence lengths"
+   }
+  },
+  "expect": [
+   "diff"
+  ]
+ }
+]

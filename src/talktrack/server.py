@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import html
+import inspect
 import json
 import logging
 import re
@@ -66,6 +67,10 @@ def texts(deliver: str = "link") -> dict:
             merged.update({k: v for k, v in t.items() if k != "args"})
             merged["args"] = {**merged.get("args", {}), **t.get("args", {})}
         out["tools"] = tools
+        # A prompt that needs different steps in file mode (a course has no playlist to link) gets
+        # its wording here. The others end with "Share the link" and rely on the file-mode
+        # instructions, which tell the agent to send the file instead.
+        out["prompts"] = {k: {**v, **load("prompts.json", {}, over).get(k, {})} for k, v in out["prompts"].items()}
     return out
 
 
@@ -521,8 +526,11 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
         text += "\n" + "\n".join(f"{e['n']}. {e['title']} ({mmss(e['duration_s'])})" for e in r["entries"])
         return _result(text, {"status": "created", **r})
 
-    for name, p in texts(deliver)["prompts"].items():
-        _register_prompt(mcp, name, p)
+    prompts = texts(deliver)["prompts"]
+    shared = prompts.get("_shared", {}).get("optional", {})
+    for name, p in prompts.items():
+        if not name.startswith("_"):
+            _register_prompt(mcp, name, p, shared)
 
     @mcp.resource(
         "talktrack://walkthroughs",
@@ -567,19 +575,57 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
     return mcp
 
 
-def _register_prompt(mcp: MCPServer, name: str, p: dict) -> None:
-    (arg,) = list(p.get("args", {"target": ""}).keys())[:1] or ["target"]
-    template = p.get("template", "{" + arg + "}")
+def _prompt_parts(p: dict, shared: dict | None) -> tuple[dict, dict, str]:
+    required = dict(p.get("args") or {"target": ""})
+    own = p.get("optional", {})
+    optional = {**own, **{k: v for k, v in (shared or {}).items() if k not in own}}
+    return required, optional, p.get("template", "{" + next(iter(required)) + "}")
+
+
+def _render_prompt(p: dict, shared: dict | None, kw: dict) -> str:
+    required, optional, template = _prompt_parts(p, shared)
+    fields = {k: kw.get(k, "") for k in required}
+    extra = ""
+    for key, o in optional.items():
+        value = (kw.get(key) or "").strip()
+        fragment = " " + o["text"].replace("{value}", value) if value else ""
+        if "{" + key + "}" in template:
+            fields[key] = fragment
+        else:
+            extra += fragment
+    return template.format(**fields) + extra
+
+
+def render_prompt(name: str, args: dict, deliver: str = "link") -> str:
+    """The text a client receives from MCP prompt `name`; the eval sends it as the user's message."""
+    prompts = texts(deliver)["prompts"]
+    if name.startswith("_") or name not in prompts:
+        raise KeyError(f"no prompt {name!r}; have {sorted(k for k in prompts if not k.startswith('_'))}")
+    return _render_prompt(prompts[name], prompts.get("_shared", {}).get("optional", {}), args)
+
+
+def _register_prompt(mcp: MCPServer, name: str, p: dict, shared: dict | None = None) -> None:
+    """Register one prompt from prompts.json. `args` are required arguments, in order; `optional`
+    (plus the entries in `shared`, which every prompt takes) are optional ones, each with a
+    `description` and a `text` that is added to the template only when the client fills the
+    argument in. The text goes where the template has `{name}`, else at the end, so a prompt
+    called without its optional arguments renders exactly its template."""
+    required, optional, _ = _prompt_parts(p, shared)
 
     async def fn(**kw: str) -> str:
-        return template.format(**{arg: kw.get(arg, "")})
+        return _render_prompt(p, shared, kw)
 
-    import inspect
-
-    fn.__signature__ = inspect.Signature(
-        [inspect.Parameter(arg, inspect.Parameter.KEYWORD_ONLY, annotation=str, default=inspect.Parameter.empty)]
-    )
-    fn.__annotations__ = {arg: str, "return": str}
+    params = [
+        inspect.Parameter(
+            k, inspect.Parameter.KEYWORD_ONLY, annotation=Annotated[str, Field(description=d)], default=inspect.Parameter.empty
+        )
+        for k, d in required.items()
+    ] + [
+        inspect.Parameter(k, inspect.Parameter.KEYWORD_ONLY, annotation=Annotated[str, Field(description=o["description"])], default="")
+        for k, o in optional.items()
+    ]
+    fn.__signature__ = inspect.Signature(params)
+    fn.__annotations__ = {**{p_.name: p_.annotation for p_ in params}, "return": str}
     fn.__name__ = f"prompt_{name}"
     mcp.prompt(name=name, title=p.get("title"), description=p.get("description"))(fn)
 

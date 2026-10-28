@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 
 import pytest
 from mcp.client import Client
@@ -276,12 +277,47 @@ async def test_unknown_slide_is_a_tool_error(mcp):
 # -- prompts and resources ------------------------------------------------------------------------------
 
 
-async def test_prompts_exist_with_one_required_argument(mcp):
+async def test_prompts_exist_with_their_required_argument(mcp):
     async with mcp as client:
         prompts = {p.name: p for p in (await client.list_prompts()).prompts}
-        assert set(prompts) >= {"diff", "review", "file", "topic"}
-        assert [a.name for a in prompts["diff"].arguments] == ["target"]
+        assert set(prompts) >= {"diff", "review", "file", "topic", "feature", "course", "bug"}
+        assert [a.name for a in prompts["diff"].arguments if a.required] == ["target"]
         assert all(p.title and p.arguments[0].required for p in prompts.values())
+
+
+async def test_every_prompt_has_an_optional_audience_with_descriptions(mcp):
+    async with mcp as client:
+        for p in (await client.list_prompts()).prompts:
+            args = {a.name: a for a in p.arguments}
+            assert args["audience"].required is False and args["audience"].description, p.name
+            assert args[p.arguments[0].name].required and args[p.arguments[0].name].description, p.name
+
+
+PINNED = json.loads((Path(__file__).parent / "fixtures" / "prompts_pinned.json").read_text())
+
+
+@pytest.mark.parametrize("name", sorted(PINNED))
+async def test_the_four_original_prompts_render_as_they_always_did(mcp, name):
+    async with mcp as client:
+        r = await client.get_prompt(name, PINNED[name]["args"])
+        assert r.messages[0].content.text == PINNED[name]["text"]
+        blank = await client.get_prompt(name, {**PINNED[name]["args"], "audience": "  "})
+        assert blank.messages[0].content.text == PINNED[name]["text"]
+
+
+@pytest.mark.parametrize("name", sorted(PINNED))
+async def test_audience_adds_one_sentence_and_leaves_the_rest(mcp, name):
+    async with mcp as client:
+        r = await client.get_prompt(name, {**PINNED[name]["args"], "audience": "product manager"})
+        body = r.messages[0].content.text
+        assert body.startswith(PINNED[name]["text"] + " The audience is product manager:")
+        assert body.count("The audience is") == 1
+
+
+async def test_audience_with_braces_is_not_treated_as_a_format_field(mcp):
+    async with mcp as client:
+        r = await client.get_prompt("topic", {"topic": "x", "audience": "{topic} {0}"})
+        assert "The audience is {topic} {0}:" in r.messages[0].content.text
 
 
 @pytest.mark.parametrize(
@@ -291,6 +327,9 @@ async def test_prompts_exist_with_one_required_argument(mcp):
         ("review", "target", "main...feature"),
         ("file", "path", "src/talktrack/store.py"),
         ("topic", "topic", "consistent hashing"),
+        ("feature", "feature", "how narration gets voiced"),
+        ("course", "subject", "the billing module"),
+        ("bug", "target", "34b942b"),
     ],
 )
 async def test_prompts_render_their_argument(mcp, name, arg, value):
@@ -298,6 +337,80 @@ async def test_prompts_render_their_argument(mcp, name, arg, value):
         r = await client.get_prompt(name, {arg: value})
         body = r.messages[0].content.text
         assert value in body and "{" + arg + "}" not in body and "talktrack" in body
+
+
+async def test_feature_prompt_asks_for_a_traced_path_with_code_from_disk(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("feature", {"feature": "how login works"})).messages[0].content.text
+        for needle in ("entry point", "`file=` and `lines=`", "sequence diagram", "not sure", "2 to 3 minutes"):
+            assert needle in body
+
+
+async def test_course_prompt_plans_parts_and_ends_in_a_playlist(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("course", {"subject": "billing"})).messages[0].content.text
+        for needle in ("3 to 6 parts", "dependency order", "quiz slide", "`create_playlist`", "playlist link"):
+            assert needle in body
+
+
+async def test_course_in_file_mode_sends_each_part_and_makes_no_playlist(service):
+    async with Client(create_mcp(service, deliver="file")) as client:
+        body = (await client.get_prompt("course", {"subject": "billing", "audience": "new engineer"})).messages[0].content.text
+        assert "billing" in body and "Export each part as an MP4" in body and "new engineer" in body
+        assert "create_playlist" not in body and "share the playlist link" not in body
+        diff = (await client.get_prompt("diff", PINNED["diff"]["args"])).messages[0].content.text
+        assert diff == PINNED["diff"]["text"]
+
+
+async def test_bug_prompt_orders_symptom_cause_fix_proof_prevention(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("bug", {"target": "34b942b"})).messages[0].content.text
+        order = ["the symptom", "the cause", "; the fix;", "now works", "coming back", "suspected"]
+        assert [body.index(x) for x in order] == sorted(body.index(x) for x in order)
+
+
+async def test_review_spec_is_optional_and_placed_before_the_rev_advice(mcp):
+    async with mcp as client:
+        p = {p.name: p for p in (await client.list_prompts()).prompts}["review"]
+        args = {a.name: a for a in p.arguments}
+        assert [a.name for a in p.arguments] == ["target", "spec", "audience"]
+        assert args["target"].required and not args["spec"].required and args["spec"].description
+        spec = "MLX speech must keep memory bounded, whatever the sentence lengths {x}"
+        body = (await client.get_prompt("review", {"target": "a..b", "spec": spec, "audience": "reviewer"})).messages[0].content.text
+        assert "Check it against this spec: " + spec + "." in body
+        assert body.index("`gh pr view`") < body.index("In `rev=`") < body.index("Open with the verdict")
+        assert "met, partly met or missing" in body and "same severities" in body
+        assert body.endswith("tailor the depth and the vocabulary to them.")
+        plain = (await client.get_prompt("review", {"target": "a..b", "spec": " "})).messages[0].content.text
+        assert plain == PINNED["review"]["text"].replace("main...feature", "a..b")
+
+
+async def test_bug_prompt_shows_the_faulty_code_as_the_old_side_of_a_single_commit_diff(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("bug", {"target": "34b942b"})).messages[0].content.text
+        assert "rev=<sha>~1..<sha>" in body and "bare `rev=<sha>`" in body and "only when the bug is still unfixed" in body
+
+
+async def test_feature_prompt_keeps_code_to_a_few_short_excerpts(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("feature", {"feature": "x"})).messages[0].content.text
+        assert "3 to 5 places" in body and "2 to 3 minutes" in body and "sequence diagram" in body
+
+
+def test_a_prompts_own_optional_argument_beats_a_shared_one_of_the_same_name():
+    from talktrack.server import _render_prompt
+
+    p = {"args": {"t": ""}, "template": "x {t}.", "optional": {"audience": {"description": "d", "text": "own {value}"}}}
+    shared = {"audience": {"description": "d", "text": "shared {value}"}}
+    assert _render_prompt(p, shared, {"t": "a", "audience": "pm"}) == "x a. own pm"
+
+
+async def test_course_prompt_tells_the_agent_to_finish_each_part(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("course", {"subject": "x"})).messages[0].content.text
+        assert "`finish_walkthrough` on each part" in body
+        args = {a.name: a for a in {p.name: p for p in (await client.list_prompts()).prompts}["course"].arguments}
+        assert "whom" not in args["subject"].description
 
 
 async def test_walkthroughs_resource_reads(mcp):
@@ -443,7 +556,8 @@ def test_file_texts_override_only_what_mentions_the_link():
     from talktrack.server import texts
 
     base, file = texts("link"), texts("file")
-    assert file["guide"] == base["guide"] and file["prompts"] == base["prompts"]
+    assert file["guide"] == base["guide"]
+    assert {k for k in base["prompts"] if file["prompts"][k] != base["prompts"][k]} == {"course"}
     assert set(file["tools"]) == set(base["tools"])
     for name, t in base["tools"].items():
         assert set(file["tools"][name]["args"]) == set(t.get("args", {})), name

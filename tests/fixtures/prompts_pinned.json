@@ -1,0 +1,26 @@
+{
+ "diff": {
+  "args": {
+   "target": "main..HEAD"
+  },
+  "text": "Make a narrated talktrack walkthrough of the changes in main..HEAD. First run `git diff --shortstat` on the range to size it: under about 50 changed lines, 5 to 8 short slides; up to about 300, 8 to 12; more, 12 to 16, and say on a slide what was left out. Keep each slide to one point in one to three short paragraphs, and the whole to 2 to 4 minutes. Read the diff and work out what changed and why, then pick its shape: new capability (what it lets you do, how it works, how to use it and its limits); bug fix (the symptom, the cause, the fix, evidence it now works); restructuring (what was hard before, the new structure, what behaves the same and how that was checked); or a batch of small changes (grouped by theme, one slide per group). If it mixes shapes, lead with the one a reviewer most needs. Before writing, pick two to four hunks of at most about 12 lines each to show. Skip lockfiles, generated files, renames and pure formatting unless they are the point. Open with what the change does for the user, not with code names. Show code read from disk with `diff file=... rev=...` or `file=` and `lines=` blocks rather than retyping it, and after two or three code slides show the behaviour: a sequence diagram or a terminal session. In `rev=`, A..B compares two commits; for a branch, `rev=<base>...<branch>` (three dots) shows only what the branch changed, as its pull request does. Close with risks, follow-up work and how to test it. Share the link with me as soon as it is playable."
+ },
+ "review": {
+  "args": {
+   "target": "main...feature"
+  },
+  "text": "Review the changes in main...feature and present the review as a narrated talktrack walkthrough: judge the change, don't tour it. Run `git diff --shortstat` on the range, then read the whole diff and the code around it, and run the tests or commands that would confirm a problem where you can. In `rev=`, A..B compares two commits; for a branch, `rev=<base>...<branch>` (three dots) shows only what the branch changed. Open with the verdict in one sentence: ready to merge, ready after fixes, or not ready, and the main reason. Then give each finding its own slide: what is wrong, the evidence on screen as a `diff file=... rev=...` or `file=` and `lines=` block with the exact lines cued, why it matters, and a severity in the takeaway line: blocker, should-fix or minor. Give the strongest reason the author may have done it this way, and say plainly whether each finding is verified (you ran it, or the code shows it) or suspected. Never invent problems to fill slides: if the change is sound, say so and show what you checked. Close with the findings ranked most severe first, as a table or a checklist, and the next step. Keep it to 2 to 4 minutes, one point per slide. Share the link with me as soon as it is playable."
+ },
+ "file": {
+  "args": {
+   "path": "src/talktrack/store.py"
+  },
+  "text": "Make a narrated talktrack walkthrough of src/talktrack/store.py. Read the file first. Start with what it is for and where it fits in the project, then go through its main parts in the order a newcomer needs them, and end with how it is used and what to watch out for, then one quiz slide on the main point a newcomer should take away. Show code from disk with `file=src/talktrack/store.py` and `lines=` ranges, and point at the lines you talk about. Share the link with me as soon as it is playable."
+ },
+ "topic": {
+  "args": {
+   "topic": "consistent hashing"
+  },
+  "text": "Make a narrated talktrack walkthrough of consistent hashing. Go from the problem it solves, to how it works, to its consequences and trade-offs, in about 1 to 2 minutes of short slides, one point each. Open with the most concrete fact or the question it answers, and end with one quiz slide on the main point. Use diagrams, formulas, tables, charts for numbers or short code examples where they help, and tie it to code in this project when there is a real example, read from disk. Share the link with me as soon as it is playable."
+ }
+}
