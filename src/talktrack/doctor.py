@@ -13,17 +13,21 @@ from .config import Config
 
 # Until talktrack is on PyPI, where this becomes `uvx talktrack mcp`.
 INSTALL = "uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp"
-# The same install with the browser that draws slides: the `video` extra adds Playwright, and
-# `playwright install chromium` fetches its Chromium, about 100 MB, once.
-VIDEO_FROM = "'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0'"
-INSTALL_VIDEO = f"uvx --from {VIDEO_FROM} talktrack mcp"
-INSTALL_BROWSER = f"uvx --from {VIDEO_FROM} playwright install chromium"
-INSTALL_EXPORT = f"uvx --from {VIDEO_FROM} talktrack export <id> talk.mp4"
+# Playwright is a base dependency; its Chromium (about 100 MB) is fetched on first need (browser.py).
+# These are the steps by hand, for when that is off (TALKTRACK_AUTO_BROWSER=0) or fails.
+FROM = "git+https://github.com/AhmedElhadarey/talktrack@v0.2.0"
+INSTALL_BROWSER = f"uvx --from {FROM} playwright install chromium-headless-shell"  # what browser.py fetches
+INSTALL_BROWSER_LINUX = f"uvx --from {FROM} playwright install --with-deps chromium-headless-shell"
 # Shown by finish (where the daemon runs `mcp`) and by MP4 export from the command line alike.
 BROWSER_HINT = (
-    "run talktrack with the video extra and fetch the browser once:\n"
-    f"    {INSTALL_VIDEO}   (or, to export: {INSTALL_EXPORT})\n    {INSTALL_BROWSER}"
+    "fetch the browser by hand:\n"
+    f"    {INSTALL_BROWSER}\n"
+    "  On Linux, which may lack system libraries (this needs root):\n"
+    f"    {INSTALL_BROWSER_LINUX}"
 )
+
+# Chromium is on disk but Linux lacks libraries it loads; installing the browser again would not help.
+DEPS_HINT = f"install the system libraries it needs (this needs root):\n    {INSTALL_BROWSER_LINUX}"
 
 OK, WARN, FAIL = "ok", "warn", "fail"
 
@@ -33,31 +37,29 @@ def _row(status: str, name: str, detail: str) -> None:
     print(f"  {mark} {name:<16} {detail}")
 
 
-def _chromium() -> str:
-    """Path of Playwright's Chromium, or '' when Playwright or its browser is missing."""
-    try:
-        from playwright.sync_api import sync_playwright
+def _chromium() -> bool:
+    """Whether the browser the headless launch needs is on disk."""
+    from . import browser
 
-        with sync_playwright() as pw:
-            path = pw.chromium.executable_path
-    except Exception:
-        return ""
-    from pathlib import Path
-
-    return path if Path(path).is_file() else ""
+    return browser.installed()
 
 
 def _browser_check() -> tuple[str, str, str]:
-    """finish_walkthrough draws every slide in Playwright's Chromium. Without it the layout check,
-    the pictures of alike slides, the poster and MP4 export are off; the rest works, so a warning."""
+    """finish_walkthrough draws every slide in Playwright's headless Chromium. It is fetched on
+    first need, so absent is fine unless that is switched off, and then a warning."""
+    from . import browser
+
     if _chromium():
         return OK, "slide checks", "Playwright Chromium found: finish_walkthrough draws every slide; MP4 export can render"
+    if browser.enabled():
+        return OK, "slide checks", f"Chromium ({browser.SIZE}) is fetched on first need: finish_walkthrough, posters and MP4 export"
     return (
         WARN,
         "slide checks",
         (
-            "Playwright Chromium not found: finish_walkthrough does not draw the slides, so the agent gets no layout "
-            "findings, no pictures of alike slides and no poster, and MP4 export is off. To add it, " + BROWSER_HINT
+            "Playwright Chromium not found and TALKTRACK_AUTO_BROWSER=0: finish_walkthrough does not draw the slides, "
+            "so the agent gets no layout findings, no pictures of alike slides and no poster, and MP4 export is off. "
+            "To add it, " + BROWSER_HINT
         ),
     )
 
@@ -143,7 +145,7 @@ def doctor(cfg: Config, args) -> None:
             OK if same else WARN,
             "daemon",
             f"running at {lock['url']} (pid {lock['pid']}, version {lock.get('version')}, "
-            f"speech {h['speech']['state']})"
+            f"speech {h['speech']['state']}, browser {h.get('browser', {}).get('state', 'unknown')})"
             + (
                 ""
                 if same
@@ -166,6 +168,6 @@ def doctor(cfg: Config, args) -> None:
     print("Connect an MCP client:")
     print(f"  Claude Code   claude mcp add --scope user talktrack -- {INSTALL}")
     print(f"  any client    command: {INSTALL}   (stdio)")
-    print(f"  with browser  {INSTALL_VIDEO}   then once: {INSTALL_BROWSER}")
+    print(f"  browser       fetched on first need; by hand: {INSTALL_BROWSER}")
     print(f"  over HTTP     {cfg.base_url}/mcp   (after `talktrack serve`)")
     sys.exit(1 if problems else 0)

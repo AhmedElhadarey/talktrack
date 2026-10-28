@@ -2,7 +2,7 @@
 
 The player opens with `?capture=1`, which hides everything but the stage, turns animation off and
 exposes `window.__talktrack.seek(t)`; each frame is a screenshot taken after that promise
-resolves. Playwright is an optional dependency (the `video` extra), imported only here.
+resolves. Playwright is imported only here; its Chromium is fetched on first need (browser.py).
 
     frames = capture_frames("out/folder", [0, 12.5])          # PNG bytes per time
     async with Capturer("http://127.0.0.1:4747/w/<id>/") as c: # or step through by hand
@@ -21,6 +21,7 @@ from collections.abc import Iterator, Sequence
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+from . import browser
 from .model import FRAMES
 
 
@@ -32,7 +33,7 @@ def install_hint() -> str:
 
 
 class CaptureUnavailable(RuntimeError):
-    """Playwright or its Chromium is not installed. `reason` is the short form, without the hint."""
+    """Playwright's Chromium is not installed and could not be fetched. `reason` is the short form, without the hint."""
 
     def __init__(self, reason: str, hint: str = ""):
         self.reason = reason
@@ -177,13 +178,41 @@ class Capturer:
         return await self.page.evaluate("window.__talktrack.renderErrors || []")
 
 
+def _unlaunchable(e: Exception) -> None:
+    """Raise CaptureUnavailable for the two launch failures talktrack can explain. Playwright's
+    Linux message about missing libraries also says "playwright install", so it is checked first."""
+    text = str(e)
+    if "missing dependencies" in text:
+        from .doctor import DEPS_HINT
+
+        raise CaptureUnavailable("Chromium is installed but this system lacks libraries it needs", DEPS_HINT) from e
+    if "Executable doesn't exist" in text or "playwright install" in text:
+        raise CaptureUnavailable("Playwright's Chromium is not installed", install_hint()) from e
+
+
+def _is_missing(e: Exception) -> bool:
+    try:
+        _unlaunchable(e)
+    except CaptureUnavailable as c:
+        return "not installed" in c.reason
+    return False
+
+
 async def launch(pw):
-    """Headless Chromium, with a clear message when the browser is not installed."""
+    """Headless Chromium. When the browser is not on disk it is fetched first (browser.ensure, one
+    download however many launches wait on it); CaptureUnavailable says what to run by hand if
+    that is off or fails. Every launch in the package goes through here."""
     try:
         return await pw.chromium.launch()
     except Exception as e:
-        if "Executable doesn't exist" in str(e) or "playwright install" in str(e):
-            raise CaptureUnavailable("Playwright's Chromium is not installed", install_hint()) from e
+        if not _is_missing(e):
+            _unlaunchable(e)
+            raise
+    await asyncio.to_thread(browser.ensure)
+    try:
+        return await pw.chromium.launch()
+    except Exception as e:
+        _unlaunchable(e)
         raise
 
 

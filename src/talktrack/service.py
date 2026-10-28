@@ -153,6 +153,8 @@ class LocalService:
                     s.report(f)
 
         try:
+            if wait := await _browser_wait():
+                return "no_browser", wait
             await asyncio.wait_for(run(), LAYOUT_CHECK_S)
         except CaptureUnavailable as e:
             if not _browser_warned:  # once per daemon, so the log says why finish never draws
@@ -180,6 +182,8 @@ class LocalService:
             want = want[-PREVIEW_MAX:] if not slides else want[:PREVIEW_MAX]
         times = [ends[sid] for sid in want]
         try:
+            if wait := await _browser_wait():
+                raise ValueError(wait)
             pngs = await capture_frames_async(s.url, times, short=short, measure=True) if times else []
         except CaptureUnavailable as e:
             raise ValueError(str(e)) from e
@@ -312,6 +316,7 @@ EXPORT_WAIT_S = 300.0  # for the narration to finish voicing before an export
 PREVIEW_MAX = 12
 LAYOUT_CHECK_MAX = 60  # slides drawn by the finish-time layout check
 LAYOUT_CHECK_S = 25.0
+BROWSER_WAIT_S = 30.0  # the first Chromium download may run on, but a reply must beat the shim's 70 s
 ALIKE_SHOTS_MAX = 6  # pictures of alike slides in the finish reply
 
 
@@ -365,3 +370,20 @@ def mmss(seconds: float | None) -> str:
 
 def now() -> float:
     return time.time()
+
+
+async def _browser_wait() -> str:
+    """'' when the browser is on disk, waiting up to BROWSER_WAIT_S for a download it starts; else why
+    it is not yet (the download goes on in the background). Raises CaptureUnavailable if fetching is
+    off or failed."""
+    import asyncio
+
+    from . import browser
+
+    if browser.status.state == "ready":
+        return ""
+    try:
+        await asyncio.wait_for(asyncio.shield(asyncio.wrap_future(browser.begin())), BROWSER_WAIT_S)
+    except TimeoutError:
+        return f"Chromium is still {browser.describe()}, about 100 MB, fetched once; this works once it is done, so try again in a minute"
+    return ""
