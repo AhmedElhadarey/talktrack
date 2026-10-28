@@ -16,8 +16,8 @@ INSTALL = "uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 tal
 # Playwright is a base dependency; its Chromium (about 100 MB) is fetched on first need (browser.py).
 # These are the steps by hand, for when that is off (TALKTRACK_AUTO_BROWSER=0) or fails.
 FROM = "git+https://github.com/AhmedElhadarey/talktrack@v0.2.0"
-INSTALL_BROWSER = f"uvx --from {FROM} playwright install chromium"
-INSTALL_BROWSER_LINUX = f"uvx --from {FROM} playwright install --with-deps chromium"
+INSTALL_BROWSER = f"uvx --from {FROM} playwright install chromium-headless-shell"  # what browser.py fetches
+INSTALL_BROWSER_LINUX = f"uvx --from {FROM} playwright install --with-deps chromium-headless-shell"
 # Shown by finish (where the daemon runs `mcp`) and by MP4 export from the command line alike.
 BROWSER_HINT = (
     "fetch the browser by hand:\n"
@@ -25,6 +25,9 @@ BROWSER_HINT = (
     "  On Linux, which may lack system libraries (this needs root):\n"
     f"    {INSTALL_BROWSER_LINUX}"
 )
+
+# Chromium is on disk but Linux lacks libraries it loads; installing the browser again would not help.
+DEPS_HINT = f"install the system libraries it needs (this needs root):\n    {INSTALL_BROWSER_LINUX}"
 
 OK, WARN, FAIL = "ok", "warn", "fail"
 

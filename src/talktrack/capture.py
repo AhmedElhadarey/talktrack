@@ -178,8 +178,24 @@ class Capturer:
         return await self.page.evaluate("window.__talktrack.renderErrors || []")
 
 
-def _missing(e: Exception) -> bool:
-    return "Executable doesn't exist" in str(e) or "playwright install" in str(e)
+def _unlaunchable(e: Exception) -> None:
+    """Raise CaptureUnavailable for the two launch failures talktrack can explain. Playwright's
+    Linux message about missing libraries also says "playwright install", so it is checked first."""
+    text = str(e)
+    if "missing dependencies" in text:
+        from .doctor import DEPS_HINT
+
+        raise CaptureUnavailable("Chromium is installed but this system lacks libraries it needs", DEPS_HINT) from e
+    if "Executable doesn't exist" in text or "playwright install" in text:
+        raise CaptureUnavailable("Playwright's Chromium is not installed", install_hint()) from e
+
+
+def _is_missing(e: Exception) -> bool:
+    try:
+        _unlaunchable(e)
+    except CaptureUnavailable as c:
+        return "not installed" in c.reason
+    return False
 
 
 async def launch(pw):
@@ -189,14 +205,14 @@ async def launch(pw):
     try:
         return await pw.chromium.launch()
     except Exception as e:
-        if not _missing(e):
+        if not _is_missing(e):
+            _unlaunchable(e)
             raise
     await asyncio.to_thread(browser.ensure)
     try:
         return await pw.chromium.launch()
     except Exception as e:
-        if _missing(e):
-            raise CaptureUnavailable("Playwright's Chromium is not installed", install_hint()) from e
+        _unlaunchable(e)
         raise
 
 
