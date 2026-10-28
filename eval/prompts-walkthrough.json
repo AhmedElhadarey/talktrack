@@ -71,7 +71,7 @@
   "mcp_prompt": {
    "name": "diff",
    "args": {
-    "target": "4dfeb0d~1..4dfeb0d"
+    "target": "34b942b~1..34b942b"
    }
   },
   "expect": [
@@ -84,7 +84,7 @@
   "mcp_prompt": {
    "name": "diff",
    "args": {
-    "target": "4dfeb0d~1..4dfeb0d",
+    "target": "34b942b~1..34b942b",
     "audience": "product manager"
    }
   }

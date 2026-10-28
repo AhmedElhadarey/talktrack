@@ -15,7 +15,7 @@
     },
     "optional": {
       "spec": {
-        "description": "Optional. What the change was meant to do: an issue or pull request number or URL, ticket text, or a file path. Without it the review looks for an issue linked in the commit messages or pull request body.",
+        "description": "Optional. What the change was meant to do: an issue or pull request number or URL, ticket text, or a file path.",
         "text": "Check it against this spec: {value}. Read the spec first: when it is an issue or pull request number or URL and `gh issue view` or `gh pr view` works, read that; otherwise take it as the requirement text, or as a file path to read. Then add whether the change does what was asked: each requirement met, partly met or missing, and anything the change does that was not asked, as findings with the same severities."
       }
     },
