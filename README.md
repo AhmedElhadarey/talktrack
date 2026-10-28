@@ -1,24 +1,113 @@
-# showntell
+<div align="center">
 
-Narrated slide walkthroughs for coding agents, voiced on your machine.
+# 🎙️ showntell
+
+**Narrated slide walkthroughs for coding agents, voiced on your machine.**
+Your agent writes slides and narration in Markdown; showntell voices them locally and hands back a link that starts playing while the rest is still being written.
+
+[![Version](https://img.shields.io/badge/version-0.1.8-blue)](CHANGELOG.md)
+[![Python](https://img.shields.io/badge/python-%E2%89%A53.12-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+[Overview](#-overview) · [Architecture](#-architecture) · [Quick start](#-quick-start) · [Install per client](#-install-per-client) · [Format](#-the-format) · [Commands](#-commands) · [Limitations](#-status--limitations)
+
+</div>
+
+---
+
+## 📖 Overview
 
 Ask your agent to walk you through a pull request, a module or a concept. It writes slides and narration in Markdown; showntell voices them locally with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) and hands back a link that starts playing in about a second, while the rest is still being written. A pointer follows the narration through code, diagrams and lists, word by word.
 
 ![Three moments from gallery walkthroughs: code changing from one version to the next, a dot travelling along a diagram's edges, and the pointer stepping through a bar chart as the narration names each bar](docs/media/demo.gif)
 
-**[Watch the gallery](https://rahimnathwani.github.io/showntell/)**: ten walkthroughs written by Claude (Opus and Sonnet) and voiced on a laptop, unedited: a tour of this repository, one call's path through it, a refactor step by step, a code review, contributor setup, a speed-up told with a chart, the messages of an MCP tool call, the TLS 1.3 handshake, scaled dot-product attention, and git rebase versus merge on a phone-shaped frame.
+**[Watch the gallery](https://rahimnathwani.github.io/showntell/)**: eleven walkthroughs written by Claude (Opus and Sonnet) and voiced on a laptop, unedited: a tour of this repository, a review of one commit, one call's path through it, a refactor step by step, CSRF and SameSite cookies, contributor setup, a speed-up told with a chart, the messages of an MCP tool call, the TLS 1.3 handshake, scaled dot-product attention, and git rebase versus merge on a phone-shaped frame.
+
+### Highlights
 
 - **Local:** speech runs on your Mac or PC. No API keys, no hosted service, no telemetry. Code never leaves your machine except to the model you already use.
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
-- **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the player, diagrams that failed to render or text shrunk too small to read; with Playwright installed, `finish_walkthrough` draws every slide to find them. The agent can also look at pictures of its slides with `preview_slides`.
+- **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the player, diagrams that failed to render or text shrunk too small to read. With Playwright installed, `finish_walkthrough` draws every slide to find them. The agent can also look at pictures of its slides with `preview_slides`.
 - **Shareable:** export a walkthrough as one HTML file that plays offline (send it in Slack or by email), a static folder with captions, or an MP4; embed it with `<showntell-player>`, link to a range of slides, or present it yourself with speaker notes. An agent in a sandbox or behind WhatsApp sends you the MP4 itself.
 
 How it compares with a screen recording, a written PR description and a rendered MP4 explainer, including where those win: [docs/comparison.md](docs/comparison.md).
 
-## Install
+---
 
-You need [uv](https://docs.astral.sh/uv/). It installs Python 3.12 or newer for you if needed.
+## 📑 Table of Contents
+
+- [Architecture](#-architecture)
+- [Quick Start](#-quick-start)
+- [Install per Client](#-install-per-client)
+- [The Format](#-the-format)
+- [MCP Tools, Prompts and Resources](#-mcp-tools-prompts-and-resources)
+- [Commands](#-commands)
+- [The Player](#-the-player)
+- [Configuration](#-configuration)
+- [Privacy and Security](#-privacy-and-security)
+- [Project Structure](#-project-structure)
+- [In Pull Requests (GitHub Action)](#-in-pull-requests-github-action)
+- [Releasing](#-releasing)
+- [Testing](#-testing)
+- [Status & Limitations](#-status--limitations)
+- [Documentation](#-documentation)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## 🏗 Architecture
+
+showntell is one Python package and one static web player. A long-lived daemon owns the voice model and the walkthroughs. MCP clients reach it through a small stdio shim (`showntell mcp`) or directly over HTTP.
+
+```mermaid
+graph TB
+  subgraph daemon ["showntell serve: one daemon per machine"]
+    MCPH["MCP over HTTP at /mcp"] --> SV["LocalService"]
+    RPC["RPC at /api/rpc"] --> SV
+    SV --> ST["Store and sessions"]
+    ST --> BL["Builder: parser, sources, cues, checks"]
+    ST --> NR["Narrator: speech queue and audio cache"]
+    NR --> BK["Kokoro on MLX or ONNX"]
+    ST --> EV["SSE: changed slides"]
+    ST --> EX["Exports: HTML page, folder, MP4"]
+  end
+  subgraph browser ["Your browser"]
+    PL["Player: timeline, renderer, pointer"]
+  end
+  AG["Coding agent"] -->|"stdio MCP"| SH["showntell mcp: stdio shim"]
+  SH -->|"token from the lockfile"| RPC
+  HC["HTTP MCP client"] --> MCPH
+  EV --> PL
+  ST -->|"data.json and audio"| PL
+  PL -->|"findings"| ST
+```
+
+**Request path:**
+
+1. **Shim.** `showntell mcp` reads `daemon.json` in the data folder. If no healthy daemon is running this code, it starts `showntell serve` in the background and waits for `/health`. Its MCP tools forward to the daemon's RPC route with the token from the lockfile.
+2. **Opening first.** The agent's first call, `start_walkthrough`, carries only the title slide and a sentence or two. It returns as soon as that audio exists, about 0.3 s later, and tells the agent to send you the link.
+3. **Built as it arrives.** Each `add_slides` chunk goes through the incremental Markdown parser (`format.py`). The builder (`build.py`) turns blocks into slides, reads code from disk or git (`sources.py`), resolves and infers cues (`cues.py`) and records findings (`checks.py`), which go back on the same call.
+4. **Voiced in the background.** Every narration paragraph becomes a speech job. `pronounce.py` rewrites code and units into speakable text. One worker thread voices jobs in order of their position in the walkthrough, and the audio is cached by a hash of model, voice, speed and spoken text. The player waits with a notice if it ever catches up with the writer.
+5. **Live updates.** The SSE route coalesces changes for 50 ms and sends only the changed slides plus the slide order.
+6. **Timed to the word.** Kokoro reports when each word is spoken. Each cue in the narration, a Markdown link like `[the retry limit](#L48)`, fires 0.3 s before its first word so the pointer lands as the word is heard.
+7. **Checked.** `finish_walkthrough` draws every slide in headless Chromium when Playwright is installed. The open player also posts its own findings (layout, render and audio errors) back to the daemon; they reach the agent marked as untrusted.
+
+The module-by-module description, the player's ES modules, capture and single-page export are in [docs/architecture.md](docs/architecture.md).
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **[uv](https://docs.astral.sh/uv/).** It installs Python 3.12 or newer for you if needed.
+- **Disk and network on first run:** the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model. After that, everything works offline.
+- **Optional, for slide checks, posters and MP4 export:** the `video` extra (Playwright) and its Chromium (about 100 MB).
+- **Optional, for MP4 export:** [FFmpeg](https://ffmpeg.org/) (`ffmpeg` and `ffprobe`) on PATH.
+
+### Install and connect
 
 Every agent runs the same command, which starts showntell as a stdio MCP server:
 
@@ -26,11 +115,11 @@ Every agent runs the same command, which starts showntell as a stdio MCP server:
 uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell mcp
 ```
 
-The tag after `@` installs that release; leave it off for the latest commit. Once showntell is on PyPI this shortens to `uvx showntell mcp`. Pick your agent below, then ask it something like *"walk me through how a request gets retried in this codebase"*. The agent replies with a link; open it and press play.
+The tag after `@` installs that release; leave it off for the latest commit. Once showntell is on PyPI this shortens to `uvx showntell mcp`. Pick your agent under [Install per client](#-install-per-client), then ask it something like *"walk me through how a request gets retried in this codebase"*. The agent replies with a link; open it and press play.
 
-The first run downloads the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model. The first walkthrough takes a few seconds longer while they load. After that, everything works offline.
+The first walkthrough takes a few seconds longer while the models load.
 
-The base install leaves out the browser that draws slides. With it, `finish_walkthrough` checks every slide's layout and shows the agent pictures of slides that look alike, each walkthrough gets a poster in the gallery, and MP4 export works. To add it, use the `video` extra in place of the command above and fetch Chromium (about 100 MB) once:
+The base install leaves out the browser that draws slides. With it, `finish_walkthrough` checks every slide's layout and shows the agent pictures of slides that look alike, each walkthrough gets a poster in the gallery, and MP4 export works. To add it, use the `video` extra in place of the command above and fetch Chromium once:
 
 ```zsh
 uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.8' showntell mcp
@@ -50,6 +139,26 @@ Install showntell, an MCP server that turns Markdown into narrated slide walkthr
 3. Run `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell doctor` and fix anything it marks with ✗. The first run downloads the voice model, a few hundred MB.
 4. Tell me whether I need to restart you or reload MCP servers before the tools appear. Once they do, make a three-slide walkthrough of this project and send me the link.
 ```
+
+### Run locally
+
+From a checkout, without a voice model:
+
+```zsh
+uv sync
+uv run pytest -m "not slow and not browser and not mlx and not onnx"   # fast tests, no models or browser
+uv run showntell serve --speech fake                                   # run without a voice model
+```
+
+You can also write a walkthrough by hand and play it with `showntell play talk.md`.
+
+### Run the tests
+
+The first command in the block above runs the fast tests. The rest of the suites are under [Testing](#-testing).
+
+---
+
+## 🔌 Install per Client
 
 ### Claude Code
 
@@ -103,7 +212,7 @@ args = ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.8", "show
 
 ### Gemini CLI
 
-1. Install the extension. It adds the server and a context file with the same guidance as the Claude Code skill:
+1. Install the extension. It adds the server and a context file ([GEMINI.md](GEMINI.md)) with the same guidance as the Claude Code skill:
 
    ```zsh
    gemini extensions install https://github.com/rahimnathwani/showntell
@@ -196,34 +305,9 @@ I can't open links on your machine, so you'll send me walkthroughs as MP4 files.
 - **Your walkthroughs:** http://localhost:4747/ lists them. They and their audio stay until you delete them, or run `showntell prune --older-than 60d`. The daemon log is `~/.local/share/showntell/daemon.log`, kept under 5 MB with the part before in `daemon.log.1`.
 - **Faster mornings on a Mac:** `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell autostart on` starts the daemon at login, so even the first walkthrough of the day comes back as fast as the rest.
 
-## How it works
+---
 
-```mermaid
-graph TB
-  subgraph agent [Your coding agent]
-    S[start_walkthrough with the opening] --> L[shares the link with you]
-    L --> M[add_slides one to three slides at a time]
-    M --> F[finish_walkthrough]
-  end
-  subgraph daemon [showntell daemon]
-    P[Markdown parser] --> B[Slide builder and checks]
-    B --> Q[Speech queue]
-    Q --> K[Kokoro on MLX or ONNX]
-  end
-  subgraph browser [Your browser]
-    R[Player driven by narration time]
-  end
-  S --> P
-  M --> P
-  K --> R
-  B -->|changed slides over SSE| R
-```
-
-1. **Opening first.** The agent's first call starts the walkthrough with only the title slide and a sentence or two. It returns as soon as that audio exists, about 0.3 s later, and tells the agent to send you the link.
-2. **Voiced in the background.** Later slides are parsed, checked and voiced while you watch. The player waits with a notice if it ever catches up with the writer.
-3. **Timed to the word.** Kokoro reports when each word is spoken. Each cue in the narration, a Markdown link like `[the retry limit](#L48)`, moves the pointer as its first word is heard.
-
-## The format
+## ✍️ The Format
 
 A walkthrough is Markdown. Headings start slides, fenced blocks and lists are what you see, plain paragraphs are what you hear.
 
@@ -252,6 +336,7 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **Formula** | a `math` block or `$$ … $$`, rendered with KaTeX |
 | **Table** | a pipe table |
 | **List, steps, cards, timeline** | `-` or `1.` items; `.cards` on the heading for cards, `.timeline` for dated events |
+| **Quiz** | `.quiz` on the heading turns a `- [ ]` / `- [x]` checklist into a multiple-choice question |
 | **Image** | `![alt](path)` from the project, optionally `{frame=browser}`; cues can point at a region |
 | **Chart** | `chart bar`, `chart hbar` or `chart line` with `label: value` lines |
 | **Terminal session** | a `terminal` block: `$` commands and their output |
@@ -262,9 +347,45 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **Layouts** | `{.side}` puts `>` takeaways beside the visual, `{.pair}` shows two visuals, `{.full}` one edge to edge; a slide with only a `>` sentence is a statement |
 | **Icons** | Lucide names: `- :database: **Postgres**`, `> :zap: takeaway`, `{icon=rocket}` on a heading, `<use href="icon:cloud"/>` in a drawing |
 
-`.build` on a heading reveals parts as the narration reaches them. A cue can send a dot along diagram edges (`#client->api->db`), and a style after it changes the pointer: `{.circle}`, `{.underline}`, `{.arrow}`, `{.highlight}`, or `{.zoom}` to move the camera in. Seven themes (dark, light, paper, night, ocean, studio, high contrast) are chosen with `theme`, in front matter or in the project's `showntell.theme.json`, and viewers can switch. The full reference is [docs/format.md](docs/format.md). You can also write a walkthrough by hand and play it with `showntell play talk.md`.
+- **Step reveal:** `.build` on a heading reveals parts as the narration reaches them.
+- **Pointer:** a cue can send a dot along diagram edges (`#client->api->db`), and a style after it changes the pointer: `{.circle}`, `{.underline}`, `{.arrow}`, `{.highlight}`, or `{.zoom}` to move the camera in.
+- **Themes:** seven themes (`dark`, `light`, `paper`, `night`, `ocean`, `studio`, `contrast`) are chosen with `theme`, in front matter or in the project's `showntell.theme.json`, and viewers can switch. The project file can also override single colour tokens.
+- **Frames:** `landscape` (1280 × 720), `square` (960 × 960) and `portrait` (720 × 1280).
 
-## Commands
+The full reference is [docs/format.md](docs/format.md).
+
+---
+
+## 🧰 MCP Tools, Prompts and Resources
+
+The server exposes seven tools. Their descriptions, and everything else the agent reads, live in [`src/showntell/text/`](src/showntell/text/).
+
+| Tool | What it does |
+|---|---|
+| **`start_walkthrough`** | creates a walkthrough; with `opening`, voices the title slide and returns a playable link |
+| **`add_slides`** | appends slides written in Markdown |
+| **`revise_slide`** | replaces one slide, found by its id, and replies with a link that plays that slide |
+| **`finish_walkthrough`** | closes the walkthrough and returns render and layout findings |
+| **`export_walkthrough`** | saves an MP4 (`format` `mp4`, the default) or a self-contained HTML page (`html`); `path` and `max_mb` are optional |
+| **`list_walkthroughs`** | recent walkthroughs with handles, titles and links |
+| **`preview_slides`** | small pictures of slides as the viewer sees them, plus any layout problems found while drawing them |
+
+| Prompt | Argument | Use |
+|---|---|---|
+| **`diff`** | `target` | walk through a commit range, a branch or the working tree |
+| **`review`** | `target` | review a change |
+| **`file`** | `path` | walk through a file |
+| **`topic`** | `topic` | walk through a topic |
+
+| Resource | Contents |
+|---|---|
+| **`showntell://walkthroughs`** | recent walkthroughs with titles, links and handles |
+| **`showntell://slide-kinds`** | every kind of visual a slide can show, with an example |
+| **`showntell://walkthroughs/{id}`** | the Markdown a walkthrough was written in |
+
+---
+
+## ⌨️ Commands
 
 | Command | What it does |
 |---|---|
@@ -279,6 +400,17 @@ After [the final attempt](#L55) the error goes back to the caller.
 | **`showntell prune --older-than 60d`** | delete walkthroughs unchanged for that long and cached audio nothing uses; `--dry-run` lists them first |
 | **`showntell stop`** | stop the daemon; the next client starts one from its own copy |
 | **`showntell autostart on\|off\|status`** | macOS: keep the daemon running from login |
+| **`showntell version`** | print the version |
+
+Run with no command from a terminal, `showntell` prints help; launched by an MCP client (stdin not a terminal), it runs `showntell mcp`.
+
+| Flag | Commands | Meaning |
+|---|---|---|
+| **`--data`**, **`--port`**, **`--host`** | all | data folder, port and interface; override `SHOWNTELL_DATA`, `SHOWNTELL_PORT`, `SHOWNTELL_HOST` |
+| **`--deliver link\|file`** | `mcp`, `serve` | how the user gets a walkthrough; overrides `SHOWNTELL_DELIVER` |
+| **`--voice`**, **`--speech`** | `serve` (and `--speech` on `doctor`) | default voice and speech backend (`auto`, `mlx`, `onnx`, `fake`) |
+| **`--public-url`**, **`--open`** | `serve` | base URL for links on other devices; open each walkthrough in the browser once playable |
+| **`--project`**, **`--no-open`** | `play` | folder that `file=` paths are relative to (default: the git root or the file's folder); do not open the browser |
 
 ### Video export
 
@@ -300,17 +432,9 @@ uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0
 
 Needs [FFmpeg](https://ffmpeg.org/) on PATH and the `video` extra (Playwright). Without Playwright, folder exports still work and skip `poster.png`.
 
-### In pull requests
+---
 
-The repository is also a GitHub Action: it voices a walkthrough's Markdown on the runner, with no API key, and posts the outline, the transcript and a download link on the pull request. See [docs/github-action.md](docs/github-action.md).
-
-```yaml
-- uses: rahimnathwani/showntell@v0.1.7
-  with:
-    markdown: .showntell/pr.md
-```
-
-## In the player
+## ▶️ The Player
 
 | Feature | How |
 |---|---|
@@ -320,7 +444,7 @@ The repository is also a GitHub Action: it voices a walkthrough's Markdown on th
 | **Pause at each step** | the menu: stops after each paragraph that revealed a part |
 | **Ask for a change** | the menu copies a request naming the slide, the time and what the narration says, to paste to your agent |
 | **Theme** | the menu, or `?theme=light` |
-| **Keyboard** | Space, ←/→ 5 s, Shift ←/→ slides, C captions, T transcript; lists are one tab stop with arrow keys |
+| **Keyboard** | Space (or K) play and pause, ←/→ (or J/L) 5 s, Shift ←/→ or `,`/`.` or Page Up/Down slides, Home to the start, C captions, T transcript, `?` the menu; lists are one tab stop with arrow keys |
 
 ### Embedding
 
@@ -329,9 +453,11 @@ The repository is also a GitHub Action: it voices a walkthrough's Markdown on th
 <showntell-player src="https://your.host/my-walkthrough/" poster="https://your.host/my-walkthrough/poster.png"></showntell-player>
 ```
 
-The element plays an exported folder or a live link in an iframe, forwards `ready`, `slidechange`, `timeupdate`, `durationchange`, `waiting`, `play`, `pause` and `ended` events, and has `play()`, `pause()` and `seek(seconds)`. With `poster`, the player loads on the first click. Browsers block public pages from loading a link on your own machine, so embed exported folders, not `localhost` links.
+The element plays an exported folder or a live link in an iframe, forwards `ready`, `slidechange`, `timeupdate`, `durationchange`, `waiting`, `play`, `pause`, `ended`, `playbackerror` and `error` events, and has `play()`, `pause()` and `seek(seconds)` and the read-only `currentTime`, `duration`, `paused` and `slide`. A `frame` attribute (`landscape`, `square` or `portrait`) sets its aspect ratio. With `poster`, the player loads on the first click. Browsers block public pages from loading a link on your own machine, so embed exported folders, not `localhost` links.
 
-## Settings
+---
+
+## ⚙️ Configuration
 
 Environment variables, also listed in [.env.example](.env.example). Command-line flags override them.
 
@@ -343,23 +469,164 @@ Environment variables, also listed in [.env.example](.env.example). Command-line
 | **`SHOWNTELL_VOICE`** | `af_heart` | default voice; any English Kokoro voice, such as `am_michael` or `bf_emma` |
 | **`SHOWNTELL_SPEECH`** | `auto` | `mlx` on Apple silicon (`onnx` if MLX fails to load), `onnx` elsewhere, or `fake` for tests |
 | **`SHOWNTELL_PUBLIC_URL`** | | base URL for links when viewing from another device, such as a Tailscale name; links then carry an access token |
+| **`SHOWNTELL_ACCESS_TOKEN`** | generated | the access token used when `SHOWNTELL_HOST` is not a loopback address or `SHOWNTELL_PUBLIC_URL` is set; the only secret here |
+| **`SHOWNTELL_OPEN`** | | `1` opens each walkthrough in the browser as soon as it is playable (the same as `serve --open`) |
 | **`SHOWNTELL_ONNX_MODEL`** | `model_quantized` | ONNX variant; `model` (fp32) can be faster on CPUs without AVX2 |
 | **`SHOWNTELL_THREADS`** | up to 6 | CPU threads for ONNX speech |
 | **`SHOWNTELL_DELIVER`** | `link` | `file`: the agent sends an exported MP4 instead of the player's link, for agents in a sandbox or behind a chat app |
 | **`SHOWNTELL_FINISH_CHECK`** | 1 | `0` skips drawing every slide headless at `finish_walkthrough` (needs Playwright) |
 
-Pronunciations: put `word = spoken form` lines in `~/.local/share/showntell/lexicon.txt`. A lowercase word matches any capitalisation, and the spoken form may be misaki phonemes between slashes (`kubectl = /kjˈubkˌʌtəl/`). showntell already knows several hundred technical terms.
+**Pronunciations:** put `word = spoken form` lines in `~/.local/share/showntell/lexicon.txt`. A lowercase word matches any capitalisation, and the spoken form may be misaki phonemes between slashes (`kubectl = /kjˈubkˌʌtəl/`). showntell already knows several hundred technical terms.
 
-## Privacy and security
+**Project theme:** a `showntell.theme.json` in the project root picks a theme and may replace single colours, for example `{ "theme": "light", "tokens": { "accent": "#0969da" } }`. See [docs/format.md](docs/format.md#themes).
+
+**Where things are kept**, inside the data folder:
+
+| Path | Contents |
+|---|---|
+| `daemon.json` | pid, port, version and RPC token of the running daemon (mode 0600) |
+| `daemon.log` | daemon log when started in the background |
+| `walkthroughs/<id>/` | `state.json` (slides, narration, cues, timings), `source.md` (the Markdown as received), `assets/` (images copied from the project) |
+| `audio/` | voiced narration and its word timings, shared by all walkthroughs |
+| `models/` | the spaCy English model |
+| `lexicon.txt` | your pronunciations |
+
+Voice models live in the Hugging Face cache (`~/.cache/huggingface`).
+
+---
+
+## 🔒 Privacy and Security
 
 - **Network:** showntell listens on localhost only, checks the Host and Origin of every request, and accepts only JSON POSTs.
 - **Links:** walkthrough ids are 128-bit random values; writing needs a separate key, which the agent gets and any MCP client on this machine can list.
-- **Files:** code and images are read only from the project folder. When the MCP client shares its folders, the project folder must be inside one of them, so an agent cannot show files from elsewhere on the machine. Git runs only plumbing commands with repository hooks and diff drivers disabled.
+- **Files:** code and images are read only from the project folder, with symbolic links resolved. When the MCP client shares its folders, the project folder must be inside one of them, so an agent cannot show files from elsewhere on the machine.
+- **Git:** only `git rev-parse` and `git cat-file` run, with fsmonitor disabled; diffs are computed in Python.
+- **Exports:** `export_walkthrough` writes only files ending in `.mp4` or `.html`, by default in the project folder.
+- **Serving to other devices:** a non-loopback address requires an access token, added to every link and kept in a cookie; MCP and RPC stay local-only.
 - **Downloads:** the only network traffic is the first-run model download (and the ONNX model, if MLX ever fails on Apple silicon).
 
-See [SECURITY.md](SECURITY.md) to report a problem.
+The threat model is in [SECURITY.md](SECURITY.md). Report vulnerabilities privately through GitHub's "Report a vulnerability", not in a public issue.
 
-## Platforms
+---
+
+## 📂 Project Structure
+
+```text
+showntell/
+├── src/showntell/            # the Python package
+│   ├── cli.py                # the `showntell` command and its subcommands
+│   ├── config.py             # SHOWNTELL_* settings and their defaults
+│   ├── daemon.py             # start, reuse or replace the background daemon; lockfile and log cap
+│   ├── app.py                # the daemon: server wiring and the request guard
+│   ├── server.py             # MCP tools, prompts, resources and web routes
+│   ├── service.py            # LocalService (the tools' logic) and RemoteService (the shim's client)
+│   ├── store.py              # walkthrough sessions, speech requests, events, persistence
+│   ├── format.py             # the incremental Markdown parser
+│   ├── build.py              # slides from parsed blocks
+│   ├── cues.py               # resolving and inferring cues
+│   ├── checks.py             # findings on sizes, slides and the whole walkthrough
+│   ├── issues.py             # finding codes, severities and fixes
+│   ├── sources.py            # code from disk and git, kept inside the project
+│   ├── pronounce.py          # code and units turned into speakable text
+│   ├── export.py             # HTML page and static folder exports
+│   ├── video.py              # MP4 export
+│   ├── capture.py            # drives the player in headless Chromium for frames and posters
+│   ├── doctor.py, prune.py   # the setup check; cleanup of old walkthroughs and audio
+│   ├── model.py              # the walkthrough document model and format version
+│   ├── themes.py, icons.py, mermaid.py   # themes, bundled Lucide icons, Mermaid parsing for cues
+│   ├── kinds/                # bundled slide kinds: chart, stat, chat, terminal, tree, svg, drawio
+│   ├── speech/               # Kokoro on MLX or ONNX, fake backend, fallback, narrator queue, downloads
+│   ├── text/                 # what the agent reads; text/file/ replaces the link parts for --deliver file
+│   ├── data/                 # Lucide icons and the built-in pronunciation word list
+│   └── static/               # the player: HTML, CSS, ES modules, embed.js, vendored libraries
+├── claude-plugin/            # Claude Code plugin: .mcp.json and the showntell skill
+├── .claude-plugin/           # marketplace manifest pointing at claude-plugin/
+├── gemini-extension.json     # Gemini CLI extension manifest (generated)
+├── GEMINI.md                 # Gemini CLI context file (generated from the skill)
+├── action.yml                # the GitHub Action
+├── action/                   # the Action's pull request summary script and example walkthrough
+├── docs/                     # format reference, spec, architecture, comparison, Action guide, demo GIF
+├── gallery/                  # exported walkthroughs published to GitHub Pages
+├── eval/                     # prompts for the evaluation and the gallery
+├── scripts/                  # evaluation, gallery build, version sync, vendoring, smoke test, measurements
+├── tests/                    # pytest suites, player tests for node --test, golden states, Linux screenshot baselines
+└── .github/workflows/        # CI, gallery deploy to Pages, PyPI release
+```
+
+---
+
+## 🔁 In Pull Requests (GitHub Action)
+
+The repository is also a GitHub Action: it voices a walkthrough's Markdown on the runner, with no API key, and posts the outline, the transcript and a download link on the pull request.
+
+```yaml
+- uses: rahimnathwani/showntell@v0.1.7
+  with:
+    markdown: .showntell/pr.md
+```
+
+| Input | Default | What |
+|---|---|---|
+| **markdown** | (required) | the walkthrough's Markdown, relative to the repository root |
+| **format** | `html` | `html`, `mp4` or `both` |
+| **name** | `walkthrough` | the artifact's name; one comment per name |
+| **comment** | `true` | post or update the pull request comment; needs `pull-requests: write` |
+| **token** | `github.token` | token for the comment |
+
+Outputs are `folder` and `artifact-url`. The full workflow, where the Markdown comes from, and notes on forks are in [docs/github-action.md](docs/github-action.md). [action/example.md](action/example.md) is the walkthrough CI runs the Action on.
+
+---
+
+## 📦 Releasing
+
+Maintainers release from a tag. In short ([CONTRIBUTING.md](CONTRIBUTING.md#releasing) has the details):
+
+1. Change the version in `pyproject.toml`, then run `uv run scripts/sync_version.py`. It stamps the package, the plugin, marketplace and Gemini manifests, pins the install commands in the plugin, this README and `doctor` to `@vX.Y.Z`, and regenerates `GEMINI.md`. `tests/test_versions.py` fails while anything disagrees.
+2. Date the `## X.Y.Z` section in [CHANGELOG.md](CHANGELOG.md).
+3. Check locally with `uv run scripts/sync_version.py --check --tag vX.Y.Z`.
+4. Push the tag `vX.Y.Z`. Installs from GitHub pinned to it start working.
+5. Publish a GitHub release for the tag. `release.yml` runs lint, format and tests, checks the tag, manifests and changelog agree, builds and smoke-tests the wheel, and publishes to PyPI through trusted publishing.
+
+---
+
+## 🧪 Testing
+
+```zsh
+uv sync
+uv run pytest -m "not slow and not browser and not mlx and not onnx"   # fast tests; no models or browser
+uv run pytest -m "browser or slow"     # Playwright's Chromium and ffmpeg; `uv run playwright install chromium` once
+uv run pytest -m "mlx or onnx"         # need the cached voice models
+uv run ruff check src tests scripts && uv run ruff format --check src tests scripts
+node --test tests/js/*.test.js         # player logic
+```
+
+| Marker | Needs |
+|---|---|
+| **`mlx`** | Apple silicon and the cached Kokoro MLX model |
+| **`onnx`** | the cached Kokoro ONNX model |
+| **`slow`** | nothing extra; takes more than a few seconds |
+| **`browser`** | headless Chromium through Playwright |
+| **`claude`** | the real Claude Code CLI; opt in with `SHOWNTELL_TEST_CLAUDE=1 uv run pytest -m claude` (costs a few cents, CI cannot run it) |
+
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs four jobs: Linux with fake speech, the browser tests and ONNX; macOS on Apple silicon with MLX; the GitHub Action on its own example; and the built wheel installed outside the repository (`scripts/wheel_smoke.sh`).
+
+---
+
+## 📊 Status & Limitations
+
+**Current status:** version 0.1.8, marked beta (`Development Status :: 4 - Beta`). Installs come from GitHub tags; the PyPI release is not yet published. Progress against the 1.0 launch criteria is in [ROADMAP.md](ROADMAP.md).
+
+| | Item |
+|:--:|:--|
+| 🟡 | **English only.** Kokoro's other languages are on the [roadmap](ROADMAP.md). |
+| 🟡 | **No browser in the base install.** Without the `video` extra, the finish-time layout check, slide pictures, posters and MP4 export are off. |
+| 🟡 | **Windows is untested.** Best effort; reports welcome. |
+| 🟡 | **Action on forks.** Pull requests from forks get a read-only token, so the comment step fails there; see [docs/github-action.md](docs/github-action.md). |
+| 🔵 | **`autostart` is macOS only.** It uses launchd; elsewhere, use a systemd user unit. |
+
+Parked work, each with what would settle it, is in [TODO.md](TODO.md).
+
+### Platforms
 
 | Platform | Speech | Status |
 |---|---|---|
@@ -367,22 +634,42 @@ See [SECURITY.md](SECURITY.md) to report a problem.
 | **Linux, Intel Mac** | Kokoro on ONNX Runtime (CPU) | supported |
 | **Windows** | Kokoro on ONNX Runtime (CPU) | untested, best effort; reports welcome |
 
-English voices only for now. Kokoro's other languages are on the [roadmap](ROADMAP.md).
+---
 
-## Development
+## 📚 Documentation
 
-```zsh
-uv sync
-uv run pytest -m "not slow and not browser and not mlx and not onnx"   # fast tests, no models or browser
-uv run showntell serve --speech fake                                   # run without a voice model
-```
+| Doc | What |
+|-----|------|
+| [`docs/format.md`](docs/format.md) | the full walkthrough format: visuals, layouts, cues, step reveal, frames, themes |
+| [`docs/spec.md`](docs/spec.md) | functional spec: tools, timings, findings |
+| [`docs/architecture.md`](docs/architecture.md) | daemon, builder, player modules, capture and export |
+| [`docs/comparison.md`](docs/comparison.md) | against screen recordings, written PR descriptions and rendered explainers |
+| [`docs/github-action.md`](docs/github-action.md) | the GitHub Action |
+| [`claude-plugin/skills/showntell/SKILL.md`](claude-plugin/skills/showntell/SKILL.md) | the skill shipped with the Claude Code plugin |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | setup, where things live, changes, adding a slide kind, releasing |
+| [`SECURITY.md`](SECURITY.md) | threat model and how to report a vulnerability |
+| [`ROADMAP.md`](ROADMAP.md) | decisions, launch criteria, status, what comes after 1.0 |
+| [`CHANGELOG.md`](CHANGELOG.md) | changes per release |
+| [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | bundled libraries and downloaded models, with their licences |
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [docs/spec.md](docs/spec.md) and [docs/architecture.md](docs/architecture.md).
+---
 
-## Who uses it
+## 🤝 Contributing
 
-Using showntell on a team or project? Add a line to [ADOPTERS.md](ADOPTERS.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). The main rules:
 
-## Licence
+- **Format changes** go into `docs/format.md` first and must not break existing walkthroughs.
+- **Agent-facing text** in `src/showntell/text/` is tuned against `scripts/eval.py`; include the before and after table in the pull request.
+- **Player changes** need a screenshot of each affected slide kind, and `timeline.js` changes need a `node --test` case.
+- **Dependencies:** nothing GPL in the default install. Optional extras may be.
+- **Bug reports:** include `showntell doctor` output, the walkthrough's `source.md` (in the data folder under `walkthroughs/<id>/`), and what you expected.
 
-MIT. Bundled libraries and downloaded models keep their own licences; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+**Who uses it:** using showntell on a team or project? Add a line to [ADOPTERS.md](ADOPTERS.md).
+
+---
+
+## 📄 License
+
+**MIT.** Copyright (c) 2026 Rahim Nathwani. See [LICENSE](LICENSE).
+
+Bundled libraries and downloaded models keep their own licences; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The optional `espeak` extra installs espeak-ng, which is GPL-3.0 and not installed by default.
