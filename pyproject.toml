@@ -29,6 +29,8 @@ dependencies = [
     "num2words>=0.5.14",
     # frames of the player in headless Chromium; the browser itself is fetched on first need
     "playwright>=1.50",
+    # text and outline of a PDF the user wants explained (read_source)
+    "pypdf>=6.0",
     "spacy>=3.8,<3.9",
     "mlx-audio==0.5.9; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "onnxruntime>=1.20; sys_platform != 'darwin' or platform_machine != 'x86_64'",

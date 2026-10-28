@@ -17,7 +17,7 @@ Your agent writes slides and narration in Markdown; talktrack voices them locall
 
 ## 📖 Overview
 
-Ask your agent to walk you through a pull request, a module or a concept. It writes slides and narration in Markdown; talktrack voices them locally with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) and hands back a link that starts playing in about a second, while the rest is still being written. A pointer follows the narration through code, diagrams and lists, word by word.
+Ask your agent to walk you through a pull request, a module or a concept, or to explain an article, a PDF, an image or an idea. It writes slides and narration in Markdown; talktrack voices them locally with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) and hands back a link that starts playing in about a second, while the rest is still being written. A pointer follows the narration through code, diagrams and lists, word by word.
 
 ![Three moments from gallery walkthroughs: code changing from one version to the next, a dot travelling along a diagram's edges, and the pointer stepping through a bar chart as the narration names each bar](docs/media/demo.gif)
 
@@ -28,6 +28,7 @@ Ask your agent to walk you through a pull request, a module or a concept. It wri
 - **Local:** speech runs on your Mac or PC. No API keys, no hosted service, no telemetry. Code never leaves your machine except to the model you already use.
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
+- **Explains anything:** paste notes or an idea, or give an article link, a PDF or an image, and the `explain` prompt turns it into a walkthrough for the audience you name, such as "a grade-10 student". `read_source` gives the agent the source word for word, not a summary; a long document becomes a course.
 - **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the player, diagrams that failed to render or text shrunk too small to read. `finish_walkthrough` draws every slide in headless Chromium to find them. The agent can also look at pictures of its slides with `preview_slides`.
 - **Shareable:** export a walkthrough as one HTML file that plays offline (send it in Slack or by email), a static folder with captions, or an MP4; embed it with `<talktrack-player>`, link to a range of slides, or present it yourself with speaker notes. An agent in a sandbox or behind WhatsApp sends you the MP4 itself.
 
@@ -358,7 +359,7 @@ The full reference is [docs/format.md](docs/format.md).
 
 ## 🧰 MCP Tools, Prompts and Resources
 
-The server exposes eight tools. Their descriptions, and everything else the agent reads, live in [`src/talktrack/text/`](src/talktrack/text/).
+The server exposes nine tools. Their descriptions, and everything else the agent reads, live in [`src/talktrack/text/`](src/talktrack/text/).
 
 | Tool | What it does |
 |---|---|
@@ -370,6 +371,7 @@ The server exposes eight tools. Their descriptions, and everything else the agen
 | **`create_playlist`** | joins finished walkthroughs, in order, into one page with a table of contents and one link; it plays on to the next entry when one ends. `export_walkthrough` takes the playlist's id and `html` for an offline file |
 | **`list_walkthroughs`** | recent walkthroughs with handles, titles and links |
 | **`preview_slides`** | small pictures of slides as the viewer sees them, plus any layout problems found while drawing them |
+| **`read_source`** | something to explain, word for word: a web page as Markdown (no menus or ads), a PDF's outline and pages (`pages=1-20`), an image to look at, or a text file. Links must be public (the checked address is the one connected to); files must be inside the project |
 
 | Prompt | Argument | Use |
 |---|---|---|
@@ -380,6 +382,7 @@ The server exposes eight tools. Their descriptions, and everything else the agen
 | **`course`** | `subject` | teach a subject as 3 to 6 short walkthroughs, each ending in a quiz, joined in a playlist (sent as MP4s in order in file mode) |
 | **`bug`** | `target` | tell a bug: symptom, cause with evidence, the fix as a diff, proof it works, how to prevent it; from a fix, an issue or just a symptom |
 | **`feature`** | `feature` | follow one real path through the code, across files, to show how a feature works |
+| **`explain`** | `source` | explain pasted text, notes or an idea, an article link, a PDF or an image: the big idea first, one idea per slide with a picture, nothing the source doesn't say; a source past about 20 pages or 10,000 words becomes a course |
 
 Every prompt also takes an optional `audience`, such as `product manager` or `new engineer`, which tailors depth and vocabulary; left empty, the prompt is unchanged.
 
@@ -536,6 +539,7 @@ talktrack/
 │   ├── checks.py             # findings on sizes, slides and the whole walkthrough
 │   ├── issues.py             # finding codes, severities and fixes
 │   ├── sources.py            # code from disk and git, kept inside the project
+│   ├── readers.py            # sources to explain: web pages, PDFs, images and text, public links only
 │   ├── pronounce.py          # code and units turned into speakable text
 │   ├── export.py             # HTML page and static folder exports
 │   ├── video.py              # MP4 export
