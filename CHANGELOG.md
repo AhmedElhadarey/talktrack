@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 (unreleased)
 
 - **Playlists:** `create_playlist` joins finished walkthroughs, in order, into one course: a page at `/p/<id>/` with a table of contents, the current walkthrough in the usual player, and a move to the next entry when one ends. `?n=2` opens entry 2. `export_walkthrough` with the playlist's id and `html`, or `talktrack export PLAYLIST out.html`, writes the whole course as one offline file; the `talktrack://playlists` resource lists them. A long topic can now go out as parts under one link instead of a single piece past the four-minute warning.
 
