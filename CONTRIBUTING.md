@@ -68,7 +68,7 @@ A kind made from a fenced block (```` ```name ````) touches these files:
 - **Changelog:** rename `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)` with at least one entry under it.
 - **Tag:** push `vX.Y.Z`. That alone publishes nothing; installs from GitHub pinned to the tag start working.
 - **Publish:** publish a GitHub release for the tag (or run `release.yml` on it, leaving `target` at `pypi`). The workflow runs lint, format and tests, stops unless the tag equals the pyproject version, the manifests agree and the changelog section is dated and non-empty, then builds, smoke-tests the wheel with `scripts/wheel_smoke.sh` and publishes to PyPI through trusted publishing.
-- **Try TestPyPI:** run `release.yml` by hand with `target` set to `testpypi`. It runs the same gates, then uploads to test.pypi.org from the `testpypi` environment, skipping files already there. A published release never goes there.
+- **Try TestPyPI:** after pushing the tag, run `release.yml` by hand, pick the `vX.Y.Z` tag under "Use workflow from" and set `target` to `testpypi`. The version gate reads the tag name, so a run from `main` stops there. It runs the same gates, then uploads to test.pypi.org from the `testpypi` environment, skipping files already there; then publish the GitHub release. A published release never goes there. A manual run uses the workflow file in the tag it runs from, and tags up to `v0.2.0` predate the `target` input, so a manual run on them publishes to PyPI: the first TestPyPI rehearsal is on the first tag cut after this workflow.
 - **One-time setup:** see [Publishing setup](#publishing-setup-once).
 - **Check first:** `uv run scripts/sync_version.py --check --tag vX.Y.Z` runs the same gate locally.
 - **Through Claude Code:** `TALKTRACK_TEST_CLAUDE=1 uv run pytest -m claude` checks what the model really receives from the tools (the guide, the share-the-link instruction, preview pictures). CI cannot run it; it needs a logged-in `claude` and costs a few cents.
@@ -76,7 +76,7 @@ A kind made from a fenced block (```` ```name ````) touches these files:
 
 ### Publishing setup (once)
 
-The workflow stores no token; PyPI trusts the workflow's identity. The owner registers it on each index, before the first upload, as a pending publisher (PyPI: Account settings, Publishing; TestPyPI is a separate account and form at test.pypi.org):
+The workflow stores no token; PyPI trusts the workflow's identity. The owner registers it on each index, before the first upload, as a pending publisher (PyPI: Your account, Publishing, at pypi.org/manage/account/publishing/; TestPyPI is a separate account and form at test.pypi.org). A pending publisher does not reserve the name: until the first upload, anyone can still take `talktrack`.
 
 | Field | PyPI | TestPyPI |
 | --- | --- | --- |
@@ -86,7 +86,7 @@ The workflow stores no token; PyPI trusts the workflow's identity. The owner reg
 | Workflow name | `release.yml` | `release.yml` |
 | Environment name | `pypi` | `testpypi` |
 
-Then create the GitHub environments `pypi` and `testpypi` (Settings, Environments). Recommended: on `pypi`, add yourself as a required reviewer and limit deployment to release tags (`v*`); `testpypi` can stay open. Run the TestPyPI dispatch once to prove the setup before the first real release.
+Then create the GitHub environments `pypi` and `testpypi` (Settings, Environments). Recommended: on `pypi`, add yourself as a required reviewer and limit deployment to release tags (`v*`); `testpypi` can stay open. Rehearse on TestPyPI with the first release tag cut after this workflow (see Try TestPyPI) before publishing that release to PyPI.
 
 ## Reporting bugs
 

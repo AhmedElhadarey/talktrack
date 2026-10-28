@@ -48,7 +48,7 @@ Phases 0 to 2 are built, every launch criterion is met, and the repository is pu
 
 Evaluation cost on Sonnet: $0.09 to $0.24 per walkthrough, $1.40 for the ten.
 
-**Owner steps left:** register `release.yml` as a pending trusted publisher on PyPI (environment `pypi`) and TestPyPI (environment `testpypi`), create both GitHub environments, run the Release workflow once with `target` `testpypi`, then publish the GitHub release for the current tag (until then the README installs from the tag on GitHub); announce. Values are in CONTRIBUTING.md, Publishing setup.
+**Owner steps left:** register `release.yml` as a pending trusted publisher on PyPI (environment `pypi`) and TestPyPI (environment `testpypi`), create both GitHub environments, cut the next release tag (v0.2.1 or later: older tags predate the `target` input, so a manual run on them publishes to PyPI), run the Release workflow on it once with `target` `testpypi`, then publish that GitHub release (until then the README installs from the tag on GitHub); announce. Values are in CONTRIBUTING.md, Publishing setup.
 
 ## Phase 0: Foundations
 

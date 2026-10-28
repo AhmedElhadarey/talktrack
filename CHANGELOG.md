@@ -2,7 +2,7 @@
 
 ## 0.2.1 (unreleased)
 
-- **Test releases:** running `release.yml` by hand can now publish to TestPyPI instead of PyPI, so the first upload can be tried without taking the real name. Each index uses its own GitHub environment (`pypi`, `testpypi`) and trusted publisher, a published release still goes only to PyPI, and a test checks the workflow never falls back to a stored token.
+- **Test releases:** running `release.yml` by hand on a release tag can now publish to TestPyPI instead of PyPI, so a release is rehearsed before it reaches the real index. Each index uses its own GitHub environment (`pypi`, `testpypi`) and trusted publisher, a published release still goes only to PyPI, and a test checks the workflow never falls back to a stored token.
 
 ## 0.2.0 (2026-10-28)
 
