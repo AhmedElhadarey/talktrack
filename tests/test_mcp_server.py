@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 
 import pytest
 from mcp.client import Client
@@ -276,12 +277,47 @@ async def test_unknown_slide_is_a_tool_error(mcp):
 # -- prompts and resources ------------------------------------------------------------------------------
 
 
-async def test_prompts_exist_with_one_required_argument(mcp):
+async def test_prompts_exist_with_their_required_argument(mcp):
     async with mcp as client:
         prompts = {p.name: p for p in (await client.list_prompts()).prompts}
         assert set(prompts) >= {"diff", "review", "file", "topic"}
-        assert [a.name for a in prompts["diff"].arguments] == ["target"]
+        assert [a.name for a in prompts["diff"].arguments if a.required] == ["target"]
         assert all(p.title and p.arguments[0].required for p in prompts.values())
+
+
+async def test_every_prompt_has_an_optional_audience_with_descriptions(mcp):
+    async with mcp as client:
+        for p in (await client.list_prompts()).prompts:
+            args = {a.name: a for a in p.arguments}
+            assert args["audience"].required is False and args["audience"].description, p.name
+            assert args[p.arguments[0].name].required and args[p.arguments[0].name].description, p.name
+
+
+PINNED = json.loads((Path(__file__).parent / "fixtures" / "prompts_pinned.json").read_text())
+
+
+@pytest.mark.parametrize("name", sorted(PINNED))
+async def test_the_four_original_prompts_render_as_they_always_did(mcp, name):
+    async with mcp as client:
+        r = await client.get_prompt(name, PINNED[name]["args"])
+        assert r.messages[0].content.text == PINNED[name]["text"]
+        blank = await client.get_prompt(name, {**PINNED[name]["args"], "audience": "  "})
+        assert blank.messages[0].content.text == PINNED[name]["text"]
+
+
+@pytest.mark.parametrize("name", sorted(PINNED))
+async def test_audience_adds_one_sentence_and_leaves_the_rest(mcp, name):
+    async with mcp as client:
+        r = await client.get_prompt(name, {**PINNED[name]["args"], "audience": "product manager"})
+        body = r.messages[0].content.text
+        assert body.startswith(PINNED[name]["text"] + " The audience is product manager:")
+        assert body.count("The audience is") == 1
+
+
+async def test_audience_with_braces_is_not_treated_as_a_format_field(mcp):
+    async with mcp as client:
+        r = await client.get_prompt("topic", {"topic": "x", "audience": "{topic} {0}"})
+        assert "The audience is {topic} {0}:" in r.messages[0].content.text
 
 
 @pytest.mark.parametrize(

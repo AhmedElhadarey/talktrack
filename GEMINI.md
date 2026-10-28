@@ -17,7 +17,7 @@ One question per walkthrough, 6 to 12 slides, two to four minutes: purpose, then
 | **Architecture** | components, then one request's path through them |
 | **Concept, maths** | the problem, how it works, trade-offs, real project code if any |
 
-For a broad request, cover what the user asked about and offer the rest as end questions.
+For a broad request, cover what the user asked about and offer the rest as end questions. When the user names who will watch (a product manager, an executive, a new engineer), tailor to them: for non-engineers lead with what it does for users, impact and risk, in plain words, with no code unless asked; for newcomers define terms.
 
 ## Read first
 

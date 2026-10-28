@@ -378,6 +378,8 @@ The server exposes eight tools. Their descriptions, and everything else the agen
 | **`file`** | `path` | walk through a file |
 | **`topic`** | `topic` | walk through a topic |
 
+Every prompt also takes an optional `audience`, such as `product manager` or `new engineer`, which tailors depth and vocabulary; left empty, the prompt is unchanged.
+
 | Resource | Contents |
 |---|---|
 | **`talktrack://walkthroughs`** | recent walkthroughs with titles, links and handles |

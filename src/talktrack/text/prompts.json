@@ -30,5 +30,13 @@
       "topic": "The concept, algorithm, architecture or question to cover."
     },
     "template": "Make a narrated talktrack walkthrough of {topic}. Go from the problem it solves, to how it works, to its consequences and trade-offs, in about 1 to 2 minutes of short slides, one point each. Open with the most concrete fact or the question it answers, and end with one quiz slide on the main point. Use diagrams, formulas, tables, charts for numbers or short code examples where they help, and tie it to code in this project when there is a real example, read from disk. Share the link with me as soon as it is playable."
+  },
+  "_shared": {
+    "optional": {
+      "audience": {
+        "description": "Who will watch, for example product manager, new engineer, reviewer or executive. Empty: the usual walkthrough.",
+        "text": "The audience is {value}: for product, executive, sales or support people, say what it does for users, with impact and risk first, in plain words and with no code slides unless they ask; for engineers new to the code, give more context and define terms; for any other audience, tailor the depth and the vocabulary to them."
+      }
+    }
   }
 }
