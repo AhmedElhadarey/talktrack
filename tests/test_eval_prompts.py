@@ -55,6 +55,22 @@ def test_unknown_prompt_names_are_refused():
         render_prompt("_shared", {})
 
 
+def test_course_runs_get_a_longer_timeout_and_audience_is_scored_alike():
+    by_id = {e["id"]: e for e in _load("prompts-walkthrough.json")}
+    assert by_id["course-after"]["timeout"] >= 1500 and by_id["course-before"]["timeout"] >= 1500
+    assert ("expect" in by_id["audience-before"]) == ("expect" in by_id["audience-after"])
+
+
+def test_table_shows_course_columns_only_when_a_run_made_parts_or_a_playlist(capsys):
+    ev = _eval()
+    plain = {"id": "a", "model": "m", "kind": "k", "issues": 0, "parts": 1, "playlists": 0, "playlist_link": False}
+    ev.print_table([plain])
+    assert "playlist link" not in capsys.readouterr().out
+    ev.print_table([plain, {**plain, "id": "c", "parts": 5, "playlists": 1, "playlist_link": True}])
+    out = capsys.readouterr().out
+    assert "| parts | playlists | playlist link |" in out and "| 5 | 1 | yes |" in out
+
+
 def test_walkthrough_entries_are_before_after_pairs_and_all_render():
     entries = _load("prompts-walkthrough.json")
     ids = [e["id"] for e in entries]

@@ -27,7 +27,8 @@
    "args": {
     "topic": "talktrack's player and slide kinds, for a new contributor"
    }
-  }
+  },
+  "timeout": 1500
  },
  {
   "id": "course-after",
@@ -37,7 +38,8 @@
    "args": {
     "subject": "talktrack's player and slide kinds, for a new contributor"
    }
-  }
+  },
+  "timeout": 1500
  },
  {
   "id": "bug-before",
@@ -73,10 +75,7 @@
    "args": {
     "target": "34b942b~1..34b942b"
    }
-  },
-  "expect": [
-   "diff"
-  ]
+  }
  },
  {
   "id": "audience-after",

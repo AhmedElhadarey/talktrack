@@ -40,7 +40,8 @@ from talktrack.model import Walkthrough  # noqa: E402
 from talktrack.server import render_prompt  # noqa: E402
 
 URL_RE = re.compile(r"http://(?:localhost|127\.0\.0\.1):\d+/w/[A-Za-z0-9_-]+/?")
-RUN_TIMEOUT = 600  # seconds for one agent run; the longest so far took about 70
+PLAYLIST_RE = re.compile(r"http://(?:localhost|127\.0\.0\.1):\d+/p/[A-Za-z0-9_-]+/?")
+RUN_TIMEOUT = 600  # seconds for one agent run unless its entry sets `timeout`; the longest single walkthrough took about 70
 
 ALLOWED = [
     "mcp__talktrack",
@@ -107,7 +108,7 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
     tool_inputs: dict[str, dict] = {}
     try:
         # One hung agent must not hold the whole batch: kill it and record the timeout.
-        async with asyncio.timeout(RUN_TIMEOUT):
+        async with asyncio.timeout(prompt.get("timeout", RUN_TIMEOUT)):
             async for raw in proc.stdout:
                 now = time.time() - t0
                 try:
@@ -123,7 +124,9 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
                             marks["tool_calls"].append((round(now, 2), name))
                             if name == "start_walkthrough":
                                 marks.setdefault("start_call", now)
-                        elif block.get("type") == "text" and URL_RE.search(block.get("text", "")) and "link_shared" not in marks:
+                        elif block.get("type") == "text" and PLAYLIST_RE.search(block.get("text", "")) and "playlist_link" not in marks:
+                            marks["playlist_link"] = True
+                        if block.get("type") == "text" and URL_RE.search(block.get("text", "")) and "link_shared" not in marks:
                             marks["link_shared"] = now
                 elif ev.get("type") == "user":
                     for block in ev["message"].get("content", []):
@@ -180,6 +183,10 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
         proc.kill()
         await proc.wait()
     err_file.close()
+    names = [n for _, n in marks["tool_calls"]]
+    marks["parts"] = names.count("start_walkthrough")
+    marks["playlists"] = names.count("create_playlist")
+    marks.setdefault("playlist_link", False)
     marks["exit"] = proc.returncode
     marks["wall"] = round(time.time() - t0, 1)
     marks["url"] = url
@@ -517,6 +524,10 @@ def print_table(results: list[dict]) -> None:
         "| run | model | link s | total s | cost | slides | min | issues | render err | stalls | cue acc | missing/min | preview "
         "| s/slide | >20 s | small text | plain | fit | variety | layouts | takeaways | icons | alike | features |"
     )
+    # Course runs only: parts made, playlists created, whether a /p/ link was shared.
+    course = any(r.get("playlists") or r.get("playlist_link") or r.get("parts", 1) > 1 for r in results)
+    if course:
+        head += " parts | playlists | playlist link |"
     print("\n" + head + "\n|" + "---|" * (head.count("|") - 1))
     for r in sorted(results, key=lambda r: (r["model"], r["id"])):
         s, pl, a = r.get("summary", {}), r.get("player", {}), r.get("asr", {})
@@ -529,6 +540,7 @@ def print_table(results: list[dict]) -> None:
             f"{s.get('long_slides', '-')} | {r.get('issue_codes', {}).get('text_too_small', 0)} | {s.get('plain_share', '-')} | "
             f"{'-' if s.get('fit') is None else 'yes' if s['fit'] else 'no'} | {s.get('variety', '-')} | {s.get('layouts', '-')} | "
             f"{s.get('takeaways', '-')} | {s.get('icons', '-')} | {s.get('alike', '-')} | {', '.join(s.get('features', [])) or '-'} |"
+            + (f" {r.get('parts', '-')} | {r.get('playlists', '-')} | {'yes' if r.get('playlist_link') else 'no'} |" if course else "")
         )
 
 
