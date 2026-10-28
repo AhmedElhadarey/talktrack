@@ -374,7 +374,7 @@ The server exposes eight tools. Their descriptions, and everything else the agen
 | Prompt | Argument | Use |
 |---|---|---|
 | **`diff`** | `target` | walk through a commit range, a branch or the working tree |
-| **`review`** | `target` | review a change |
+| **`review`** | `target`, optional `spec` | review a change; with a `spec` (issue or PR number or URL, ticket text or a file path) it also checks each requirement is met, partly met or missing, and what was done that was not asked |
 | **`file`** | `path` | walk through a file |
 | **`topic`** | `topic` | walk through a topic |
 | **`course`** | `subject` | teach a subject as 3 to 6 short walkthroughs, each ending in a quiz, joined in a playlist (sent as MP4s in order in file mode) |

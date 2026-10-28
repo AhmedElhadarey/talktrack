@@ -13,6 +13,7 @@ One question per walkthrough, 6 to 12 slides, two to four minutes: purpose, then
 | Request | Cover |
 |---|---|
 | **Diff or PR** | why it changed, the edits that matter in reviewer order, risks, how to test |
+| **Review** | the verdict first, one finding per slide with evidence and a severity; given a spec (issue, PR, ticket or file), also each requirement met, partly met or missing, and what was done that was not asked |
 | **File** | its job, main parts in control-flow order, usage, pitfalls |
 | **A bug** | the symptom as the user saw it, the cause with evidence on screen, the fix as a diff, evidence it now works, how to keep it from coming back; with no fix yet, cause and suspected fix marked verified or suspected |
 | **A feature** | its entry point, then one real path through the code across files in run order, code from disk on each mechanism slide, the behaviour after two or three code slides, then edge cases, limits and where to change it; "not sure" over a guess |

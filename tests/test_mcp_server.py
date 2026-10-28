@@ -369,6 +369,22 @@ async def test_bug_prompt_orders_symptom_cause_fix_proof_prevention(mcp):
         assert [body.index(x) for x in order] == sorted(body.index(x) for x in order)
 
 
+async def test_review_spec_is_optional_and_placed_before_the_rev_advice(mcp):
+    async with mcp as client:
+        p = {p.name: p for p in (await client.list_prompts()).prompts}["review"]
+        args = {a.name: a for a in p.arguments}
+        assert [a.name for a in p.arguments] == ["target", "spec", "audience"]
+        assert args["target"].required and not args["spec"].required and args["spec"].description
+        spec = "MLX speech must keep memory bounded, whatever the sentence lengths {x}"
+        body = (await client.get_prompt("review", {"target": "a..b", "spec": spec, "audience": "reviewer"})).messages[0].content.text
+        assert "Check it against this spec: " + spec + "." in body
+        assert body.index("`gh pr view`") < body.index("In `rev=`") < body.index("Open with the verdict")
+        assert "met, partly met or missing" in body and "same severities" in body
+        assert body.endswith("tailor the depth and the vocabulary to them.")
+        plain = (await client.get_prompt("review", {"target": "a..b", "spec": " "})).messages[0].content.text
+        assert plain == PINNED["review"]["text"].replace("main...feature", "a..b")
+
+
 async def test_walkthroughs_resource_reads(mcp):
     async with mcp as client:
         h = await start(client)
