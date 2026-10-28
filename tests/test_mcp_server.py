@@ -342,7 +342,7 @@ async def test_prompts_render_their_argument(mcp, name, arg, value):
 async def test_feature_prompt_asks_for_a_traced_path_with_code_from_disk(mcp):
     async with mcp as client:
         body = (await client.get_prompt("feature", {"feature": "how login works"})).messages[0].content.text
-        for needle in ("entry point", "`file=` and `lines=`", "sequence diagram", "not sure", "2 to 4 minutes"):
+        for needle in ("entry point", "`file=` and `lines=`", "sequence diagram", "not sure", "2 to 3 minutes"):
             assert needle in body
 
 
@@ -365,7 +365,7 @@ async def test_course_in_file_mode_sends_each_part_and_makes_no_playlist(service
 async def test_bug_prompt_orders_symptom_cause_fix_proof_prevention(mcp):
     async with mcp as client:
         body = (await client.get_prompt("bug", {"target": "34b942b"})).messages[0].content.text
-        order = ["the symptom", "the cause", "`diff file=... rev=...`", "now works", "coming back", "suspected"]
+        order = ["the symptom", "the cause", "; the fix;", "now works", "coming back", "suspected"]
         assert [body.index(x) for x in order] == sorted(body.index(x) for x in order)
 
 
@@ -383,6 +383,34 @@ async def test_review_spec_is_optional_and_placed_before_the_rev_advice(mcp):
         assert body.endswith("tailor the depth and the vocabulary to them.")
         plain = (await client.get_prompt("review", {"target": "a..b", "spec": " "})).messages[0].content.text
         assert plain == PINNED["review"]["text"].replace("main...feature", "a..b")
+
+
+async def test_bug_prompt_shows_the_faulty_code_as_the_old_side_of_a_single_commit_diff(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("bug", {"target": "34b942b"})).messages[0].content.text
+        assert "rev=<sha>~1..<sha>" in body and "bare `rev=<sha>`" in body and "only when the bug is still unfixed" in body
+
+
+async def test_feature_prompt_keeps_code_to_a_few_short_excerpts(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("feature", {"feature": "x"})).messages[0].content.text
+        assert "3 to 5 places" in body and "2 to 3 minutes" in body and "sequence diagram" in body
+
+
+def test_a_prompts_own_optional_argument_beats_a_shared_one_of_the_same_name():
+    from talktrack.server import _render_prompt
+
+    p = {"args": {"t": ""}, "template": "x {t}.", "optional": {"audience": {"description": "d", "text": "own {value}"}}}
+    shared = {"audience": {"description": "d", "text": "shared {value}"}}
+    assert _render_prompt(p, shared, {"t": "a", "audience": "pm"}) == "x a. own pm"
+
+
+async def test_course_prompt_tells_the_agent_to_finish_each_part(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("course", {"subject": "x"})).messages[0].content.text
+        assert "`finish_walkthrough` on each part" in body
+        args = {a.name: a for a in {p.name: p for p in (await client.list_prompts()).prompts}["course"].arguments}
+        assert "whom" not in args["subject"].description
 
 
 async def test_walkthroughs_resource_reads(mcp):

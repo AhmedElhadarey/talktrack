@@ -577,7 +577,8 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
 
 def _prompt_parts(p: dict, shared: dict | None) -> tuple[dict, dict, str]:
     required = dict(p.get("args") or {"target": ""})
-    optional = {**p.get("optional", {}), **(shared or {})}
+    own = p.get("optional", {})
+    optional = {**own, **{k: v for k, v in (shared or {}).items() if k not in own}}
     return required, optional, p.get("template", "{" + next(iter(required)) + "}")
 
 
