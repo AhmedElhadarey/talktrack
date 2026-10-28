@@ -1123,3 +1123,53 @@ def test_charts_and_pictures_move_by_the_clock(daemon, browser):
     a, b = (float(s[6:-1]) for s in scales)
     assert 1 <= a < b <= 1.06, scales
     page.close()
+
+
+def _playlist_of_two(daemon) -> tuple[str, list[str]]:
+    """Two short walkthroughs and a playlist of them: (the playlist's link, their ids)."""
+    ids = [_make(daemon, "landscape", f"# Part {k}\n\nJust one short sentence.\n", f"Part {k}").split("/w/")[1].strip("/") for k in (1, 2)]
+    r = _rpc(daemon)("create_playlist", title="Course", walkthroughs=ids)
+    return r["url"].replace("localhost", "127.0.0.1") + "/", ids
+
+
+def _frame_path(page) -> str:
+    return page.evaluate("document.getElementById('frame').contentWindow.location.pathname")
+
+
+def test_a_playlist_moves_to_the_next_entry_when_one_ends(daemon, browser):
+    url, ids = _playlist_of_two(daemon)
+    # A browser of its own: narration may start without a click in the next frame.
+    b = browser.browser_type.launch(args=["--autoplay-policy=no-user-gesture-required", "--mute-audio"])
+    page = b.new_page(viewport={"width": 1280, "height": 720})
+    page.goto(url)
+    page.wait_for_selector("#entries button[aria-current=true]")
+    assert page.inner_text("#entries li:nth-child(2) .t") == "Part 2"
+    assert page.evaluate("new URL(location.href).searchParams.get('n')") == "1" and _frame_path(page) == f"/w/{ids[0]}/"
+    page.frame_locator("#frame").locator("#big-play").click()
+    page.wait_for_function("new URL(location.href).searchParams.get('n') === '2'", timeout=20000)
+    page.wait_for_function(f"document.getElementById('frame').contentWindow.location.pathname === '/w/{ids[1]}/'")
+    assert page.get_attribute("#entries li:nth-child(2) button", "aria-current") == "true"
+    # The next entry was told to play, not left at its start screen.
+    page.wait_for_function("document.getElementById('frame').contentWindow.__talktrack?.starts?.length > 0", timeout=15000)
+    b.close()
+
+
+def test_a_playlist_opens_at_entry_n_and_jumps_from_the_contents(daemon, browser):
+    url, ids = _playlist_of_two(daemon)
+    page = browser.new_page(viewport={"width": 1280, "height": 720})
+    page.goto(url + "?n=2")
+    page.wait_for_selector("#entries button[aria-current=true]")
+    assert page.get_attribute("#entries li:nth-child(2) button", "aria-current") == "true" and _frame_path(page) == f"/w/{ids[1]}/"
+    page.click("#entries li:nth-child(1) button")
+    page.wait_for_function(f"document.getElementById('frame').contentWindow.location.pathname === '/w/{ids[0]}/'")
+    assert page.evaluate("new URL(location.href).searchParams.get('n')") == "1"
+    # The player's keys work straight after a click in the contents.
+    page.wait_for_function("document.activeElement.id === 'frame'")  # the new player has loaded and holds the keyboard
+    frame = page.frame_locator("#frame")
+    frame.locator("#cc").wait_for()
+    before = frame.locator("#cc").get_attribute("aria-pressed")
+    page.keyboard.press("c")
+    page.wait_for_function(
+        "document.getElementById('frame').contentDocument.querySelector('#cc').getAttribute('aria-pressed') !== " + json.dumps(before)
+    )
+    page.close()

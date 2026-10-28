@@ -363,6 +363,38 @@ def export_html(data_dir: Path, wid: str, out: Path) -> Path:
     return out
 
 
+def export_playlist_html(data_dir: Path, pl: dict, out: Path) -> Path:
+    """One HTML file for a playlist: the contents page, and each walkthrough's single-page export
+    inside it, loaded into the frame as it is played. Offline, like `export_html`; the player code
+    is carried once per walkthrough, so a playlist is a few hundred KB per entry over its audio."""
+    import tempfile
+
+    from . import playlists
+    from .server import render_playlist
+
+    rows = playlists.entries(data_dir, pl)
+    if not rows:
+        raise SystemExit("every walkthrough in this playlist has been deleted")
+    docs: dict[str, str] = {}
+    with tempfile.TemporaryDirectory() as tmp:
+        for r in rows:
+            if r["id"] not in docs:
+                docs[r["id"]] = export_html(data_dir, r["id"], Path(tmp) / f"{r['id']}.html").read_text()
+            r["doc"] = docs[r["id"]]
+    page = render_playlist(pl, rows, "__STATIC__", rows[0]["theme"])
+    page = _swap(
+        page,
+        '<link rel="icon" href="__STATIC__/icon.svg" type="image/svg+xml">',
+        f'<link rel="icon" href="{_data_uri(STATIC / "icon.svg")}" type="image/svg+xml">',
+    )
+    page = _swap(page, '<link rel="stylesheet" href="__STATIC__/themes.css">', f"<style>\n{(STATIC / 'themes.css').read_text()}\n</style>")
+    if "__STATIC__" in page:
+        raise RuntimeError("playlist.html references a file the single page does not carry")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(page)
+    return out
+
+
 def write_poster(folder: Path) -> bool:
     """poster.png: the title slide's settled frame. False, silently, without Playwright or its
     browser; a warning for any other failure."""
@@ -389,7 +421,7 @@ def _copy_poster(folder: Path, out: Path) -> bool:
 
 
 def copy_player(dest: Path) -> None:
-    shutil.copytree(STATIC, dest, ignore=shutil.ignore_patterns("index.html", "player.html", "*.map"), dirs_exist_ok=True)
+    shutil.copytree(STATIC, dest, ignore=shutil.ignore_patterns("index.html", "player.html", "playlist.html", "*.map"), dirs_exist_ok=True)
 
 
 def _resolve_id(source: str) -> str | None:
@@ -402,6 +434,17 @@ def _resolve_id(source: str) -> str | None:
 
 
 def export_cli(cfg: Config, args) -> None:
+    from . import playlists
+
+    m = re.search(r"/p/([A-Za-z0-9_-]{16,64})", args.source)
+    pl = playlists.get(cfg.data_dir, m.group(1) if m else args.source)
+    if pl:
+        dest = Path(args.out).expanduser()
+        if dest.suffix.lower() not in (".html", ".htm"):
+            raise SystemExit("a playlist exports as one .html file; export its walkthroughs one by one for MP4")
+        export_playlist_html(cfg.data_dir, pl, dest)
+        print(f"Exported to {dest} ({dest.stat().st_size / 1e6:.1f} MB): one file that plays the playlist offline in a browser.")
+        return
     wid = _resolve_id(args.source)
     if wid is None:
         path = Path(args.source).expanduser()

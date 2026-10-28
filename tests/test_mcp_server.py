@@ -47,6 +47,7 @@ async def test_tools_are_listed_with_titles(mcp):
             "list_walkthroughs",
             "preview_slides",
             "export_walkthrough",
+            "create_playlist",
         }
         assert all(t.title and t.description for t in tools.values())
 
@@ -54,7 +55,7 @@ async def test_tools_are_listed_with_titles(mcp):
 async def test_writing_tools_are_not_read_only_or_destructive(mcp):
     async with mcp as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
-        for name in ("start_walkthrough", "add_slides", "revise_slide", "finish_walkthrough", "export_walkthrough"):
+        for name in ("start_walkthrough", "add_slides", "revise_slide", "finish_walkthrough", "export_walkthrough", "create_playlist"):
             a = tools[name].annotations
             assert (a.read_only_hint, a.destructive_hint, a.open_world_hint) == (False, False, False), name
 

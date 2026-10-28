@@ -8,5 +8,6 @@
   "loading": "The voice model is not ready yet: {status}. Send the opening with add_slides anyway; that reply may take longer.",
   "guide_send_link": "The user receives this walkthrough as a video file, not a link: write it all, finish, fix, export, then send the file.",
   "guide_tell_user": "**Export and send:** call `export_walkthrough`, then attach the file it saves in your message to the user, with a line or two on what it covers. No link; don't repeat the script.",
-  "alike": "Slides {ids} in a row look alike ({look}); pictures of them follow when they could be drawn. Before you tell the user, give one of them a different look with revise_slide: takeaways beside the visual with `.side`, a second visual with `.pair`, `.full`, or another kind of visual. Keep a run only if it is one sequence the viewer should read as such."
+  "alike": "Slides {ids} in a row look alike ({look}); pictures of them follow when they could be drawn. Before you tell the user, give one of them a different look with revise_slide: takeaways beside the visual with `.side`, a second visual with `.pair`, `.full`, or another kind of visual. Keep a run only if it is one sequence the viewer should read as such.",
+  "playlist_created": "Playlist `{title}`: {count} walkthroughs, {duration}. Id: {id}\nThe user cannot open links. Call export_walkthrough with handle {id} and format html, then send them the file it saves."
 }

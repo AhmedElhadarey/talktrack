@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Playlists:** `create_playlist` joins finished walkthroughs, in order, into one course: a page at `/p/<id>/` with a table of contents, the current walkthrough in the usual player, and a move to the next entry when one ends. `?n=2` opens entry 2. `export_walkthrough` with the playlist's id and `html`, or `talktrack export PLAYLIST out.html`, writes the whole course as one offline file; the `talktrack://playlists` resource lists them. A long topic can now go out as parts under one link instead of a single piece past the four-minute warning.
+
 ## 0.2.0 (2026-10-28)
 
 - **Renamed to talktrack:** the package, the `talktrack` command, the `<talktrack-player>` element, the Claude Code plugin, the Gemini extension and the GitHub Action all carry the new name, and installs come from `AhmedElhadarey/talktrack`. Settings are now `TALKTRACK_*` (`TALKTRACK_PORT`, `TALKTRACK_DATA` and the rest); the old `SHOWNTELL_*` variables are no longer read. The data folder moves with the name, so the voice model downloads again on first run. Entries below keep the old name.
