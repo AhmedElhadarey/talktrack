@@ -1,0 +1,5 @@
+{
+  "course": {
+    "template": "Make a talktrack course that takes someone from no knowledge to working knowledge of {subject}, as 3 to 6 parts. Read the code and docs first, then plan one learning goal per part, in dependency order: no part leans on one that comes later. Say the plan in the opening of the first part. Make each part its own finished walkthrough of 1 to 3 minutes of short slides, one point each, that ends with one quiz slide on its goal. Export each part as an MP4 as soon as it is finished and send it to me, in order, with its goal in one line, before you start the next. Make no playlist and send no links."
+  }
+}

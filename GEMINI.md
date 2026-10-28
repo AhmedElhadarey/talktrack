@@ -15,6 +15,7 @@ One question per walkthrough, 6 to 12 slides, two to four minutes: purpose, then
 | **Diff or PR** | why it changed, the edits that matter in reviewer order, risks, how to test |
 | **File** | its job, main parts in control-flow order, usage, pitfalls |
 | **A feature** | its entry point, then one real path through the code across files in run order, code from disk on each mechanism slide, the behaviour after two or three code slides, then edge cases, limits and where to change it; "not sure" over a guess |
+| **A course** | plan 3 to 6 parts, one learning goal each, in dependency order, and say the plan in part one; each part its own 1 to 3 minute walkthrough ending in a quiz; share each link as it plays, then `create_playlist` and share its link (file mode: export and send each MP4 in order) |
 | **Architecture** | components, then one request's path through them |
 | **Concept, maths** | the problem, how it works, trade-offs, real project code if any |
 

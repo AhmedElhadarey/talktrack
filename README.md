@@ -377,6 +377,7 @@ The server exposes eight tools. Their descriptions, and everything else the agen
 | **`review`** | `target` | review a change |
 | **`file`** | `path` | walk through a file |
 | **`topic`** | `topic` | walk through a topic |
+| **`course`** | `subject` | teach a subject as 3 to 6 short walkthroughs, each ending in a quiz, joined in a playlist (sent as MP4s in order in file mode) |
 | **`feature`** | `feature` | follow one real path through the code, across files, to show how a feature works |
 
 Every prompt also takes an optional `audience`, such as `product manager` or `new engineer`, which tailors depth and vocabulary; left empty, the prompt is unchanged.

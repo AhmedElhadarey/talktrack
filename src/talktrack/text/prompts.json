@@ -39,6 +39,14 @@
     },
     "template": "Make a narrated talktrack walkthrough of {feature}. Find its entry point first: where a user or a caller triggers it. Then follow one real path from there through the code, across files, in the order it runs, and read each file before you describe it. On each mechanism slide show the code from disk with `file=` and `lines=` of at most about 12 lines, and point at the lines you talk about. After two or three code slides show the behaviour: a sequence diagram of who calls whom, or a terminal session. Then cover the edge cases, the limits and where you would change it. State only what the code shows, and say \"not sure\" where you cannot tell rather than guess. Open with what the user gets from it, not with code names. Keep it to 2 to 4 minutes, one point per slide. Share the link with me as soon as it is playable."
   },
+  "course": {
+    "title": "Teach a subject as a course",
+    "description": "A course of three to six short walkthroughs on one subject, each ending in a quiz, joined in a playlist.",
+    "args": {
+      "subject": "What to teach: a codebase, a module or a topic, and for whom if it matters."
+    },
+    "template": "Make a talktrack course that takes someone from no knowledge to working knowledge of {subject}, as 3 to 6 parts. Read the code and docs first, then plan one learning goal per part, in dependency order: no part leans on one that comes later. Say the plan in the opening of the first part. Make each part its own finished walkthrough of 1 to 3 minutes of short slides, one point each, that ends with one quiz slide on its goal. Share each part's link as soon as it is playable, before you start the next. When every part is finished, call `create_playlist` with the parts in order and share the playlist link with me."
+  },
   "_shared": {
     "optional": {
       "audience": {

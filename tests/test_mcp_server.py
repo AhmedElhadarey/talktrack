@@ -280,7 +280,7 @@ async def test_unknown_slide_is_a_tool_error(mcp):
 async def test_prompts_exist_with_their_required_argument(mcp):
     async with mcp as client:
         prompts = {p.name: p for p in (await client.list_prompts()).prompts}
-        assert set(prompts) >= {"diff", "review", "file", "topic", "feature"}
+        assert set(prompts) >= {"diff", "review", "file", "topic", "feature", "course"}
         assert [a.name for a in prompts["diff"].arguments if a.required] == ["target"]
         assert all(p.title and p.arguments[0].required for p in prompts.values())
 
@@ -328,6 +328,7 @@ async def test_audience_with_braces_is_not_treated_as_a_format_field(mcp):
         ("file", "path", "src/talktrack/store.py"),
         ("topic", "topic", "consistent hashing"),
         ("feature", "feature", "how narration gets voiced"),
+        ("course", "subject", "the billing module"),
     ],
 )
 async def test_prompts_render_their_argument(mcp, name, arg, value):
@@ -342,6 +343,22 @@ async def test_feature_prompt_asks_for_a_traced_path_with_code_from_disk(mcp):
         body = (await client.get_prompt("feature", {"feature": "how login works"})).messages[0].content.text
         for needle in ("entry point", "`file=` and `lines=`", "sequence diagram", "not sure", "2 to 4 minutes"):
             assert needle in body
+
+
+async def test_course_prompt_plans_parts_and_ends_in_a_playlist(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("course", {"subject": "billing"})).messages[0].content.text
+        for needle in ("3 to 6 parts", "dependency order", "quiz slide", "`create_playlist`", "playlist link"):
+            assert needle in body
+
+
+async def test_course_in_file_mode_sends_each_part_and_makes_no_playlist(service):
+    async with Client(create_mcp(service, deliver="file")) as client:
+        body = (await client.get_prompt("course", {"subject": "billing", "audience": "new engineer"})).messages[0].content.text
+        assert "billing" in body and "Export each part as an MP4" in body and "new engineer" in body
+        assert "create_playlist" not in body and "share the playlist link" not in body
+        diff = (await client.get_prompt("diff", PINNED["diff"]["args"])).messages[0].content.text
+        assert diff == PINNED["diff"]["text"]
 
 
 async def test_walkthroughs_resource_reads(mcp):
@@ -487,7 +504,8 @@ def test_file_texts_override_only_what_mentions_the_link():
     from talktrack.server import texts
 
     base, file = texts("link"), texts("file")
-    assert file["guide"] == base["guide"] and file["prompts"] == base["prompts"]
+    assert file["guide"] == base["guide"]
+    assert {k for k in base["prompts"] if file["prompts"][k] != base["prompts"][k]} == {"course"}
     assert set(file["tools"]) == set(base["tools"])
     for name, t in base["tools"].items():
         assert set(file["tools"][name]["args"]) == set(t.get("args", {})), name

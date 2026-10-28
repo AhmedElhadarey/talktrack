@@ -67,6 +67,10 @@ def texts(deliver: str = "link") -> dict:
             merged.update({k: v for k, v in t.items() if k != "args"})
             merged["args"] = {**merged.get("args", {}), **t.get("args", {})}
         out["tools"] = tools
+        # A prompt that needs different steps in file mode (a course has no playlist to link) gets
+        # its wording here. The others end with "Share the link" and rely on the file-mode
+        # instructions, which tell the agent to send the file instead.
+        out["prompts"] = {k: {**v, **load("prompts.json", {}, over).get(k, {})} for k, v in out["prompts"].items()}
     return out
 
 
