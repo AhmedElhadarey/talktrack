@@ -2,6 +2,7 @@
 
 ## 0.2.1 (unreleased)
 
+- **Test releases:** running `release.yml` by hand on a release tag can now publish to TestPyPI instead of PyPI, so a release is rehearsed before it reaches the real index. Each index uses its own GitHub environment (`pypi`, `testpypi`) and trusted publisher, a published release still goes only to PyPI, and a test checks the workflow never falls back to a stored token.
 - **Chromium on first need:** Playwright is a base dependency now, and its headless Chromium downloads the first time a slide check, poster, `preview_slides` or MP4 export needs it, as the voice model does: 99 MiB in 33 s on a fast line, once, with progress on stderr and in `/health`. Before, the base install had no browser, so finish skipped its layout check until you added the `video` extra and ran `playwright install` by hand. Only the headless shell is fetched (about 100 MB, against 250 for the full Chromium), under a lock so MP4 export's four browsers share one download, and other projects' browsers in the cache are kept. A failed download (offline, a Linux image without system libraries) names the manual steps, including `--with-deps`; `TALKTRACK_AUTO_BROWSER=0` keeps the old behaviour. `talktrack[video]` installs still work. `doctor` says whether the browser is there or will be fetched.
 
 ## 0.2.0 (2026-10-28)

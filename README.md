@@ -454,7 +454,7 @@ Maintainers release from a tag. In short ([CONTRIBUTING.md](CONTRIBUTING.md#rele
 2. Date the `## X.Y.Z` section in [CHANGELOG.md](CHANGELOG.md).
 3. Check locally with `uv run scripts/sync_version.py --check --tag vX.Y.Z`.
 4. Push the tag `vX.Y.Z`. Installs from GitHub pinned to it start working.
-5. Publish a GitHub release for the tag. `release.yml` runs lint, format and tests, checks the tag, manifests and changelog agree, builds and smoke-tests the wheel, and publishes to PyPI through trusted publishing.
+5. Publish a GitHub release for the tag. `release.yml` runs lint, format and tests, checks the tag, manifests and changelog agree, builds and smoke-tests the wheel, and publishes to PyPI through trusted publishing. The one-time PyPI and TestPyPI registration, and the manual TestPyPI run, are in [CONTRIBUTING.md](CONTRIBUTING.md#publishing-setup-once).
 
 ---
 
