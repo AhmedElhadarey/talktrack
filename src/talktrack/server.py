@@ -21,7 +21,7 @@ from pydantic import Field
 from starlette.requests import Request
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 
-from . import __version__
+from . import __version__, browser
 from .build import LIMITS
 from .issues import as_dict, line_text, summarize
 from .service import RPC_METHODS, LocalService, mmss
@@ -793,6 +793,7 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
                     "speed": n.speed_factor(),
                     "stats": n.stats,
                 },
+                "browser": {"state": browser.status.state, "detail": browser.describe()},
                 "walkthroughs_open": len(store.sessions),
                 "uptime_s": round(time.time() - started, 1),
                 "busy": n.backlog() > 0

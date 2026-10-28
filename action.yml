@@ -50,8 +50,8 @@ runs:
         venv="$RUNNER_TEMP/talktrack-venv"
         uv venv -q --python 3.12 "$venv"
         # The versions in this release's lockfile, the ones its tests ran against.
-        extra=(); [[ "$FORMAT" != html ]] && extra=(--extra video)
-        uv export -q --project "$SRC" --frozen --no-dev --no-hashes --no-emit-project "${extra[@]}" > "$RUNNER_TEMP/talktrack-req.txt"
+        # Playwright is in the base install; only its Chromium is fetched below, for mp4.
+        uv export -q --project "$SRC" --frozen --no-dev --no-hashes --no-emit-project > "$RUNNER_TEMP/talktrack-req.txt"
         uv pip install -q --python "$venv/bin/python" -r "$RUNNER_TEMP/talktrack-req.txt"
         uv pip install -q --python "$venv/bin/python" --no-deps "$SRC"
         echo "$venv/bin" >> "$GITHUB_PATH"
