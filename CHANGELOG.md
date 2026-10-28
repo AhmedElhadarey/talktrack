@@ -7,6 +7,7 @@
 - **Prompts for an audience:** every MCP prompt takes an optional `audience` ("product manager", "new engineer", "executive"). Filled in, it adds one sentence that tailors depth and vocabulary: impact and risk first, plain words and no code slides for non-engineers, more context for newcomers. Empty, each prompt renders exactly as before. Prompt arguments now come from `prompts.json` with their descriptions and required flags, so a prompt can take several.
 - **Feature prompt:** `feature` asks for a walkthrough of how one feature works: find where it is triggered, follow one real path through the files in the order it runs with the code read from disk, show the behaviour, then edge cases, limits and where to change it, saying "not sure" rather than guessing.
 - **Course prompt:** `course` asks for 3 to 6 parts on a subject, planned in dependency order with the plan said in part one, each its own 1 to 3 minute walkthrough ending in a quiz, then one playlist. With `--deliver file` it asks for each part's MP4 in order instead.
+- **Bug prompt:** `bug` takes a fix commit, range or pull request, an issue or just a symptom and asks for the symptom as the user saw it, the cause with the faulty code, a log or a test on screen, the fix as a diff, evidence it now works and how to keep it from coming back; with no fix yet it marks the cause and suspected fix verified or suspected.
 
 ## 0.2.0 (2026-10-28)
 

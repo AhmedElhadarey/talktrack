@@ -280,7 +280,7 @@ async def test_unknown_slide_is_a_tool_error(mcp):
 async def test_prompts_exist_with_their_required_argument(mcp):
     async with mcp as client:
         prompts = {p.name: p for p in (await client.list_prompts()).prompts}
-        assert set(prompts) >= {"diff", "review", "file", "topic", "feature", "course"}
+        assert set(prompts) >= {"diff", "review", "file", "topic", "feature", "course", "bug"}
         assert [a.name for a in prompts["diff"].arguments if a.required] == ["target"]
         assert all(p.title and p.arguments[0].required for p in prompts.values())
 
@@ -329,6 +329,7 @@ async def test_audience_with_braces_is_not_treated_as_a_format_field(mcp):
         ("topic", "topic", "consistent hashing"),
         ("feature", "feature", "how narration gets voiced"),
         ("course", "subject", "the billing module"),
+        ("bug", "target", "34b942b"),
     ],
 )
 async def test_prompts_render_their_argument(mcp, name, arg, value):
@@ -359,6 +360,13 @@ async def test_course_in_file_mode_sends_each_part_and_makes_no_playlist(service
         assert "create_playlist" not in body and "share the playlist link" not in body
         diff = (await client.get_prompt("diff", PINNED["diff"]["args"])).messages[0].content.text
         assert diff == PINNED["diff"]["text"]
+
+
+async def test_bug_prompt_orders_symptom_cause_fix_proof_prevention(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("bug", {"target": "34b942b"})).messages[0].content.text
+        order = ["the symptom", "the cause", "`diff file=... rev=...`", "now works", "coming back", "suspected"]
+        assert [body.index(x) for x in order] == sorted(body.index(x) for x in order)
 
 
 async def test_walkthroughs_resource_reads(mcp):

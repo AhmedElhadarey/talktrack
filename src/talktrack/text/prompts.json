@@ -47,6 +47,14 @@
     },
     "template": "Make a talktrack course that takes someone from no knowledge to working knowledge of {subject}, as 3 to 6 parts. Read the code and docs first, then plan one learning goal per part, in dependency order: no part leans on one that comes later. Say the plan in the opening of the first part. Make each part its own finished walkthrough of 1 to 3 minutes of short slides, one point each, that ends with one quiz slide on its goal. Share each part's link as soon as it is playable, before you start the next. When every part is finished, call `create_playlist` with the parts in order and share the playlist link with me."
   },
+  "bug": {
+    "title": "Walk through a bug",
+    "description": "Narrated walkthrough of a bug: the symptom, the cause with evidence, the fix, proof it works and how to prevent it.",
+    "args": {
+      "target": "The bug: a fix commit, range or pull request, an issue, or a symptom as the user saw it."
+    },
+    "template": "Make a narrated talktrack walkthrough of the bug in {target}. Read the fix and the code around it first. Tell it in this order: the symptom as the user saw it; the cause, with the evidence on screen: the faulty code as a `file=` block with `lines=`, a log or a failing test; the fix as `diff file=... rev=...`; evidence it now works, a test or a run you did; and how to keep it from coming back. In `rev=`, A..B compares two commits. If you were given only a symptom and no fix exists yet, investigate, then present the cause and a suspected fix, and mark each as verified (you ran it, or the code shows it) or suspected; never present a guess as the cause. Keep it to 2 to 4 minutes, one point per slide. Share the link with me as soon as it is playable."
+  },
   "_shared": {
     "optional": {
       "audience": {
