@@ -28,7 +28,7 @@ Ask your agent to walk you through a pull request, a module or a concept. It wri
 - **Local:** speech runs on your Mac or PC. No API keys, no hosted service, no telemetry. Code never leaves your machine except to the model you already use.
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
-- **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the player, diagrams that failed to render or text shrunk too small to read. With Playwright installed, `finish_walkthrough` draws every slide to find them. The agent can also look at pictures of its slides with `preview_slides`.
+- **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the player, diagrams that failed to render or text shrunk too small to read. `finish_walkthrough` draws every slide in headless Chromium to find them. The agent can also look at pictures of its slides with `preview_slides`.
 - **Shareable:** export a walkthrough as one HTML file that plays offline (send it in Slack or by email), a static folder with captions, or an MP4; embed it with `<talktrack-player>`, link to a range of slides, or present it yourself with speaker notes. An agent in a sandbox or behind WhatsApp sends you the MP4 itself.
 
 How it compares with a screen recording, a written PR description and a rendered MP4 explainer, including where those win: [docs/comparison.md](docs/comparison.md).
@@ -92,7 +92,7 @@ graph TB
 4. **Voiced in the background.** Every narration paragraph becomes a speech job. `pronounce.py` rewrites code and units into speakable text. One worker thread voices jobs in order of their position in the walkthrough, and the audio is cached by a hash of model, voice, speed and spoken text. The player waits with a notice if it ever catches up with the writer.
 5. **Live updates.** The SSE route coalesces changes for 50 ms and sends only the changed slides plus the slide order.
 6. **Timed to the word.** Kokoro reports when each word is spoken. Each cue in the narration, a Markdown link like `[the retry limit](#L48)`, fires 0.3 s before its first word so the pointer lands as the word is heard.
-7. **Checked.** `finish_walkthrough` draws every slide in headless Chromium when Playwright is installed. The open player also posts its own findings (layout, render and audio errors) back to the daemon; they reach the agent marked as untrusted.
+7. **Checked.** `finish_walkthrough` draws every slide in headless Chromium (fetched on first need, below). The open player also posts its own findings (layout, render and audio errors) back to the daemon; they reach the agent marked as untrusted.
 
 The module-by-module description, the player's ES modules, capture and single-page export are in [docs/architecture.md](docs/architecture.md).
 
@@ -104,7 +104,7 @@ The module-by-module description, the player's ES modules, capture and single-pa
 
 - **[uv](https://docs.astral.sh/uv/).** It installs Python 3.12 or newer for you if needed.
 - **Disk and network on first run:** the voice model (about 330 MB on Apple silicon, 92 MB elsewhere) and a 12 MB English language model. After that, everything works offline.
-- **Optional, for slide checks, posters and MP4 export:** the `video` extra (Playwright) and its Chromium (about 100 MB).
+- **Chromium, fetched on first need:** the first slide check, poster or MP4 export downloads Playwright's headless Chromium (about 100 MB, 33 s on a fast line) with a progress line on stderr, and later runs reuse it. `TALKTRACK_AUTO_BROWSER=0` turns the download off.
 - **Optional, for MP4 export:** [FFmpeg](https://ffmpeg.org/) (`ffmpeg` and `ffprobe`) on PATH.
 
 ### Install and connect
@@ -119,14 +119,14 @@ The tag after `@` installs that release; leave it off for the latest commit. Onc
 
 The first walkthrough takes a few seconds longer while the models load.
 
-The base install leaves out the browser that draws slides. With it, `finish_walkthrough` checks every slide's layout and shows the agent pictures of slides that look alike, each walkthrough gets a poster in the gallery, and MP4 export works. To add it, use the `video` extra in place of the command above and fetch Chromium once:
+The browser that draws slides comes with the first need for it: the first `finish_walkthrough`, poster or MP4 export downloads Playwright's headless Chromium (about 100 MB) once, and `talktrack doctor` says whether it is there yet. Where the download fails (offline, or a Linux image without the system libraries) the reply names the commands to run by hand:
 
 ```zsh
-uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' talktrack mcp
-uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' playwright install chromium
+uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 playwright install chromium-headless-shell
+uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 playwright install --with-deps chromium-headless-shell-headless-shell   # Linux, as root: also the system libraries
 ```
 
-`talktrack doctor` says whether the browser was found. Without it, finish tells the agent the slides were not drawn.
+Installs made with `talktrack[video]` keep working; the extra is empty now.
 
 Or paste this into your agent and let it set itself up:
 
@@ -264,11 +264,11 @@ Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobail
 When the agent runs in a sandbox, or you talk to it through WhatsApp, Telegram or similar, a `localhost` link is no use to you. Run the server with `--deliver file`: the agent then writes the whole walkthrough, calls `export_walkthrough`, and sends you the MP4 instead of a link.
 
 ```zsh
-# inside the sandbox image, once (Debian or Ubuntu)
+# inside the sandbox image, once (Debian or Ubuntu); Chromium would download on first use, its system libraries would not
 apt-get install -y ffmpeg
-uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' playwright install --with-deps chromium
+uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 playwright install --with-deps chromium-headless-shell
 # the MCP server the agent runs
-uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' talktrack mcp --deliver file
+uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp --deliver file
 ```
 
 | Part | What happens |
@@ -286,12 +286,12 @@ Install talktrack, an MCP server that turns Markdown into narrated slide walkthr
 I can't open links on your machine, so you'll send me walkthroughs as MP4 files.
 
 1. Install what's missing in your environment: uv (curl -LsSf https://astral.sh/uv/install.sh | sh) and ffmpeg with ffprobe (apt-get install -y ffmpeg, your package manager, or a static build on PATH).
-2. Install Chromium for video rendering:
-   uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' playwright install --with-deps chromium
+2. Install Chromium and its system libraries for video rendering ahead of time:
+   uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 playwright install --with-deps chromium-headless-shell
    If you can't install system packages, drop --with-deps and tell me if Chromium fails to start.
 3. Add a stdio MCP server named talktrack to your own MCP configuration, running inside this environment, not on a host outside it:
-   uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' talktrack mcp --deliver file
-4. Run `uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' talktrack doctor` and fix anything marked ✗ or about video export. The first run downloads the voice model, about 100 MB.
+   uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp --deliver file
+4. Run `uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack doctor` and fix anything marked ✗ or about video export. The first run downloads the voice model, about 100 MB.
 5. If this environment is rebuilt between sessions, add steps 1 to 3 to whatever sets it up, so they persist.
 6. Once the tools appear (restart or reload MCP servers if you must), make a three-slide walkthrough on any topic, export it with export_walkthrough, and send me the MP4 as an attachment. If you have no way to attach files, tell me so instead of sending a path.
 ```
@@ -420,8 +420,7 @@ Run with no command from a terminal, `talktrack` prints help; launched by an MCP
 An output path ending in `.mp4` renders a video. Each frame is captured by seeking the player in headless Chromium, so rendering runs faster than real time and never drops a frame: a 4.4-minute walkthrough renders in 16 to 20 s on an M-series Mac.
 
 ```zsh
-uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' playwright install chromium   # once
-uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' talktrack export <id> talk.mp4
+uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack export <id> talk.mp4
 ```
 
 | Part | What you get |
@@ -433,7 +432,7 @@ uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v
 | **Size** | `--max-mb 16` lowers the audio bitrate, then the picture to 720p, until the file fits, or fails |
 | **Checks** | the file's duration must match the timeline within 0.2 s, or the export fails |
 
-Needs [FFmpeg](https://ffmpeg.org/) on PATH and the `video` extra (Playwright). Without Playwright, folder exports still work and skip `poster.png`.
+Needs [FFmpeg](https://ffmpeg.org/) on PATH. The first export downloads Chromium (about 100 MB, once); with `TALKTRACK_AUTO_BROWSER=0` it stops with the commands to run by hand, and folder exports skip `poster.png`.
 
 ---
 
@@ -477,7 +476,8 @@ Environment variables, also listed in [.env.example](.env.example). Command-line
 | **`TALKTRACK_ONNX_MODEL`** | `model_quantized` | ONNX variant; `model` (fp32) can be faster on CPUs without AVX2 |
 | **`TALKTRACK_THREADS`** | up to 6 | CPU threads for ONNX speech |
 | **`TALKTRACK_DELIVER`** | `link` | `file`: the agent sends an exported MP4 instead of the player's link, for agents in a sandbox or behind a chat app |
-| **`TALKTRACK_FINISH_CHECK`** | 1 | `0` skips drawing every slide headless at `finish_walkthrough` (needs Playwright) |
+| **`TALKTRACK_FINISH_CHECK`** | 1 | `0` skips drawing every slide headless at `finish_walkthrough` |
+| **`TALKTRACK_AUTO_BROWSER`** | 1 | `0` stops talktrack from downloading Playwright's Chromium on first need; slide checks, posters and MP4 export then ask you to install it |
 
 **Pronunciations:** put `word = spoken form` lines in `~/.local/share/talktrack/lexicon.txt`. A lowercase word matches any capitalisation, and the spoken form may be misaki phonemes between slashes (`kubectl = /kjˈubkˌʌtəl/`). talktrack already knows several hundred technical terms.
 
@@ -623,7 +623,7 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs four jobs: Linu
 | | Item |
 |:--:|:--|
 | 🟡 | **English only.** Kokoro's other languages are on the [roadmap](ROADMAP.md). |
-| 🟡 | **No browser in the base install.** Without the `video` extra, the finish-time layout check, slide pictures, posters and MP4 export are off. |
+| 🟡 | **The browser downloads on first use.** Chromium (about 100 MB) is fetched at the first slide check, poster or MP4 export, so that run needs the network; offline, or with `TALKTRACK_AUTO_BROWSER=0`, those features stay off until you install it. |
 | 🟡 | **Windows is untested.** Best effort; reports welcome. |
 | 🟡 | **Action on forks.** Pull requests from forks get a read-only token, so the comment step fails there; see [docs/github-action.md](docs/github-action.md). |
 | 🔵 | **`autostart` is macOS only.** It uses launchd; elsewhere, use a systemd user unit. |

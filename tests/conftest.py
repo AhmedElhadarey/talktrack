@@ -50,7 +50,15 @@ def idle_narrator(tmp_path: Path) -> Narrator:
 
 
 @pytest.fixture
-async def store(tmp_path: Path, narrator: Narrator) -> Store:
+def browser_ready(monkeypatch):
+    """The browser counts as fetched, so a layout check with a fake Capturer never starts a download."""
+    from talktrack import browser
+
+    monkeypatch.setattr(browser.status, "state", "ready")
+
+
+@pytest.fixture
+async def store(tmp_path: Path, narrator: Narrator, browser_ready) -> Store:
     s = Store(tmp_path / "data", BASE_URL, narrator)
     s.loop = asyncio.get_running_loop()
     return s
