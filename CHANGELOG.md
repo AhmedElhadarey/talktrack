@@ -2,6 +2,7 @@
 
 ## 0.2.1 (unreleased)
 
+- **Test releases:** running `release.yml` by hand on a release tag can now publish to TestPyPI instead of PyPI, so a release is rehearsed before it reaches the real index. Each index uses its own GitHub environment (`pypi`, `testpypi`) and trusted publisher, a published release still goes only to PyPI, and a test checks the workflow never falls back to a stored token.
 - **`.morph` no longer nudged:** the guide's "Change in place" line is gone. Four eval rounds with it and no agent used `.morph`, and each guide line costs tokens on every walkthrough. The feature is unchanged: walkthroughs that use `.morph` still glide, and the slide-kinds resource still lists it.
 
 ## 0.2.0 (2026-10-28)
