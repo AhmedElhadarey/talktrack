@@ -39,7 +39,7 @@ Run a daemon without a voice model with `uv run talktrack serve --speech fake --
 ## Changes
 
 - **Format changes** go into `docs/format.md` first, keep the "any split at block boundaries" parser property, and must not break existing walkthroughs. The format version lives in `model.py`.
-- **Agent-facing text** in `src/talktrack/text/` is tuned against the evaluation in `scripts/eval.py`. Re-run the affected prompts and include the before and after table in the pull request.
+- **Agent-facing text** in `src/talktrack/text/` is tuned against the evaluation in `scripts/eval.py`. Re-run the affected prompts and include the before and after table in the pull request. For an MCP prompt, `eval/prompts-walkthrough.json` holds before/after pairs that render it through `mcp_prompt`; run them with `--prompts eval/prompts-walkthrough.json --runs <ids>`.
 - **Player changes** need a screenshot of each affected slide kind, and `timeline.js` changes need a `node --test` case.
 - **New slide kinds:** see below.
 - **Dependencies:** nothing GPL in the default install. Optional extras may be.

@@ -7,6 +7,11 @@ pronunciation against speech recognition.
 
     uv run --with mlx-whisper python scripts/eval.py --models sonnet --runs tcp,csrf,arch,speedup,money,seasons
     uv run --with mlx-whisper python scripts/eval.py --models haiku --runs dns,tcp
+    uv run --with mlx-whisper python scripts/eval.py --prompts eval/prompts-walkthrough.json --runs all
+
+eval/prompts.json is what `--runs all` runs. eval/prompts-walkthrough.json holds before/after pairs
+for the MCP prompts (`feature`, `course`, `bug`, `audience`, `review` with a spec); an entry there
+names the prompt to render with `mcp_prompt` instead of writing the request out.
 
 Playwright comes from the project environment: `--with playwright` would resolve a newer release
 whose browser build is not installed, and the player watch would fail on launch.
@@ -32,6 +37,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from talktrack.checks import _layout, look  # noqa: E402
 from talktrack.model import Walkthrough  # noqa: E402
+from talktrack.server import render_prompt  # noqa: E402
 
 URL_RE = re.compile(r"http://(?:localhost|127\.0\.0\.1):\d+/w/[A-Za-z0-9_-]+/?")
 RUN_TIMEOUT = 600  # seconds for one agent run; the longest so far took about 70
@@ -50,6 +56,17 @@ ALLOWED = [
 ]
 
 
+def prompt_text(p: dict) -> str:
+    """What the agent is asked. An entry may carry `"mcp_prompt": {"name": ..., "args": {...}}`:
+    the request is then what that MCP prompt returns to a client, rendered by the server's own
+    code, and follows `prompt` when the entry has both."""
+    mp = p.get("mcp_prompt")
+    if not mp:
+        return p["prompt"]
+    rendered = render_prompt(mp["name"], mp.get("args", {}))
+    return f"{p['prompt']}\n\n{rendered}" if p.get("prompt") else rendered
+
+
 async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: bool) -> dict:
     cfg = {
         "mcpServers": {
@@ -65,7 +82,7 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
     cmd = [
         "claude",
         "-p",
-        prompt["prompt"],
+        prompt_text(prompt),
         "--model",
         model,
         "--mcp-config",
