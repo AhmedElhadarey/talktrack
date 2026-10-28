@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 (unreleased)
+
+- **`.morph` no longer nudged:** the guide's "Change in place" line is gone. Four eval rounds with it and no agent used `.morph`, and each guide line costs tokens on every walkthrough. The feature is unchanged: walkthroughs that use `.morph` still glide, and the slide-kinds resource still lists it.
+
 ## 0.2.0 (2026-10-28)
 
 - **Renamed to talktrack:** the package, the `talktrack` command, the `<talktrack-player>` element, the Claude Code plugin, the Gemini extension and the GitHub Action all carry the new name, and installs come from `AhmedElhadarey/talktrack`. Settings are now `TALKTRACK_*` (`TALKTRACK_PORT`, `TALKTRACK_DATA` and the rest); the old `SHOWNTELL_*` variables are no longer read. The data folder moves with the name, so the voice model downloads again on first run. Entries below keep the old name.
