@@ -280,7 +280,7 @@ async def test_unknown_slide_is_a_tool_error(mcp):
 async def test_prompts_exist_with_their_required_argument(mcp):
     async with mcp as client:
         prompts = {p.name: p for p in (await client.list_prompts()).prompts}
-        assert set(prompts) >= {"diff", "review", "file", "topic"}
+        assert set(prompts) >= {"diff", "review", "file", "topic", "feature"}
         assert [a.name for a in prompts["diff"].arguments if a.required] == ["target"]
         assert all(p.title and p.arguments[0].required for p in prompts.values())
 
@@ -327,6 +327,7 @@ async def test_audience_with_braces_is_not_treated_as_a_format_field(mcp):
         ("review", "target", "main...feature"),
         ("file", "path", "src/talktrack/store.py"),
         ("topic", "topic", "consistent hashing"),
+        ("feature", "feature", "how narration gets voiced"),
     ],
 )
 async def test_prompts_render_their_argument(mcp, name, arg, value):
@@ -334,6 +335,13 @@ async def test_prompts_render_their_argument(mcp, name, arg, value):
         r = await client.get_prompt(name, {arg: value})
         body = r.messages[0].content.text
         assert value in body and "{" + arg + "}" not in body and "talktrack" in body
+
+
+async def test_feature_prompt_asks_for_a_traced_path_with_code_from_disk(mcp):
+    async with mcp as client:
+        body = (await client.get_prompt("feature", {"feature": "how login works"})).messages[0].content.text
+        for needle in ("entry point", "`file=` and `lines=`", "sequence diagram", "not sure", "2 to 4 minutes"):
+            assert needle in body
 
 
 async def test_walkthroughs_resource_reads(mcp):

@@ -169,7 +169,7 @@ The first command in the block above runs the fast tests. The rest of the suites
    ```
 
 2. Start a new `claude` session and run `/mcp`; `talktrack` should be listed as connected.
-3. Ask for a walkthrough, or use a built-in prompt: `/mcp__talktrack__diff HEAD~1..HEAD`, `/mcp__talktrack__file src/app.py` or `/mcp__talktrack__topic how TLS works`.
+3. Ask for a walkthrough, or use a built-in prompt: `/mcp__talktrack__diff HEAD~1..HEAD`, `/mcp__talktrack__file src/app.py`, `/mcp__talktrack__feature how login works` or `/mcp__talktrack__topic how TLS works`.
 
 **Or install the plugin** instead of step 1. You get the MCP server plus a skill: guidance on when a walkthrough beats a written answer, and how to pace one:
 
@@ -377,6 +377,7 @@ The server exposes eight tools. Their descriptions, and everything else the agen
 | **`review`** | `target` | review a change |
 | **`file`** | `path` | walk through a file |
 | **`topic`** | `topic` | walk through a topic |
+| **`feature`** | `feature` | follow one real path through the code, across files, to show how a feature works |
 
 Every prompt also takes an optional `audience`, such as `product manager` or `new engineer`, which tailors depth and vocabulary; left empty, the prompt is unchanged.
 

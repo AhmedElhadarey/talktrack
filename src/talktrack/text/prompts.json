@@ -31,6 +31,14 @@
     },
     "template": "Make a narrated talktrack walkthrough of {topic}. Go from the problem it solves, to how it works, to its consequences and trade-offs, in about 1 to 2 minutes of short slides, one point each. Open with the most concrete fact or the question it answers, and end with one quiz slide on the main point. Use diagrams, formulas, tables, charts for numbers or short code examples where they help, and tie it to code in this project when there is a real example, read from disk. Share the link with me as soon as it is playable."
   },
+  "feature": {
+    "title": "Walk through a feature",
+    "description": "Narrated walkthrough of how one feature works, following a real path through the code from its entry point.",
+    "args": {
+      "feature": "What to explain: a feature, behaviour or flow, such as \"how narration gets voiced\", or its name."
+    },
+    "template": "Make a narrated talktrack walkthrough of {feature}. Find its entry point first: where a user or a caller triggers it. Then follow one real path from there through the code, across files, in the order it runs, and read each file before you describe it. On each mechanism slide show the code from disk with `file=` and `lines=` of at most about 12 lines, and point at the lines you talk about. After two or three code slides show the behaviour: a sequence diagram of who calls whom, or a terminal session. Then cover the edge cases, the limits and where you would change it. State only what the code shows, and say \"not sure\" where you cannot tell rather than guess. Open with what the user gets from it, not with code names. Keep it to 2 to 4 minutes, one point per slide. Share the link with me as soon as it is playable."
+  },
   "_shared": {
     "optional": {
       "audience": {
