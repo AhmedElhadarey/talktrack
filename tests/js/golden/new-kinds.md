@@ -50,7 +50,7 @@ First [the tests](#L1) run, then [the linter](#L4).
 
 ```tree
 src/
-  showntell/
+  talktrack/
     build.py   # Markdown to slides
     kinds.py   # charts, terminals, trees
     static/

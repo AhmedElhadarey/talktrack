@@ -1,12 +1,12 @@
 [project]
-name = "showntell"
-version = "0.1.8"
+name = "talktrack"
+version = "0.2.0"
 description = "Narrated slide walkthroughs for coding agents, voiced on your machine"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [
-    { name = "Rahim Nathwani", email = "rahim@encona.com" }
+    { name = "Ahmed Samer", email = "ahmed.elhadarey94@gmail.com" }
 ]
 keywords = ["mcp", "tts", "kokoro", "walkthrough", "code review", "claude code"]
 classifiers = [
@@ -44,11 +44,11 @@ espeak = ["phonemizer-fork>=3.3", "espeakng-loader>=0.2.4"]
 video = ["playwright>=1.50"]
 
 [project.urls]
-Homepage = "https://github.com/rahimnathwani/showntell"
-Issues = "https://github.com/rahimnathwani/showntell/issues"
+Homepage = "https://github.com/AhmedElhadarey/talktrack"
+Issues = "https://github.com/AhmedElhadarey/talktrack/issues"
 
 [project.scripts]
-showntell = "showntell:main"
+talktrack = "talktrack:main"
 
 [build-system]
 requires = ["uv_build>=0.12.17,<0.13.0"]
@@ -71,7 +71,7 @@ markers = [
     "onnx: needs the cached Kokoro ONNX model",
     "slow: takes more than a few seconds",
     "browser: drives headless Chromium through Playwright",
-    "claude: runs the real Claude Code CLI (opt in with SHOWNTELL_TEST_CLAUDE=1; costs a few cents)",
+    "claude: runs the real Claude Code CLI (opt in with TALKTRACK_TEST_CLAUDE=1; costs a few cents)",
 ]
 
 [tool.ruff]

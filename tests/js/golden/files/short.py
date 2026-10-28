@@ -1,4 +1,4 @@
-"""Incremental, lenient parser for the showntell Markdown format (docs/format.md).
+"""Incremental, lenient parser for the talktrack Markdown format (docs/format.md).
 
 `Parser.feed(chunk)` returns the blocks completed by that chunk. The end of a chunk closes
 every open block except a fenced block, a `$$` formula or front matter, which wait for

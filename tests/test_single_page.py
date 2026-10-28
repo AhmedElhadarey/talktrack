@@ -14,19 +14,19 @@ import time
 import httpx
 import pytest
 
-from showntell.export import LIBRARIES, _katex_css, _library, _modules, _script_json, _swap
+from talktrack.export import LIBRARIES, _katex_css, _library, _modules, _script_json, _swap
 
 # -- building the page ----------------------------------------------------------------------------
 
 
 def test_modules_import_each_other_by_bare_specifiers():
     mods = _modules()
-    assert "showntell/js/main.js" in mods and "showntell/js/kinds/chart.js" in mods
+    assert "talktrack/js/main.js" in mods and "talktrack/js/kinds/chart.js" in mods
     for key, uri in mods.items():
         code = base64.b64decode(uri.split(",", 1)[1]).decode()
         relative = [ln for ln in code.splitlines() if ln.startswith("import") and ('"./' in ln or '"../' in ln)]
         assert not relative, (key, relative)
-        for spec in __import__("re").findall(r'from "(showntell/js/[^"]+)"', code):
+        for spec in __import__("re").findall(r'from "(talktrack/js/[^"]+)"', code):
             assert spec in mods, (key, spec)
 
 
@@ -43,7 +43,7 @@ def test_katex_fonts_travel_inside_the_stylesheet():
 def test_large_libraries_are_gzipped_and_highlightjs_is_not():
     import gzip
 
-    from showntell.export import STATIC
+    from talktrack.export import STATIC
 
     m = _library("vendor/mermaid.min.js")
     assert gzip.decompress(base64.b64decode(m["gzip"])) == (STATIC / "vendor" / "mermaid.min.js").read_bytes()
@@ -71,9 +71,9 @@ def _free_port() -> int:
 
 def _voiced(data, markdown: str, root: str) -> str:
     """Write a walkthrough with a fake-speech daemon and wait until it is voiced and saved."""
-    env = {**os.environ, "SHOWNTELL_DATA": str(data), "SHOWNTELL_SPEECH": "fake", "SHOWNTELL_FINISH_CHECK": "0"}
+    env = {**os.environ, "TALKTRACK_DATA": str(data), "TALKTRACK_SPEECH": "fake", "TALKTRACK_FINISH_CHECK": "0"}
     proc = subprocess.Popen(
-        [sys.executable, "-m", "showntell", "serve", "--port", str(_free_port()), "--speech", "fake"],
+        [sys.executable, "-m", "talktrack", "serve", "--port", str(_free_port()), "--speech", "fake"],
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -121,7 +121,7 @@ def test_one_page_plays_every_kind_offline(tmp_path):
     pw = pytest.importorskip("playwright.sync_api")
     from test_player_browser import DOC, KINDS, ROOT
 
-    from showntell.export import export_html
+    from talktrack.export import export_html
 
     data = tmp_path / "data"
     wid = _voiced(data, DOC, str(ROOT))
@@ -148,14 +148,14 @@ def test_one_page_plays_every_kind_offline(tmp_path):
         page.goto(url)
         page.wait_for_function("!document.querySelector('#big-play').disabled", timeout=15000)
         page.click("#big-play")
-        page.wait_for_function("window.__showntell.starts.length > 1", timeout=15000)  # narration plays from blob: URLs
+        page.wait_for_function("window.__talktrack.starts.length > 1", timeout=15000)  # narration plays from blob: URLs
         # Every slide, drawn from what the page carries.
         page.goto(url + "?capture=1")
-        page.wait_for_function("window.__showntell?.duration?.() > 0")
-        dur = page.evaluate("window.__showntell.duration()")
+        page.wait_for_function("window.__talktrack?.duration?.() > 0")
+        dur = page.evaluate("window.__talktrack.duration()")
         seen = {}
         for k in range(80):
-            page.evaluate("(t) => window.__showntell.seek(t)", dur * k / 80)
+            page.evaluate("(t) => window.__talktrack.seek(t)", dur * k / 80)
             kind = page.evaluate("[...document.querySelector('.slide:not(.leaving)').classList].find((c) => c.startsWith('k-')).slice(2)")
             if kind == "diagram":
                 seen[kind] = page.evaluate("document.querySelectorAll('.diagram svg g.node').length")
@@ -170,18 +170,18 @@ def test_one_page_plays_every_kind_offline(tmp_path):
         assert set(seen) == set(KINDS), set(KINDS) - set(seen)
         assert all(seen[k] > 0 for k in ("diagram", "math", "code", "image")), seen
         assert not other, other
-        assert not errors and not page.evaluate("window.__showntell.renderErrors"), errors
+        assert not errors and not page.evaluate("window.__talktrack.renderErrors"), errors
         b.close()
 
 
 @pytest.mark.browser
 def test_a_page_without_diagrams_leaves_the_libraries_out(tmp_path):
-    from showntell.export import export_html
+    from talktrack.export import export_html
 
     data = tmp_path / "data"
     wid = _voiced(data, "# Plain\n\nJust words.\n\n## List {#l}\n\n- **A**: one\n- **B**: two\n\nThe [first](#a).\n", str(tmp_path))
     html = export_html(data, wid, tmp_path / "plain.html").read_text()
-    files = json.loads(html.split('<script type="application/json" id="showntell-files">', 1)[1].split("</script>", 1)[0])
+    files = json.loads(html.split('<script type="application/json" id="talktrack-files">', 1)[1].split("</script>", 1)[0])
     assert files == {} and "mermaid" not in html and len(html) < 600_000  # the player's three faces are about 175 KB of it
     assert html.count("data:font/woff2;base64,") == 3 and 'url("vendor/fonts/' not in html
 
@@ -189,7 +189,7 @@ def test_a_page_without_diagrams_leaves_the_libraries_out(tmp_path):
 @pytest.mark.browser
 def test_a_hand_drawn_drawing_carries_its_library_and_font(tmp_path):
     pw = pytest.importorskip("playwright.sync_api")
-    from showntell.export import export_html
+    from talktrack.export import export_html
 
     md = (
         '# Sketch\n\nOpening words.\n\n## Box {#box}\n\n```svg sketch\n<svg viewBox="0 0 1150 560">'
@@ -211,8 +211,8 @@ def test_a_hand_drawn_drawing_carries_its_library_and_font(tmp_path):
             lambda route: route.continue_() if route.request.url.split("?")[0] == url else (other.append(route.request.url), route.abort()),
         )
         page.goto(url + "?capture=1")
-        page.wait_for_function("window.__showntell?.duration?.() > 0")
-        page.evaluate("(t) => window.__showntell.seek(t)", page.evaluate("window.__showntell.duration()") - 0.2)
+        page.wait_for_function("window.__talktrack?.duration?.() > 0")
+        page.evaluate("(t) => window.__talktrack.seek(t)", page.evaluate("window.__talktrack.duration()") - 0.2)
         rough = page.evaluate("document.querySelector('.drawing').shadowRoot.querySelectorAll('.rough').length")
         font = page.evaluate("document.fonts.check('24px Virgil')")
         b.close()
@@ -224,7 +224,7 @@ def test_a_drawio_diagram_plays_offline_from_one_page(tmp_path):
     pw = pytest.importorskip("playwright.sync_api")
     from test_player_browser import ROOT
 
-    from showntell.export import export_html
+    from talktrack.export import export_html
 
     md = (
         "# Diagram\n\nOpening words.\n\n## Architecture {#arch}\n\n```drawio file=tests/fixtures/drawio/architecture.drawio\n```\n\n"
@@ -246,8 +246,8 @@ def test_a_drawio_diagram_plays_offline_from_one_page(tmp_path):
         )
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.goto(url + "?capture=1")
-        page.wait_for_function("window.__showntell?.duration?.() > 0")
-        page.evaluate("(t) => window.__showntell.seek(t)", page.evaluate("window.__showntell.duration()") - 0.2)
+        page.wait_for_function("window.__talktrack?.duration?.() > 0")
+        page.evaluate("(t) => window.__talktrack.seek(t)", page.evaluate("window.__talktrack.duration()") - 0.2)
         shapes = page.evaluate("document.querySelectorAll('.drawio svg g').length")
         b.close()
     assert shapes > 3 and not other and not errors, (shapes, other, errors)

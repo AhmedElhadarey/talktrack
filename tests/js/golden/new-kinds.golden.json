@@ -601,7 +601,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/build.py"
+    "id": "src/talktrack/build.py"
    },
    "reveal": {
     "items": 3
@@ -614,7 +614,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/build.py"
+    "id": "src/talktrack/build.py"
    },
    "reveal": {
     "items": 3
@@ -627,7 +627,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/build.py"
+    "id": "src/talktrack/build.py"
    },
    "reveal": {
     "items": 3
@@ -640,7 +640,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/build.py"
+    "id": "src/talktrack/build.py"
    },
    "reveal": {
     "items": 3
@@ -653,7 +653,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/build.py"
+    "id": "src/talktrack/build.py"
    },
    "reveal": {
     "items": 3
@@ -666,7 +666,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/build.py"
+    "id": "src/talktrack/build.py"
    },
    "reveal": {
     "items": 3
@@ -679,7 +679,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/static/js/render.js"
+    "id": "src/talktrack/static/js/render.js"
    },
    "reveal": {
     "items": 7
@@ -692,7 +692,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/static/js/render.js"
+    "id": "src/talktrack/static/js/render.js"
    },
    "reveal": {
     "items": 7
@@ -705,7 +705,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/static/js/render.js"
+    "id": "src/talktrack/static/js/render.js"
    },
    "reveal": {
     "items": 7
@@ -718,7 +718,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/static/js/render.js"
+    "id": "src/talktrack/static/js/render.js"
    },
    "reveal": {
     "items": 7
@@ -731,7 +731,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/static/js/render.js"
+    "id": "src/talktrack/static/js/render.js"
    },
    "reveal": {
     "items": 7
@@ -744,7 +744,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/static/js/render.js"
+    "id": "src/talktrack/static/js/render.js"
    },
    "reveal": {
     "items": 7
@@ -757,7 +757,7 @@
    "inAudio": true,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/static/js/render.js"
+    "id": "src/talktrack/static/js/render.js"
    },
    "reveal": {
     "items": 7
@@ -770,7 +770,7 @@
    "inAudio": false,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/static/js/render.js"
+    "id": "src/talktrack/static/js/render.js"
    },
    "reveal": null
   },
@@ -781,7 +781,7 @@
    "inAudio": false,
    "cue": {
     "kind": "item",
-    "id": "src/showntell/static/js/render.js"
+    "id": "src/talktrack/static/js/render.js"
    },
    "reveal": null
   },

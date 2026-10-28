@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { test } from "node:test";
-import { build, stateAt, steps } from "../../src/showntell/static/js/timeline.js";
+import { build, stateAt, steps } from "../../src/talktrack/static/js/timeline.js";
 
 const dir = new URL("./golden/", import.meta.url);
 

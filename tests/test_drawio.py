@@ -9,7 +9,7 @@ import urllib.parse
 import zlib
 from pathlib import Path
 
-from showntell.kinds.drawio import clean_style, find, parse_drawio
+from talktrack.kinds.drawio import clean_style, find, parse_drawio
 
 FIXTURE = Path(__file__).parent / "fixtures" / "drawio" / "architecture.drawio"
 OPEN = "# T\n\nOpening.\n\n"

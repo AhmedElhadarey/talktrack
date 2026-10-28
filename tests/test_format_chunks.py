@@ -6,7 +6,7 @@ import random
 
 import pytest
 
-from showntell.format import Parser
+from talktrack.format import Parser
 
 DOC = """---
 title: Cache walkthrough

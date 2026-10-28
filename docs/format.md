@@ -1,4 +1,4 @@
-# showntell format, version 1
+# talktrack format, version 1
 
 A walkthrough is a Markdown document. Headings start slides, fenced blocks and lists are what the viewer sees, and plain paragraphs are what the narrator says. Links inside narration move the pointer.
 
@@ -383,7 +383,7 @@ A style after the link changes how the pointer looks: `[the guard](#L12){.circle
 
 On one dense drawing, draw.io diagram or screenshot, zoom onto each part as the narration names it and end with a cue to `#`, which pulls the camera back to the whole: a run of readable close-ups instead of one picture too small to read.
 
-When narration has no cues at all, showntell infers some by matching its words against code identifiers, node labels and list titles.
+When narration has no cues at all, talktrack infers some by matching its words against code identifiers, node labels and list titles.
 
 ## Step reveal
 
@@ -423,7 +423,7 @@ These are the sizes that still render at a comfortable reading size, measured wi
 | **`studio`** | bright lavender-white, violet accent |
 | **`contrast`** | black slides, white text, yellow pointer |
 
-The walkthrough's theme comes from `start_walkthrough`'s `theme`, else front matter `theme:`, else the project's `showntell.theme.json`, else `dark`. Viewers can switch with `?theme=` or the player menu. A project file can also replace single colours:
+The walkthrough's theme comes from `start_walkthrough`'s `theme`, else front matter `theme:`, else the project's `talktrack.theme.json`, else `dark`. Viewers can switch with `?theme=` or the player menu. A project file can also replace single colours:
 
 ```json
 { "theme": "light", "tokens": { "accent": "#0969da", "node-line": "#8250df" } }

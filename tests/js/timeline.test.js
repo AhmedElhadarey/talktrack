@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { build, CUE_LEAD, firedCues, revealLevel, segmentAt, slideEnd, slideSpans, slideStart, stateAt, steps, wordAt } from "../../src/showntell/static/js/timeline.js";
+import { build, CUE_LEAD, firedCues, revealLevel, segmentAt, slideEnd, slideSpans, slideStart, stateAt, steps, wordAt } from "../../src/talktrack/static/js/timeline.js";
 
 const say = (id, dur, cues = [], extra = {}) => ({ id, status: "ready", text: "one two three", duration: dur, cues, words: [], ...extra });
 const W = {

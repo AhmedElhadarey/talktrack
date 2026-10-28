@@ -9,7 +9,7 @@ This action turns a Markdown walkthrough into a narrated page, without sending a
 ```yaml file=action.yml lines=74-82
 ```
 
-[The folder export](#L76 "showntell export") voices every paragraph on the runner, with the open voice model cached between runs.
+[The folder export](#L76 "talktrack export") voices every paragraph on the runner, with the open voice model cached between runs.
 
 The page and [the video](#L79 "walkthrough.mp4") are drawn from that same walkthrough, so nothing is voiced twice.
 

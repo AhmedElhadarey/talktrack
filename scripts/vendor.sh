@@ -1,9 +1,9 @@
 #!/bin/zsh
-# Download the pinned browser libraries into src/showntell/static/vendor, checking each
+# Download the pinned browser libraries into src/talktrack/static/vendor, checking each
 # tarball's sha256, so the player works offline.
 set -euo pipefail
 cd "${0:A:h}/.."
-V=src/showntell/static/vendor
+V=src/talktrack/static/vendor
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 fetch() { # name version sha256
@@ -51,7 +51,7 @@ cp "$TMP/@fontsource-variable/jetbrains-mono/package/LICENSE" "$V/LICENSES/jetbr
 # Lucide icons (ISC), as one JSON file the builder reads: name -> inner SVG, plus search tags.
 fetch lucide-static 1.50.0 b23b1b4c30dbf0877eee2087275f48310b45a098e537ba83598cce1ea553dce6
 cp "$TMP/lucide-static/package/LICENSE" "$V/LICENSES/lucide.txt"
-python3 - "$TMP/lucide-static/package" src/showntell/data/icons.json <<'EOF'
+python3 - "$TMP/lucide-static/package" src/talktrack/data/icons.json <<'EOF'
 import json, sys
 from pathlib import Path
 from xml.sax.saxutils import quoteattr

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { esc, inline, splitLines } from "../../src/showntell/static/js/util.js";
+import { esc, inline, splitLines } from "../../src/talktrack/static/js/util.js";
 
 test("escapes before formatting", () => {
   assert.equal(esc(`<a href="x">`), "&lt;a href=&quot;x&quot;&gt;");

@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from showntell.kinds import find_part, parse_chart, parse_terminal, parse_tree
+from talktrack.kinds import find_part, parse_chart, parse_terminal, parse_tree
 
-KINDS = json.loads((Path(__file__).parent.parent / "src" / "showntell" / "text" / "kinds.json").read_text())["kinds"]
+KINDS = json.loads((Path(__file__).parent.parent / "src" / "talktrack" / "text" / "kinds.json").read_text())["kinds"]
 
 
 def slide(build, visual: str, narration: str):
@@ -138,6 +138,6 @@ def test_every_catalogue_example_builds_cleanly(build, project, k):
 
 
 def test_catalogue_is_a_resource(tmp_path):
-    from showntell.server import TEXT
+    from talktrack.server import TEXT
 
     assert json.loads((TEXT / "kinds.json").read_text())["kinds"]

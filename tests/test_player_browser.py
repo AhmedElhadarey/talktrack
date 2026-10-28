@@ -240,9 +240,9 @@ def _free_port() -> int:
 def daemon(tmp_path_factory):
     data = tmp_path_factory.mktemp("browser-data")
     port = _free_port()
-    env = {**os.environ, "SHOWNTELL_DATA": str(data), "SHOWNTELL_SPEECH": "fake"}
+    env = {**os.environ, "TALKTRACK_DATA": str(data), "TALKTRACK_SPEECH": "fake"}
     proc = subprocess.Popen(
-        [sys.executable, "-m", "showntell", "serve", "--port", str(port), "--speech", "fake"],
+        [sys.executable, "-m", "talktrack", "serve", "--port", str(port), "--speech", "fake"],
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -304,7 +304,7 @@ def test_every_kind_renders(daemon, browser, frame):
     for i, slide in enumerate(data["slides"]):
         # a moment after the first cue of the slide, or a second in
         page.goto(url)
-        page.wait_for_function("window.__showntell !== undefined")
+        page.wait_for_function("window.__talktrack !== undefined")
         t = page.evaluate(
             """(i) => new Promise((res) => {
                  import('./' + document.body.dataset.static + '/js/timeline.js').then((m) => {
@@ -329,7 +329,7 @@ def test_every_kind_renders(daemon, browser, frame):
               const p = ptr.hidden ? null : ptr.getBoundingClientRect();
               const body = document.querySelector('.slide:not(.leaving) .slide-body');
               const vis = body && body.firstElementChild ? body.firstElementChild.getBoundingClientRect() : null;
-              return {cls: slide && slide.className, errors: window.__showntell.renderErrors,
+              return {cls: slide && slide.className, errors: window.__talktrack.renderErrors,
                       stage: stage.toJSON(), pointer: p && p.toJSON(), visual: vis && vis.toJSON()};
             }"""
         )
@@ -373,11 +373,11 @@ def test_a_range_plays_its_slides_and_stops(daemon, browser):
     url = _make(daemon, "landscape")
     page = browser.new_page(viewport={"width": 1280, "height": 800})
     page.goto(url + "?from=flow&to=flow")
-    page.wait_for_function("window.__showntell !== undefined && !document.querySelector('#big-play').disabled")
+    page.wait_for_function("window.__talktrack !== undefined && !document.querySelector('#big-play').disabled")
     page.click("#big-play")
     page.wait_for_selector("#range-note:not([hidden])", timeout=20000)
     shown = page.evaluate("document.querySelector('.slide:not(.leaving)').className")
-    assert "k-diagram" in shown and not page.evaluate("window.__showntell.ended")
+    assert "k-diagram" in shown and not page.evaluate("window.__talktrack.ended")
     page.close()
 
 
@@ -408,7 +408,7 @@ def test_presenting_steps_by_hand_without_voice(daemon, browser):
         page.keyboard.press("Space")
     page.wait_for_timeout(300)
     assert page.inner_text("#notes-step") != first and "step 5 of" in page.inner_text("#notes-step")
-    assert page.evaluate("window.__showntell.starts.length") == 0  # nothing was voiced
+    assert page.evaluate("window.__talktrack.starts.length") == 0  # nothing was voiced
     page.close()
 
 
@@ -417,7 +417,7 @@ def test_embedded_player_sends_events_and_takes_commands(daemon, browser):
     embed = f"http://127.0.0.1:{daemon['port']}/static/embed.js"
     page = browser.new_page(viewport={"width": 1200, "height": 900})
     host = f"""<!doctype html><script src="{embed}"></script>
-        <showntell-player id="p" src="{url}"></showntell-player>
+        <talktrack-player id="p" src="{url}"></talktrack-player>
         <script>window.got = []; for (const t of ["ready", "slidechange", "durationchange"])
           document.getElementById("p").addEventListener(t, (e) => got.push([t, e.detail]));</script>"""
     # A page on another origin (another local port), as a docs site embedding a walkthrough.
@@ -459,7 +459,7 @@ def test_the_player_reports_text_shrunk_too_far(daemon, browser):
     url = r["url"].replace("localhost", "127.0.0.1") + "/"
     page = browser.new_page(viewport={"width": 1280, "height": 800})
     page.goto(url + "?from=wall")
-    page.wait_for_function("(window.__showntell.findings || []).some((f) => f.code === 'text_too_small')", timeout=10000)
+    page.wait_for_function("(window.__talktrack.findings || []).some((f) => f.code === 'text_too_small')", timeout=10000)
     page.wait_for_timeout(300)
     f = call("finish", handle=r["handle"], questions=None)
     assert any(i["code"] == "text_too_small" and i["slide"] == "wall" and i["source"] == "player" for i in f["player_issues"])
@@ -534,7 +534,7 @@ def test_a_new_code_version_clears_the_scroll_focus(daemon, browser):
     focusing = []
     for cue in (0, 1, 2):
         page.goto(url)
-        page.wait_for_function("window.__showntell !== undefined")
+        page.wait_for_function("window.__talktrack !== undefined")
         t = _at(page, "faster", cue, 0.3)
         page.goto(f"{url}?at={t:.2f}")
         page.wait_for_selector(".codebox.scroll")
@@ -652,7 +652,7 @@ def test_newer_visuals_follow_the_narration(daemon, browser):
 
     def at(slide_id, cue, after, js):
         page.goto(url)
-        page.wait_for_function("window.__showntell !== undefined")
+        page.wait_for_function("window.__talktrack !== undefined")
         t = _at(page, slide_id, cue, after)
         page.goto(f"{url}?at={t:.2f}")
         page.wait_for_timeout(700)
@@ -711,7 +711,7 @@ def test_reduced_motion_holds_still_and_moving_cues_are_announced(daemon, browse
 
     def at(slide_id, cue, after, js, ready="body"):
         page.goto(url)
-        page.wait_for_function("window.__showntell !== undefined")
+        page.wait_for_function("window.__talktrack !== undefined")
         t = _at(page, slide_id, cue, after)
         page.goto(f"{url}?at={t:.2f}")
         page.wait_for_selector(ready, state="attached")
@@ -725,7 +725,7 @@ def test_reduced_motion_holds_still_and_moving_cues_are_announced(daemon, browse
     assert x1 == x2 > 0
     # While playing, the route of a travelling dot is announced to screen readers.
     page.goto(url)
-    page.wait_for_function("window.__showntell !== undefined")
+    page.wait_for_function("window.__talktrack !== undefined")
     t = _at(page, "path", 0, -0.8)
     page.goto(f"{url}?at={t:.2f}")
     page.wait_for_function("!document.querySelector('#big-play').disabled")
@@ -768,7 +768,7 @@ def test_drawings_reveal_point_and_never_run_script(daemon, browser):
     url = r["url"].replace("localhost", "127.0.0.1") + "/"
     page = browser.new_page(viewport={"width": 1280, "height": 800})
     page.goto(url)
-    page.wait_for_function("window.__showntell !== undefined")
+    page.wait_for_function("window.__talktrack !== undefined")
     t = _at(page, "sky", 0, 0.3)
     page.goto(f"{url}?at={t:.2f}")
     page.wait_for_selector(".drawing")
@@ -783,10 +783,10 @@ def test_drawings_reveal_point_and_never_run_script(daemon, browser):
     assert p and p["left"] <= s["left"] + 2 and p["right"] >= s["right"] - 2 and p["top"] <= s["top"] + 2
     # Seeking forward in capture mode shows every part once the narration has ended.
     page.goto(url + "?capture=1")
-    page.wait_for_function("window.__showntell?.duration?.() > 0")
-    page.evaluate("(t) => window.__showntell.seek(t)", t)
-    end = page.evaluate("window.__showntell.duration()") - 0.1
-    page.evaluate("(t) => window.__showntell.seek(t)", end)
+    page.wait_for_function("window.__talktrack?.duration?.() > 0")
+    page.evaluate("(t) => window.__talktrack.seek(t)", t)
+    end = page.evaluate("window.__talktrack.duration()") - 0.1
+    page.evaluate("(t) => window.__talktrack.seek(t)", end)
     assert page.evaluate("document.querySelector('.drawing').shadowRoot.querySelectorAll('.veiled').length") == 0
     page.close()
 
@@ -829,22 +829,22 @@ def test_drawing_steps_glide_on_the_clock_and_frames_capture_the_motion(daemon, 
     url = r["url"].replace("localhost", "127.0.0.1") + "/"
     page = browser.new_page(viewport={"width": 1280, "height": 800})
     page.goto(url)
-    page.wait_for_function("window.__showntell !== undefined")
+    page.wait_for_function("window.__talktrack !== undefined")
     at = _at(page, "phase", 1, 0.0)
     page.goto(url + "?capture=1")
-    page.wait_for_function("window.__showntell?.duration?.() > 0")
+    page.wait_for_function("window.__talktrack?.duration?.() > 0")
     angle = (
         "(() => { const g = document.querySelector('.drawing').shadowRoot.getElementById('moon'); return g.getAttribute('transform'); })()"
     )
     seen = []
     for d in (-0.2, 0.6, 2.0):
-        page.evaluate("(t) => window.__showntell.seek(t)", at + d)
+        page.evaluate("(t) => window.__talktrack.seek(t)", at + d)
         seen.append(page.evaluate(angle))
-    page.evaluate("(t) => window.__showntell.seek(t)", at + 0.3)  # back into the glide after it ended
+    page.evaluate("(t) => window.__talktrack.seek(t)", at + 0.3)  # back into the glide after it ended
     back = page.evaluate(angle)
     sketched = page.evaluate("document.querySelector('.drawing').shadowRoot.querySelectorAll('.rough').length")
     # Frame capture keys each in-between picture apart, so video export does not repeat a frame.
-    keys = [page.evaluate("(t) => window.__showntell.seek(t)", at + d) for d in (0.2, 0.6, 1.0)]
+    keys = [page.evaluate("(t) => window.__talktrack.seek(t)", at + d) for d in (0.2, 0.6, 1.0)]
     page.close()
     first, middle, last = (float(s.split("(")[1].split()[0]) for s in seen)
     assert first == 0 and -90 < middle < 0 and last == -90 and -90 < float(back.split("(")[1].split()[0]) < 0
@@ -908,12 +908,12 @@ def test_moving_dots_and_counting_numbers_change_the_capture_key(daemon, browser
     url = r["url"].replace("localhost", "127.0.0.1") + "/"
     page = browser.new_page(viewport={"width": 1280, "height": 800})
     page.goto(url)
-    page.wait_for_function("window.__showntell !== undefined")
+    page.wait_for_function("window.__talktrack !== undefined")
     dot, count = _at(page, "path", 0, 0.0), _at(page, "numbers", 0, 0.0)
     page.goto(url + "?capture=1")
-    page.wait_for_function("window.__showntell?.duration?.() > 0")
+    page.wait_for_function("window.__talktrack?.duration?.() > 0")
     for at in (dot, count):  # MP4 export reuses a frame only while its key repeats
-        keys = [page.evaluate("(t) => window.__showntell.seek(t)", at + d) for d in (0.2, 0.5, 0.8)]
+        keys = [page.evaluate("(t) => window.__talktrack.seek(t)", at + d) for d in (0.2, 0.5, 0.8)]
         assert len(set(keys)) == 3, keys
     page.close()
 
@@ -1007,7 +1007,7 @@ def test_layouts_render_inside_the_slide(daemon, browser, frame):
     assert data["slides"][2]["pair"]["kind"] == "diagram" and "database" in data["slides"][-1]["icons"]
     page = browser.new_page(viewport={"width": 1440, "height": 900} if frame != "portrait" else {"width": 900, "height": 1400})
     page.goto(url)
-    page.wait_for_function("window.__showntell !== undefined")
+    page.wait_for_function("window.__talktrack !== undefined")
     starts = page.evaluate(
         """() => import('./' + document.body.dataset.static + '/js/timeline.js').then((m) => fetch('data.json')
              .then((r) => r.json()).then((w) => { const tl = m.build(w); return w.slides.map((_, i) => [m.slideStart(tl, i), m.slideEnd(tl, i)]); }))"""
@@ -1021,7 +1021,7 @@ def test_layouts_render_inside_the_slide(daemon, browser, frame):
               const stage = document.querySelector('#stage').getBoundingClientRect();
               const out = (e) => { const r = e.getBoundingClientRect(); return r.left < stage.left - 2 || r.right > stage.right + 2 || r.bottom > stage.bottom + 2; };
               const bodies = [...slide.querySelectorAll('.slide-body')];
-              return {cls: slide.className, errors: window.__showntell.renderErrors, style: slide.getAttribute('style') || '',
+              return {cls: slide.className, errors: window.__talktrack.renderErrors, style: slide.getAttribute('style') || '',
                       bodies: bodies.map((b) => !!b.firstElementChild && b.firstElementChild.getBoundingClientRect().width > 50),
                       overflow: [...slide.querySelectorAll('.slide-body > *, .points, .statement, .slide-head')].some(out),
                       points: slide.querySelectorAll('.points .point').length, icons: slide.querySelectorAll('svg.ic').length,
@@ -1094,14 +1094,14 @@ def test_charts_and_pictures_move_by_the_clock(daemon, browser):
     url = _make(daemon, "landscape", CHARTS_DOC, "Charts")
     page = browser.new_page(viewport={"width": 1280, "height": 800})
     page.goto(url + "?capture=1")
-    page.wait_for_function("window.__showntell !== undefined")
+    page.wait_for_function("window.__talktrack !== undefined")
     starts = page.evaluate(
         """() => import('./' + document.body.dataset.static + '/js/timeline.js').then((m) => fetch('data.json')
              .then((r) => r.json()).then((w) => { const tl = m.build(w); return w.slides.map((_, i) => [m.slideStart(tl, i), m.slideEnd(tl, i)]); }))"""
     )
 
     def look(i, dt):
-        page.evaluate("(t) => window.__showntell.seek(t)", min(starts[i][0] + dt, starts[i][1] - 0.1))
+        page.evaluate("(t) => window.__talktrack.seek(t)", min(starts[i][0] + dt, starts[i][1] - 0.1))
         return page.evaluate(
             """() => { const s = document.querySelector('.slide:not(.leaving) .chart svg');
               return {bars: [...s.querySelectorAll('g.bar rect')].map((r) => r.style.transform),
@@ -1118,7 +1118,7 @@ def test_charts_and_pictures_move_by_the_clock(daemon, browser):
     # The picture pushes in by the clock, clipped to its own box.
     scales = []
     for dt in (0.2, 3.0):
-        page.evaluate("(t) => window.__showntell.seek(t)", min(starts[3][0] + dt, starts[3][1] - 0.1))
+        page.evaluate("(t) => window.__talktrack.seek(t)", min(starts[3][0] + dt, starts[3][1] - 0.1))
         scales.append(page.evaluate("() => document.querySelector('.slide:not(.leaving) .kb img').style.transform"))
     a, b = (float(s[6:-1]) for s in scales)
     assert 1 <= a < b <= 1.06, scales

@@ -1,6 +1,6 @@
-name: showntell walkthrough
-description: Voice a showntell Markdown walkthrough on the runner and attach it to the run and the pull request. No API keys; the voice runs locally.
-author: Rahim Nathwani
+name: talktrack walkthrough
+description: Voice a talktrack Markdown walkthrough on the runner and attach it to the run and the pull request. No API keys; the voice runs locally.
+author: Ahmed Samer
 branding:
   icon: play-circle
   color: yellow
@@ -39,20 +39,20 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/huggingface
-        key: showntell-voice-${{ runner.os }}-${{ runner.arch }}-v1
+        key: talktrack-voice-${{ runner.os }}-${{ runner.arch }}-v1
 
-    - name: Install showntell
+    - name: Install talktrack
       shell: bash
       env:
         FORMAT: ${{ inputs.format }}
         SRC: ${{ github.action_path }}
       run: |
-        venv="$RUNNER_TEMP/showntell-venv"
+        venv="$RUNNER_TEMP/talktrack-venv"
         uv venv -q --python 3.12 "$venv"
         # The versions in this release's lockfile, the ones its tests ran against.
         extra=(); [[ "$FORMAT" != html ]] && extra=(--extra video)
-        uv export -q --project "$SRC" --frozen --no-dev --no-hashes --no-emit-project "${extra[@]}" > "$RUNNER_TEMP/showntell-req.txt"
-        uv pip install -q --python "$venv/bin/python" -r "$RUNNER_TEMP/showntell-req.txt"
+        uv export -q --project "$SRC" --frozen --no-dev --no-hashes --no-emit-project "${extra[@]}" > "$RUNNER_TEMP/talktrack-req.txt"
+        uv pip install -q --python "$venv/bin/python" -r "$RUNNER_TEMP/talktrack-req.txt"
         uv pip install -q --python "$venv/bin/python" --no-deps "$SRC"
         echo "$venv/bin" >> "$GITHUB_PATH"
         if [[ "$FORMAT" != html ]]; then
@@ -68,18 +68,18 @@ runs:
         FORMAT: ${{ inputs.format }}
         SRC: ${{ github.action_path }}
       run: |
-        out="$RUNNER_TEMP/showntell-out"
+        out="$RUNNER_TEMP/talktrack-out"
         rm -rf "$out" && mkdir -p "$out"
-        export SHOWNTELL_DATA="$RUNNER_TEMP/showntell-data"
+        export TALKTRACK_DATA="$RUNNER_TEMP/talktrack-data"
         # The folder export voices the Markdown and keeps data.json, which the summary reads;
         # the page and the video are then made from the same walkthrough, without voicing it again.
-        showntell export "$MD" "$out/site"
+        talktrack export "$MD" "$out/site"
         id="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$out/site/data.json")"
-        [[ "$FORMAT" != mp4 ]] && showntell export "$id" "$out/walkthrough.html"
-        [[ "$FORMAT" != html ]] && showntell export "$id" "$out/walkthrough.mp4"
+        [[ "$FORMAT" != mp4 ]] && talktrack export "$id" "$out/walkthrough.html"
+        [[ "$FORMAT" != html ]] && talktrack export "$id" "$out/walkthrough.mp4"
         python "$SRC/action/summary.py" "$out/site/data.json" > "$out/summary.md"
         rm -rf "$out/site"
-        showntell stop || true
+        talktrack stop || true
         # The artifact is uploaded next; the job summary links to the run's artifact list.
         sed "s|{{ARTIFACT_URL}}|$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID#artifacts|" "$out/summary.md" >> "$GITHUB_STEP_SUMMARY"
         echo "folder=$out" >> "$GITHUB_OUTPUT"
@@ -104,15 +104,15 @@ runs:
         NAME: ${{ inputs.name }}
         FOLDER: ${{ steps.voice.outputs.folder }}
       run: |
-        marker="<!-- showntell:$NAME -->"
+        marker="<!-- talktrack:$NAME -->"
         {
           echo "$marker"
           sed "s|{{ARTIFACT_URL}}|$URL|" "$FOLDER/summary.md"
-        } > "$RUNNER_TEMP/showntell-comment.md"
+        } > "$RUNNER_TEMP/talktrack-comment.md"
         # One comment per artifact name, updated on each push.
         existing="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n1)"
         if [[ -n "$existing" ]]; then
-          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -F "body=@$RUNNER_TEMP/showntell-comment.md" >/dev/null
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -F "body=@$RUNNER_TEMP/talktrack-comment.md" >/dev/null
         else
-          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F "body=@$RUNNER_TEMP/showntell-comment.md" >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F "body=@$RUNNER_TEMP/talktrack-comment.md" >/dev/null
         fi

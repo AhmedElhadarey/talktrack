@@ -3,9 +3,9 @@ with one, and the findings that ask for varied slides."""
 
 from __future__ import annotations
 
-from showntell import icons
-from showntell.kinds.svg import parse_svg
-from showntell.model import public_slide
+from talktrack import icons
+from talktrack.kinds.svg import parse_svg
+from talktrack.model import public_slide
 
 
 def codes(b) -> list[str]:
@@ -146,7 +146,7 @@ def test_dense_slides_without_a_takeaway_are_reported_once(build):
 
 
 def test_each_slide_has_a_look_for_the_outline(build):
-    from showntell.checks import look
+    from talktrack.checks import look
 
     w, _ = build(
         PAIR
@@ -156,7 +156,7 @@ def test_each_slide_has_a_look_for_the_outline(build):
 
 
 def test_alike_runs_skip_drawings_statements_and_morphs(build):
-    from showntell.checks import alike_runs
+    from talktrack.checks import alike_runs
 
     code = "```python\nx = 1\n```\n\nThe [line](#L1) sets it.\n\n"
     w, _ = build(

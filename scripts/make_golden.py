@@ -17,9 +17,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from showntell.speech.fake import FakeBackend  # noqa: E402
-from showntell.speech.narrator import Narrator  # noqa: E402
-from showntell.store import Store  # noqa: E402
+from talktrack.speech.fake import FakeBackend  # noqa: E402
+from talktrack.speech.narrator import Narrator  # noqa: E402
+from talktrack.store import Store  # noqa: E402
 
 GOLDEN = ROOT / "tests" / "js" / "golden"
 

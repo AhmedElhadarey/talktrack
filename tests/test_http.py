@@ -8,9 +8,9 @@ import httpx
 import pytest
 from mcp.server.transport_security import TransportSecuritySettings
 
-from showntell.app import Guard
-from showntell.config import Config
-from showntell.server import add_routes, create_mcp
+from talktrack.app import Guard
+from talktrack.config import Config
+from talktrack.server import add_routes, create_mcp
 
 RPC_TOKEN = "rpc-token-for-tests"
 BASE = "http://localhost:4799"
@@ -278,7 +278,7 @@ async def test_delete_route(http, walk, store):
 async def test_health(http, walk):
     async with http() as c:
         h = (await c.get("/health")).json()
-    assert h["app"] == "showntell" and h["version"]
+    assert h["app"] == "talktrack" and h["version"]
     assert h["speech"]["backend"] == "fake" and h["speech"]["state"] == "ready"
     assert h["walkthroughs_open"] == 1 and h["busy"] is True
 
@@ -352,7 +352,7 @@ async def test_token_in_query_sets_a_cookie_that_works_later(http, wide_cfg, wal
         r = await c.get(f"/w/{walk.w.id}/?t=sekret-token", headers={"Host": "192.168.1.5:4799"})
         assert r.status_code == 200
         cookie = r.headers["set-cookie"]
-        assert "showntell_t=sekret-token" in cookie and "HttpOnly" in cookie and "SameSite=Strict" in cookie
+        assert "talktrack_t=sekret-token" in cookie and "HttpOnly" in cookie and "SameSite=Strict" in cookie
         again = await c.get(f"/w/{walk.w.id}/data.json", headers={"Host": "192.168.1.5:4799"})
     assert again.status_code == 200 and "set-cookie" not in again.headers
 

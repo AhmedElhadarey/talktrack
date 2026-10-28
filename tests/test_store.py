@@ -8,10 +8,10 @@ import time
 
 import pytest
 
-from showntell.service import LocalService
-from showntell.speech.fake import FakeBackend
-from showntell.speech.narrator import Narrator
-from showntell.store import Store
+from talktrack.service import LocalService
+from talktrack.speech.fake import FakeBackend
+from talktrack.speech.narrator import Narrator
+from talktrack.store import Store
 
 OPENING = "# How caching works\n> A read-through cache\n\nEvery request checks a small cache first.\n"
 BODY = (
@@ -217,8 +217,8 @@ async def test_revise_replaces_the_slide_in_the_source(service, store):
     assert src.count("## The lookup") == 1 and "Only new words here." in src and "never touches" not in src
     assert "The end." not in src and "A new ending." in src and src.index("A new ending.") < src.index("## Questions")
     assert "revised" not in src
-    from showntell.build import Builder
-    from showntell.model import Walkthrough
+    from talktrack.build import Builder
+    from talktrack.model import Walkthrough
 
     w = Walkthrough(id="w" * 22, key="k", report_key="r", title="T")
     Builder(w, store.walk_dir("x")).add(src)
@@ -271,7 +271,7 @@ async def test_the_last_slides_problems_arrive_with_its_call_and_only_once(servi
 
 
 async def test_finish_times_match_the_players_clock(service, store, voiced):
-    from showntell.export import slide_starts, timeline_total
+    from talktrack.export import slide_starts, timeline_total
 
     r = await started(service)
     await service.add(r["handle"], OPENING + "\n## Part two {.chapter}\n\n" + BODY)
@@ -319,7 +319,7 @@ async def test_finish_reports_and_drops_an_unclosed_fence(service, store):
 
 
 async def test_finish_layout_check_reports_why_it_could_not_run(store, monkeypatch):
-    from showntell import capture
+    from talktrack import capture
 
     class Missing:
         def __init__(self, *a, **kw):
@@ -339,12 +339,12 @@ async def test_finish_layout_check_reports_why_it_could_not_run(store, monkeypat
     missing = [i for i in f["issues"] if i["code"] == "no_browser"]
     assert len(missing) == 1 and missing[0]["severity"] == "warning"
     assert "Playwright is not installed" in missing[0]["message"] and "not drawn" in missing[0]["message"]
-    assert "showntell doctor" in missing[0]["fix"]
+    assert "talktrack doctor" in missing[0]["fix"]
     assert not any(i["code"] == "not_checked" and "No player has opened" in i["message"] for i in f["issues"])
 
 
 async def test_finish_layout_check_passes_player_findings_on(store, monkeypatch):
-    from showntell import capture
+    from talktrack import capture
 
     seen = []
 
@@ -526,7 +526,7 @@ async def test_description_from_argument_or_front_matter(service, store):
 
 
 async def test_poster_is_listed_reused_by_export_and_dropped_when_the_title_slide_changes(service, store, tmp_path, monkeypatch):
-    import showntell.export as export
+    import talktrack.export as export
 
     r = await started(service)
     await service.add(r["handle"], OPENING + "\n" + BODY)

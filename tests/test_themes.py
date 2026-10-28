@@ -7,8 +7,8 @@ import re
 
 import pytest
 
-from showntell import themes
-from showntell.server import render_player
+from talktrack import themes
+from talktrack.server import render_player
 
 CSS = themes.CSS.read_text()
 

@@ -1,6 +1,6 @@
-"""`showntell doctor` rows that need no models or network."""
+"""`talktrack doctor` rows that need no models or network."""
 
-from showntell import __version__, doctor
+from talktrack import __version__, doctor
 
 
 def test_slide_checks_row_names_what_is_off_and_how_to_add_the_browser(monkeypatch):

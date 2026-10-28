@@ -18,7 +18,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from showntell.capture import _with_params, output_size
+from talktrack.capture import _with_params, output_size
 
 DOC = """# Video export
 > Frames by seeking
@@ -72,9 +72,9 @@ def walkthrough(tmp_path_factory):
     """(data folder, walkthrough id) for DOC, voiced by a fake-speech daemon."""
     pytest.importorskip("playwright.async_api")
     data = tmp_path_factory.mktemp("video-data")
-    env = {**os.environ, "SHOWNTELL_DATA": str(data), "SHOWNTELL_SPEECH": "fake"}
+    env = {**os.environ, "TALKTRACK_DATA": str(data), "TALKTRACK_SPEECH": "fake"}
     proc = subprocess.Popen(
-        [sys.executable, "-m", "showntell", "serve", "--port", str(_free_port()), "--speech", "fake"],
+        [sys.executable, "-m", "talktrack", "serve", "--port", str(_free_port()), "--speech", "fake"],
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -149,10 +149,10 @@ def _frame(video: Path, t: float) -> bytes:
 def test_mp4_export(walkthrough, tmp_path):
     if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
         pytest.skip("ffmpeg not installed")
-    from showntell.capture import CaptureUnavailable
-    from showntell.export import timeline, timeline_total
-    from showntell.model import Walkthrough
-    from showntell.video import probe, render_mp4
+    from talktrack.capture import CaptureUnavailable
+    from talktrack.export import timeline, timeline_total
+    from talktrack.model import Walkthrough
+    from talktrack.video import probe, render_mp4
 
     data, wid = walkthrough
     out = tmp_path / "walk.mp4"
@@ -178,7 +178,7 @@ def test_mp4_export(walkthrough, tmp_path):
         "mov_text",
     )
     assert (streams["video"]["width"], streams["video"]["height"]) == (1920, 1080)
-    assert info["format"]["tags"]["encoder"].startswith("showntell ") and info["format"]["tags"]["title"] == w.title
+    assert info["format"]["tags"]["encoder"].startswith("talktrack ") and info["format"]["tags"]["title"] == w.title
 
     # Frames from the middle of the code slide and of the steps slide differ.
     starts = {}
@@ -191,7 +191,7 @@ def test_mp4_export(walkthrough, tmp_path):
 @pytest.mark.browser
 @pytest.mark.slow
 def test_folder_export_writes_a_poster(walkthrough, tmp_path):
-    from showntell.export import export
+    from talktrack.export import export
 
     data, wid = walkthrough
     out = export(data, wid, tmp_path / "site", poster=True)
@@ -212,7 +212,7 @@ def test_mp4_export_through_the_daemon_fits_a_size_limit(walkthrough, tmp_path):
     """export_walkthrough's path: the daemon renders, then shrinks the file to fit `max_mb`."""
     if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
         pytest.skip("ffmpeg not installed")
-    from showntell.video import probe
+    from talktrack.video import probe
 
     data, wid = walkthrough
     handle, route, auth = handles[wid]

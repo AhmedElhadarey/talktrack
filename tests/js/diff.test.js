@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { diffLines, lcs } from "../../src/showntell/static/js/diff.js";
+import { diffLines, lcs } from "../../src/talktrack/static/js/diff.js";
 
 test("lcs pairs equal items in order", () => {
   assert.deepEqual(lcs([1, 2, 3, 4], [2, 4, 5], (a, b) => a === b), [[1, 0], [3, 1]]);

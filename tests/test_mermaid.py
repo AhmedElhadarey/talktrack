@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from showntell.mermaid import parse_mermaid
+from talktrack.mermaid import parse_mermaid
 
 DOC_FLOWCHART = """flowchart LR
   req[Request] --> hit{In cache?}

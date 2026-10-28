@@ -32,14 +32,14 @@ def main() -> int:
         if f.is_file() and f.suffix in REF_TYPES and f.stat().st_size < 5_000_000:
             ref |= shingles(f.read_text(errors="ignore"))
     ours = [
-        *repo.glob("src/showntell/text/*"),
+        *repo.glob("src/talktrack/text/*"),
         *repo.glob("docs/*.md"),
         repo / "README.md",
         repo / "GEMINI.md",
         *repo.glob("claude-plugin/skills/*/SKILL.md"),
-        *repo.glob("src/showntell/static/**/*.js"),
-        *repo.glob("src/showntell/static/*.html"),
-        *repo.glob("src/showntell/static/*.css"),
+        *repo.glob("src/talktrack/static/**/*.js"),
+        *repo.glob("src/talktrack/static/*.html"),
+        *repo.glob("src/talktrack/static/*.css"),
     ]
     ours = [f for f in ours if f.is_file() and "vendor" not in f.parts]
     hits = 0

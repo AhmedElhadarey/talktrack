@@ -1,15 +1,15 @@
 # Architecture
 
-showntell is one Python package and one static web player. A long-lived daemon owns the voice model and the walkthroughs; MCP clients reach it either directly over HTTP or through a small stdio shim.
+talktrack is one Python package and one static web player. A long-lived daemon owns the voice model and the walkthroughs; MCP clients reach it either directly over HTTP or through a small stdio shim.
 
 ```mermaid
 graph TB
   subgraph clients [MCP clients]
-    CC[Claude Code] --> SH[showntell mcp - stdio shim]
+    CC[Claude Code] --> SH[talktrack mcp - stdio shim]
     CU[Other clients] --> SH
     HT[HTTP clients] --> MCPH
   end
-  subgraph daemon [showntell serve - one per machine]
+  subgraph daemon [talktrack serve - one per machine]
     MCPH[MCP over HTTP at /mcp] --> SV[LocalService]
     RPC[RPC at /api/rpc - token] --> SV
     SV --> ST[Store and sessions]
@@ -28,7 +28,7 @@ graph TB
 
 ## Request path
 
-1. **Shim:** `showntell mcp` reads `daemon.json` in the data folder. If no daemon of the same version is healthy, it starts `showntell serve` in the background and waits for `/health`. Its MCP tools forward to the daemon's RPC route with the token from the lockfile.
+1. **Shim:** `talktrack mcp` reads `daemon.json` in the data folder. If no daemon of the same version is healthy, it starts `talktrack serve` in the background and waits for `/health`. Its MCP tools forward to the daemon's RPC route with the token from the lockfile.
 2. **Service:** `LocalService` implements the tools. The MCP layer (`server.py`) formats replies, waits for the opening audio with progress notifications, and attaches the guide to the first playable reply.
 3. **Builder:** `format.Parser` turns each chunk into blocks; the chunk end closes open blocks except fences. `build.Builder` turns blocks into slides, reads code from disk or git (`sources.py`), resolves and infers cues, and records problems (see **Builder** below).
 4. **Narrator:** every narration paragraph becomes a speech job. `pronounce.speakable` rewrites code and units into speakable text with a character map back to the display text; the job key is a hash of model, voice, speed and spoken text. One worker thread voices jobs in order of their position in their walkthrough.
@@ -84,7 +84,7 @@ When the player runs inside an iframe it posts its events to the parent (`ready`
 
 ## Capture and video export
 
-`capture.py` opens the player with `?capture=1`. In that mode the player plays no audio, turns CSS animation and transitions off, shows only the stage at scale 1, and exposes `window.__showntell.duration()` and `seek(t)`. `seek` resolves once the frame for *t* is painted (slide renderers, Mermaid, KaTeX, images and fonts settled, then two animation frames) and returns a state key built from slide, revision, reveal level, cue and, with burned captions, the current word. Equal keys mean equal pictures.
+`capture.py` opens the player with `?capture=1`. In that mode the player plays no audio, turns CSS animation and transitions off, shows only the stage at scale 1, and exposes `window.__talktrack.duration()` and `seek(t)`. `seek` resolves once the frame for *t* is painted (slide renderers, Mermaid, KaTeX, images and fonts settled, then two animation frames) and returns a state key built from slide, revision, reveal level, cue and, with burned captions, the current word. Equal keys mean equal pictures.
 
 ```mermaid
 graph TB
@@ -112,7 +112,7 @@ graph TB
 | **Page size** | the browser window is the frame's own size (1280x720 for landscape); the device pixel ratio scales it to the output size, so text stays sharp |
 | **Frames** | each worker seeks frame *i* to *i*/fps, screenshots only when the state key changes, and pipes the image into its ffmpeg (image2pipe, x264) |
 | **Sound** | clips from the exported `audio/` folder, placed at their start on the timeline that `export.timeline` shares with `timeline.js` |
-| **Join** | segments concatenated without re-encoding; one metadata tag, the encoder, names showntell and its version |
+| **Join** | segments concatenated without re-encoding; one metadata tag, the encoder, names talktrack and its version |
 | **Check** | the player's and exporter's timeline lengths must agree within 0.05 s, and the file's duration the timeline's within 0.2 s |
 
 The same module writes `poster.png` for folder exports and returns PNG frames at any times for other callers (`capture_frames`).
@@ -123,7 +123,7 @@ The same module writes `poster.png` for folder exports and returns PNG frames at
 
 | Part | How it travels |
 |---|---|
-| **Player modules** | each `static/js` module as a `data:` URL in an import map, its relative imports rewritten to bare `showntell/js/...` specifiers; a page opened from `file://` cannot fetch module files but can import `data:` URLs |
+| **Player modules** | each `static/js` module as a `data:` URL in an import map, its relative imports rewritten to bare `talktrack/js/...` specifiers; a page opened from `file://` cannot fetch module files but can import `data:` URLs |
 | **CSS** | `themes.css` and `player.css` inline; KaTeX's stylesheet carries its woff2 fonts as `data:` URLs |
 | **Walkthrough** | `data.json` in a `<script type="application/json">` at the end of the page; narration MP3s and images inside it as `data:` URLs, turned into `blob:` URLs before the player starts |
 | **Libraries** | only those the slide kinds need (Mermaid for diagrams, KaTeX for formulas, highlight.js for code), in a registry `loadScript` and `loadCss` read before the network; scripts over 100 KB gzipped and unpacked with `DecompressionStream` |

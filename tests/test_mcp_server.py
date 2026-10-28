@@ -8,9 +8,9 @@ import re
 import pytest
 from mcp.client import Client
 
-from showntell import themes
-from showntell.build import LIMITS
-from showntell.server import create_mcp
+from talktrack import themes
+from talktrack.build import LIMITS
+from talktrack.server import create_mcp
 
 OPENING = "# How caching works\n\nEvery request checks a small cache first.\n"
 BODY = "## The lookup {#lookup}\n\n```python\ndef get(self, key):\n    return self._data[key]\n```\n\nIt [returns](#L2) the value.\n"
@@ -134,7 +134,7 @@ async def test_first_add_is_playable_with_url_and_filled_guide(mcp):
         t = text(r)
         assert r.structured_content["status"] == "playable" and r.structured_content["url"] == h["url"]
         assert h["url"] in t and "Playable" in t
-        assert "# Writing a showntell walkthrough" in t
+        assert "# Writing a talktrack walkthrough" in t
         assert "{{" not in t and "**portrait**" in t and f"{LIMITS['portrait']['lines']} lines" in t
 
 
@@ -144,7 +144,7 @@ async def test_guide_comes_only_with_the_first_playable_reply(mcp):
         await client.call_tool("add_slides", {"handle": h["handle"], "markdown": OPENING})
         r = await client.call_tool("add_slides", {"handle": h["handle"], "markdown": BODY})
         assert r.structured_content["status"] == "added"
-        assert "# Writing a showntell walkthrough" not in text(r)
+        assert "# Writing a talktrack walkthrough" not in text(r)
 
 
 async def test_add_without_narration_asks_for_an_opening(mcp):
@@ -288,7 +288,7 @@ async def test_prompts_exist_with_one_required_argument(mcp):
     [
         ("diff", "target", "main..HEAD"),
         ("review", "target", "main...feature"),
-        ("file", "path", "src/showntell/store.py"),
+        ("file", "path", "src/talktrack/store.py"),
         ("topic", "topic", "consistent hashing"),
     ],
 )
@@ -296,15 +296,15 @@ async def test_prompts_render_their_argument(mcp, name, arg, value):
     async with mcp as client:
         r = await client.get_prompt(name, {arg: value})
         body = r.messages[0].content.text
-        assert value in body and "{" + arg + "}" not in body and "showntell" in body
+        assert value in body and "{" + arg + "}" not in body and "talktrack" in body
 
 
 async def test_walkthroughs_resource_reads(mcp):
     async with mcp as client:
         h = await start(client)
         resources = {str(r.uri): r for r in (await client.list_resources()).resources}
-        assert "showntell://walkthroughs" in resources
-        r = await client.read_resource("showntell://walkthroughs")
+        assert "talktrack://walkthroughs" in resources
+        r = await client.read_resource("talktrack://walkthroughs")
         rows = json.loads(r.contents[0].text)
         assert rows[0]["handle"] == h["handle"]
 
@@ -328,7 +328,7 @@ async def test_structured_content_carries_the_whole_reply(mcp):
         r = await client.call_tool("start_walkthrough", {"title": "Probe", "opening": "# Probe\n\nOne short sentence.\n"})
         msg = r.structured_content["message"]
         assert msg == text(r)
-        assert "Writing a showntell walkthrough" in msg and r.structured_content["url"] in msg
+        assert "Writing a talktrack walkthrough" in msg and r.structured_content["url"] in msg
         a = await client.call_tool("add_slides", {"handle": r.structured_content["handle"], "markdown": "## Next\n\nMore words.\n"})
         assert a.structured_content["message"] == text(a)
 
@@ -390,7 +390,7 @@ async def test_export_path_must_be_inside_a_folder_the_client_shares(service, tm
 
 
 def test_export_path_names_the_file_after_the_title(tmp_path):
-    from showntell.service import export_path
+    from talktrack.service import export_path
 
     assert export_path("Why TLS? A tour!", str(tmp_path), "", "mp4") == tmp_path.resolve() / "why-tls-a-tour.mp4"
     assert export_path("???", str(tmp_path), "", "html") == tmp_path.resolve() / "walkthrough.html"
@@ -414,7 +414,7 @@ async def test_file_delivery_never_offers_the_link(service, tmp_path):
         assert "export_walkthrough" in (client.instructions or "")
         h = await start(client, project_dir=str(tmp_path), opening=OPENING)
         url = h["url"]
-        assert url not in text_of(h) and "{{" not in text_of(h) and "# Writing a showntell walkthrough" in text_of(h)
+        assert url not in text_of(h) and "{{" not in text_of(h) and "# Writing a talktrack walkthrough" in text_of(h)
         r = await client.call_tool("add_slides", {"handle": h["handle"], "markdown": BODY})
         assert url not in text(r)
         r = await client.call_tool("revise_slide", {"handle": h["handle"], "slide": "lookup", "markdown": "New words."})
@@ -439,7 +439,7 @@ def test_unknown_delivery_mode_is_refused(service):
 
 
 def test_file_texts_override_only_what_mentions_the_link():
-    from showntell.server import texts
+    from talktrack.server import texts
 
     base, file = texts("link"), texts("file")
     assert file["guide"] == base["guide"] and file["prompts"] == base["prompts"]

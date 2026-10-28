@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import re
 
-from showntell.export import MAX_WORDS, phrases, timeline, vtt
-from showntell.model import Say, Slide, Walkthrough
+from talktrack.export import MAX_WORDS, phrases, timeline, vtt
+from talktrack.model import Say, Slide, Walkthrough
 
 
 def words(text: str, gaps: dict[int, float] | None = None, step: float = 0.3) -> list[dict]:

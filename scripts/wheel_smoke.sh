@@ -5,16 +5,16 @@
 set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/.." && pwd)
-wheel=$(ls "$repo"/dist/showntell-*.whl | head -n 1)
-work=$(mktemp -d "${TMPDIR:-/tmp}/showntell-smoke.XXXXXX")
+wheel=$(ls "$repo"/dist/talktrack-*.whl | head -n 1)
+work=$(mktemp -d "${TMPDIR:-/tmp}/talktrack-smoke.XXXXXX")
 cd "$work"
 
-export SHOWNTELL_DATA="$work/data"
-export SHOWNTELL_SPEECH=fake
-export SHOWNTELL_PORT="${SHOWNTELL_PORT:-4791}"
-run() { uvx --no-config --from "$wheel" showntell "$@"; }
+export TALKTRACK_DATA="$work/data"
+export TALKTRACK_SPEECH=fake
+export TALKTRACK_PORT="${TALKTRACK_PORT:-4791}"
+run() { uvx --no-config --from "$wheel" talktrack "$@"; }
 # On failure, stop any daemon this script started so no process outlives the job.
-trap 'pkill -f "showntell serve.*$SHOWNTELL_DATA" 2>/dev/null || true' EXIT
+trap 'pkill -f "talktrack serve.*$TALKTRACK_DATA" 2>/dev/null || true' EXIT
 
 echo "== wheel: $wheel"
 echo "== work dir: $work"
@@ -46,7 +46,7 @@ case "$url" in
   http://localhost:*/w/*) ;;
   *) echo "unexpected link: $url"; exit 1 ;;
 esac
-lock="$SHOWNTELL_DATA/daemon.json"
+lock="$TALKTRACK_DATA/daemon.json"
 test -f "$lock" || { echo "no lockfile after play"; exit 1; }
 
 echo "== walkthrough is listed"
@@ -62,7 +62,7 @@ for _ in $(seq 1 100); do
   sleep 0.1
 done
 if kill -0 "$pid" 2>/dev/null; then echo "daemon $pid still running"; kill "$pid"; exit 1; fi
-if pgrep -f "showntell serve.*$SHOWNTELL_DATA" >/dev/null; then echo "stray showntell process"; exit 1; fi
+if pgrep -f "talktrack serve.*$TALKTRACK_DATA" >/dev/null; then echo "stray talktrack process"; exit 1; fi
 if test -e "$lock"; then echo "lockfile left behind: $lock"; exit 1; fi
 
 echo "== clean exit"

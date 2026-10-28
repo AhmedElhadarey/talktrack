@@ -1,6 +1,6 @@
-"""Evaluate showntell end to end with real agents.
+"""Evaluate talktrack end to end with real agents.
 
-For each prompt and model, run Claude Code headless with showntell connected through the
+For each prompt and model, run Claude Code headless with talktrack connected through the
 stdio shim, watch its event stream, open the player in headless Chromium the moment the link
 is playable, and play at 1x while the agent keeps writing. Afterwards, check cue timing and
 pronunciation against speech recognition.
@@ -30,14 +30,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from showntell.checks import _layout, look  # noqa: E402
-from showntell.model import Walkthrough  # noqa: E402
+from talktrack.checks import _layout, look  # noqa: E402
+from talktrack.model import Walkthrough  # noqa: E402
 
 URL_RE = re.compile(r"http://(?:localhost|127\.0\.0\.1):\d+/w/[A-Za-z0-9_-]+/?")
 RUN_TIMEOUT = 600  # seconds for one agent run; the longest so far took about 70
 
 ALLOWED = [
-    "mcp__showntell",
+    "mcp__talktrack",
     "Read",
     "Grep",
     "Glob",
@@ -46,17 +46,17 @@ ALLOWED = [
     "Bash(git show:*)",
     "Bash(ls:*)",
     "Bash(uv run pytest --collect-only:*)",
-    "Bash(uv run showntell --help:*)",
+    "Bash(uv run talktrack --help:*)",
 ]
 
 
 async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: bool) -> dict:
     cfg = {
         "mcpServers": {
-            "showntell": {
+            "talktrack": {
                 "command": "uv",
-                "args": ["run", "--quiet", "--directory", str(ROOT), "showntell", "mcp"],
-                "env": {"SHOWNTELL_DATA": str(data_dir), "SHOWNTELL_PORT": str(port)},
+                "args": ["run", "--quiet", "--directory", str(ROOT), "talktrack", "mcp"],
+                "env": {"TALKTRACK_DATA": str(data_dir), "TALKTRACK_PORT": str(port)},
             }
         }
     }
@@ -194,10 +194,10 @@ async def _play_live(url: str) -> dict:
         t0 = time.time()
         while time.time() - t0 < 900:
             await page.wait_for_timeout(1000)
-            m = await page.evaluate("window.__showntell")
+            m = await page.evaluate("window.__talktrack")
             if m and m.get("ended"):
                 break
-        m = await page.evaluate("window.__showntell") or {}
+        m = await page.evaluate("window.__talktrack") or {}
         await b.close()
         return {
             "stalls": m.get("stalls", 0),
@@ -240,7 +240,7 @@ def norm_words(s: str) -> list[str]:
 def spoken_words(display: str, code: list) -> list[str]:
     """Words the voice says for a piece of display text: identifiers split, symbols named,
     inline phonemes reduced to their word."""
-    from showntell.pronounce import speakable
+    from talktrack.pronounce import speakable
 
     text = speakable(display, code, [], {}).text
     text = re.sub(r"\[([^\]]*)\]\(/[^)]*/\)", r"\1", text)
@@ -442,7 +442,7 @@ async def main() -> None:
     await check_browser()
     all_prompts = json.loads(Path(args.prompts).read_text())
     prompts = all_prompts if args.runs == "all" else [p for p in all_prompts if p["id"] in args.runs.split(",")]
-    data_dir = Path(tempfile.mkdtemp(prefix="showntell-eval-"))
+    data_dir = Path(tempfile.mkdtemp(prefix="talktrack-eval-"))
     jobs = [(p, m) for m in args.models.split(",") for p in prompts]
     sem = asyncio.Semaphore(args.parallel)
     # Speech recognition runs one deck at a time: mlx-whisper's numba layer aborts the whole

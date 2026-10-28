@@ -1,13 +1,13 @@
 {
-  "name": "showntell",
-  "owner": { "name": "Rahim Nathwani", "url": "https://github.com/rahimnathwani" },
+  "name": "talktrack",
+  "owner": { "name": "Ahmed Samer", "url": "https://github.com/AhmedElhadarey" },
   "metadata": {
     "description": "Narrated slide walkthroughs for coding agents, voiced on your machine.",
-    "version": "0.1.8"
+    "version": "0.2.0"
   },
   "plugins": [
     {
-      "name": "showntell",
+      "name": "talktrack",
       "source": "./claude-plugin",
       "description": "Narrated slide walkthroughs of code, diffs and concepts, voiced locally with Kokoro. The link plays within seconds while the rest is written.",
       "category": "productivity",

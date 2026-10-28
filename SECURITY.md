@@ -2,12 +2,12 @@
 
 ## Model
 
-showntell is a local tool. The daemon listens on 127.0.0.1 by default and holds walkthroughs that may contain your source code.
+talktrack is a local tool. The daemon listens on 127.0.0.1 by default and holds walkthroughs that may contain your source code.
 
 | Threat | Protection |
 |---|---|
 | **A web page you visit reads your walkthroughs** (DNS rebinding) | every route checks the Host header; MCP has its own rebinding check |
-| **A web page writes to showntell** (cross-site requests) | POSTs must be JSON and same-origin; player reports need a per-walkthrough key |
+| **A web page writes to talktrack** (cross-site requests) | POSTs must be JSON and same-origin; player reports need a per-walkthrough key |
 | **Guessing a walkthrough link** | ids are 128-bit random values |
 | **Writing to someone else's walkthrough** | writes need the write key, which only the agent receives |
 | **Reading files outside the project** | paths are resolved, symlinks included, and must stay inside the project root |

@@ -1,15 +1,15 @@
 {
-  "name": "showntell",
-  "version": "0.1.8",
+  "name": "talktrack",
+  "version": "0.2.0",
   "description": "Narrated slide walkthroughs of code, diffs and concepts, voiced on your machine. The link plays within seconds while the rest is written.",
   "contextFileName": "GEMINI.md",
   "mcpServers": {
-    "showntell": {
+    "talktrack": {
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/rahimnathwani/showntell@v0.1.8",
-        "showntell",
+        "git+https://github.com/AhmedElhadarey/talktrack@v0.2.0",
+        "talktrack",
         "mcp"
       ]
     }

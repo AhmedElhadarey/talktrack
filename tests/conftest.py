@@ -14,12 +14,12 @@ from pathlib import Path
 
 import pytest
 
-from showntell.build import Builder
-from showntell.model import Walkthrough
-from showntell.service import LocalService
-from showntell.speech.fake import FakeBackend
-from showntell.speech.narrator import Narrator
-from showntell.store import Store
+from talktrack.build import Builder
+from talktrack.model import Walkthrough
+from talktrack.service import LocalService
+from talktrack.speech.fake import FakeBackend
+from talktrack.speech.narrator import Narrator
+from talktrack.store import Store
 
 BASE_URL = "http://localhost:4799"
 

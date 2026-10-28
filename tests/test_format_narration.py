@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from showntell.format import inline_plain, parse_narration
+from talktrack.format import inline_plain, parse_narration
 
 
 def span(n, a_b) -> str:

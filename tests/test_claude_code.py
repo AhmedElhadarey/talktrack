@@ -1,9 +1,9 @@
-"""Through the real Claude Code: what the model actually receives from showntell's tools.
+"""Through the real Claude Code: what the model actually receives from talktrack's tools.
 
 Claude Code decides which parts of a tool result the model sees (since 2.1.x, only the structured
 content when there is any), and nothing else in the suite runs Claude Code itself. Opt in:
 
-    SHOWNTELL_TEST_CLAUDE=1 uv run pytest -m claude
+    TALKTRACK_TEST_CLAUDE=1 uv run pytest -m claude
 
 It needs the `claude` CLI, logged in, and costs a few cents per run (Sonnet).
 """
@@ -23,11 +23,11 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = [
     pytest.mark.claude,
-    pytest.mark.skipif(not os.environ.get("SHOWNTELL_TEST_CLAUDE"), reason="set SHOWNTELL_TEST_CLAUDE=1 to run"),
+    pytest.mark.skipif(not os.environ.get("TALKTRACK_TEST_CLAUDE"), reason="set TALKTRACK_TEST_CLAUDE=1 to run"),
     pytest.mark.skipif(shutil.which("claude") is None, reason="needs the claude CLI"),
 ]
 
-PROMPT = """Use the showntell tools, then answer.
+PROMPT = """Use the talktrack tools, then answer.
 1. Call start_walkthrough with title "Probe" and opening "# Probe\\n\\nOne short sentence."
 2. Call add_slides with this Markdown for the walkthrough:
 ## Shape
@@ -40,7 +40,7 @@ flowchart LR
 It goes from start to end.
 3. Call preview_slides for the walkthrough.
 Then reply with only a JSON object, no other text:
-{"guide": true if the start_walkthrough result contained a section titled "Writing a showntell walkthrough",
+{"guide": true if the start_walkthrough result contained a section titled "Writing a talktrack walkthrough",
  "share": true if that result told you to send the link to the user,
  "link": the walkthrough link you were given,
  "image": true if preview_slides gave you an image you could see,
@@ -50,10 +50,10 @@ Then reply with only a JSON object, no other text:
 def test_the_model_receives_the_guide_the_link_and_the_pictures(tmp_path, free_port):
     cfg = {
         "mcpServers": {
-            "showntell": {
+            "talktrack": {
                 "command": "uv",
-                "args": ["run", "--quiet", "--directory", str(ROOT), "showntell", "mcp"],
-                "env": {"SHOWNTELL_DATA": str(tmp_path / "data"), "SHOWNTELL_PORT": str(free_port), "SHOWNTELL_SPEECH": "fake"},
+                "args": ["run", "--quiet", "--directory", str(ROOT), "talktrack", "mcp"],
+                "env": {"TALKTRACK_DATA": str(tmp_path / "data"), "TALKTRACK_PORT": str(free_port), "TALKTRACK_SPEECH": "fake"},
             }
         }
     }
@@ -70,7 +70,7 @@ def test_the_model_receives_the_guide_the_link_and_the_pictures(tmp_path, free_p
                 str(tmp_path / "mcp.json"),
                 "--strict-mcp-config",
                 "--allowedTools",
-                "mcp__showntell",
+                "mcp__talktrack",
             ],
             cwd=ROOT,
             stdin=subprocess.DEVNULL,

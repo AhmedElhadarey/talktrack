@@ -1,4 +1,4 @@
-"""`showntell prune` and the daemon log cap: what goes, what stays."""
+"""`talktrack prune` and the daemon log cap: what goes, what stays."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ import time
 
 import pytest
 
-from showntell import daemon
-from showntell.prune import parse_age, prune
+from talktrack import daemon
+from talktrack.prune import parse_age, prune
 
 DAY = 86400
 

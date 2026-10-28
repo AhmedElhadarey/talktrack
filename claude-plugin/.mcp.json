@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "showntell": {
+    "talktrack": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.8", "showntell", "mcp"]
+      "args": ["--from", "git+https://github.com/AhmedElhadarey/talktrack@v0.2.0", "talktrack", "mcp"]
     }
   }
 }

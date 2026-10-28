@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from showntell.speech import fallback, make_backend, mlx_backend
-from showntell.speech.fake import FakeBackend
+from talktrack.speech import fallback, make_backend, mlx_backend
+from talktrack.speech.fake import FakeBackend
 
 
 class Broken(FakeBackend):
@@ -48,7 +48,7 @@ def test_when_both_fail_the_error_names_both():
 
 
 def test_auto_on_apple_silicon_wraps_mlx(monkeypatch, tmp_path):
-    from showntell.speech import Status
+    from talktrack.speech import Status
 
     monkeypatch.setattr(mlx_backend, "available", lambda: True)
     b = make_backend("auto", tmp_path, Status())

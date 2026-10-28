@@ -5,8 +5,8 @@
 """Render code and diff slides of growing size in each frame and report the zoom the player
 applies. A zoom of about 0.82 or more reads comfortably; build.LIMITS and docs/format.md use this.
 
-    uv run showntell serve --speech fake --port 4803 --data /tmp/showntell-measure &
-    uv run scripts/measure_limits.py /tmp/showntell-measure/daemon.json
+    uv run talktrack serve --speech fake --port 4803 --data /tmp/talktrack-measure &
+    uv run scripts/measure_limits.py /tmp/talktrack-measure/daemon.json
 """
 
 import asyncio

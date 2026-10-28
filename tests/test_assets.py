@@ -8,8 +8,8 @@ import zipfile
 
 import spacy
 
-from showntell.speech import assets
-from showntell.speech.assets import SPACY_NAME, SPACY_VERSION, ensure_spacy, spacy_dir
+from talktrack.speech import assets
+from talktrack.speech.assets import SPACY_NAME, SPACY_VERSION, ensure_spacy, spacy_dir
 
 
 def _wheel() -> bytes:
@@ -23,7 +23,7 @@ def _wheel() -> bytes:
 
 
 def test_concurrent_spacy_downloads_both_succeed(tmp_path, monkeypatch):
-    """The daemon and `showntell doctor` both fetch the model on a fresh machine: one must not
+    """The daemon and `talktrack doctor` both fetch the model on a fresh machine: one must not
     pull the other's half-extracted folder away (FileNotFoundError on tok2vec/model)."""
     data = _wheel()
     both_downloaded = threading.Barrier(2)
@@ -44,7 +44,7 @@ def test_concurrent_spacy_downloads_both_succeed(tmp_path, monkeypatch):
     monkeypatch.setattr(assets.urllib.request, "urlopen", urlopen)
     monkeypatch.setattr(spacy.util, "is_package", lambda name: False)
     monkeypatch.setattr(spacy, "load", spacy.load)
-    monkeypatch.setattr(spacy, "_showntell_redirect", None, raising=False)
+    monkeypatch.setattr(spacy, "_talktrack_redirect", None, raising=False)
 
     results, errors = [], []
 
@@ -69,9 +69,9 @@ def test_concurrent_spacy_downloads_both_succeed(tmp_path, monkeypatch):
 def test_narrator_retries_a_failed_load(tmp_path, monkeypatch):
     """A load that failed (a download cut short, a race) is tried again by a later narration,
     instead of failing every narration until the daemon restarts."""
-    from showntell.speech import narrator as narrator_mod
-    from showntell.speech.fake import FakeBackend
-    from showntell.speech.narrator import Narrator
+    from talktrack.speech import narrator as narrator_mod
+    from talktrack.speech.fake import FakeBackend
+    from talktrack.speech.narrator import Narrator
 
     class Flaky(FakeBackend):
         loads = 0

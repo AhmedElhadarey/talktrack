@@ -19,10 +19,10 @@ def test_manifests_in_sync():
 
 
 def test_versions_agree():
-    import showntell
+    import talktrack
 
     v = _sync().pyproject_version()
-    assert showntell.__version__ == v
+    assert talktrack.__version__ == v
     assert json.loads((ROOT / "claude-plugin/.claude-plugin/plugin.json").read_text())["version"] == v
     assert json.loads((ROOT / ".claude-plugin/marketplace.json").read_text())["metadata"]["version"] == v
     assert json.loads((ROOT / "gemini-extension.json").read_text())["version"] == v
@@ -32,7 +32,7 @@ def test_marketplace_points_at_plugin():
     market = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text())
     plugin = json.loads((ROOT / "claude-plugin/.claude-plugin/plugin.json").read_text())
     (entry,) = market["plugins"]
-    assert entry["name"] == plugin["name"] == market["name"] == "showntell"
+    assert entry["name"] == plugin["name"] == market["name"] == "talktrack"
     assert (ROOT / entry["source"] / ".claude-plugin" / "plugin.json").is_file()
 
 

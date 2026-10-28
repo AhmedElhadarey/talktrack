@@ -1,9 +1,9 @@
 <div align="center">
 
-# 🎙️ showntell
+# 🎙️ talktrack
 
 **Narrated slide walkthroughs for coding agents, voiced on your machine.**
-Your agent writes slides and narration in Markdown; showntell voices them locally and hands back a link that starts playing while the rest is still being written.
+Your agent writes slides and narration in Markdown; talktrack voices them locally and hands back a link that starts playing while the rest is still being written.
 
 [![Version](https://img.shields.io/badge/version-0.1.8-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.12-3776AB?logo=python&logoColor=white)](pyproject.toml)
@@ -17,11 +17,11 @@ Your agent writes slides and narration in Markdown; showntell voices them locall
 
 ## 📖 Overview
 
-Ask your agent to walk you through a pull request, a module or a concept. It writes slides and narration in Markdown; showntell voices them locally with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) and hands back a link that starts playing in about a second, while the rest is still being written. A pointer follows the narration through code, diagrams and lists, word by word.
+Ask your agent to walk you through a pull request, a module or a concept. It writes slides and narration in Markdown; talktrack voices them locally with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) and hands back a link that starts playing in about a second, while the rest is still being written. A pointer follows the narration through code, diagrams and lists, word by word.
 
 ![Three moments from gallery walkthroughs: code changing from one version to the next, a dot travelling along a diagram's edges, and the pointer stepping through a bar chart as the narration names each bar](docs/media/demo.gif)
 
-**[Watch the gallery](https://rahimnathwani.github.io/showntell/)**: eleven walkthroughs written by Claude (Opus and Sonnet) and voiced on a laptop, unedited: a tour of this repository, a review of one commit, one call's path through it, a refactor step by step, CSRF and SameSite cookies, contributor setup, a speed-up told with a chart, the messages of an MCP tool call, the TLS 1.3 handshake, scaled dot-product attention, and git rebase versus merge on a phone-shaped frame.
+**[Watch the gallery](https://ahmedelhadarey.github.io/talktrack/)**: eleven walkthroughs written by Claude (Opus and Sonnet) and voiced on a laptop, unedited: a tour of this repository, a review of one commit, one call's path through it, a refactor step by step, CSRF and SameSite cookies, contributor setup, a speed-up told with a chart, the messages of an MCP tool call, the TLS 1.3 handshake, scaled dot-product attention, and git rebase versus merge on a phone-shaped frame.
 
 ### Highlights
 
@@ -29,7 +29,7 @@ Ask your agent to walk you through a pull request, a module or a concept. It wri
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
 - **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the player, diagrams that failed to render or text shrunk too small to read. With Playwright installed, `finish_walkthrough` draws every slide to find them. The agent can also look at pictures of its slides with `preview_slides`.
-- **Shareable:** export a walkthrough as one HTML file that plays offline (send it in Slack or by email), a static folder with captions, or an MP4; embed it with `<showntell-player>`, link to a range of slides, or present it yourself with speaker notes. An agent in a sandbox or behind WhatsApp sends you the MP4 itself.
+- **Shareable:** export a walkthrough as one HTML file that plays offline (send it in Slack or by email), a static folder with captions, or an MP4; embed it with `<talktrack-player>`, link to a range of slides, or present it yourself with speaker notes. An agent in a sandbox or behind WhatsApp sends you the MP4 itself.
 
 How it compares with a screen recording, a written PR description and a rendered MP4 explainer, including where those win: [docs/comparison.md](docs/comparison.md).
 
@@ -59,11 +59,11 @@ How it compares with a screen recording, a written PR description and a rendered
 
 ## 🏗 Architecture
 
-showntell is one Python package and one static web player. A long-lived daemon owns the voice model and the walkthroughs. MCP clients reach it through a small stdio shim (`showntell mcp`) or directly over HTTP.
+talktrack is one Python package and one static web player. A long-lived daemon owns the voice model and the walkthroughs. MCP clients reach it through a small stdio shim (`talktrack mcp`) or directly over HTTP.
 
 ```mermaid
 graph TB
-  subgraph daemon ["showntell serve: one daemon per machine"]
+  subgraph daemon ["talktrack serve: one daemon per machine"]
     MCPH["MCP over HTTP at /mcp"] --> SV["LocalService"]
     RPC["RPC at /api/rpc"] --> SV
     SV --> ST["Store and sessions"]
@@ -76,7 +76,7 @@ graph TB
   subgraph browser ["Your browser"]
     PL["Player: timeline, renderer, pointer"]
   end
-  AG["Coding agent"] -->|"stdio MCP"| SH["showntell mcp: stdio shim"]
+  AG["Coding agent"] -->|"stdio MCP"| SH["talktrack mcp: stdio shim"]
   SH -->|"token from the lockfile"| RPC
   HC["HTTP MCP client"] --> MCPH
   EV --> PL
@@ -86,7 +86,7 @@ graph TB
 
 **Request path:**
 
-1. **Shim.** `showntell mcp` reads `daemon.json` in the data folder. If no healthy daemon is running this code, it starts `showntell serve` in the background and waits for `/health`. Its MCP tools forward to the daemon's RPC route with the token from the lockfile.
+1. **Shim.** `talktrack mcp` reads `daemon.json` in the data folder. If no healthy daemon is running this code, it starts `talktrack serve` in the background and waits for `/health`. Its MCP tools forward to the daemon's RPC route with the token from the lockfile.
 2. **Opening first.** The agent's first call, `start_walkthrough`, carries only the title slide and a sentence or two. It returns as soon as that audio exists, about 0.3 s later, and tells the agent to send you the link.
 3. **Built as it arrives.** Each `add_slides` chunk goes through the incremental Markdown parser (`format.py`). The builder (`build.py`) turns blocks into slides, reads code from disk or git (`sources.py`), resolves and infers cues (`cues.py`) and records findings (`checks.py`), which go back on the same call.
 4. **Voiced in the background.** Every narration paragraph becomes a speech job. `pronounce.py` rewrites code and units into speakable text. One worker thread voices jobs in order of their position in the walkthrough, and the audio is cached by a hash of model, voice, speed and spoken text. The player waits with a notice if it ever catches up with the writer.
@@ -109,34 +109,34 @@ The module-by-module description, the player's ES modules, capture and single-pa
 
 ### Install and connect
 
-Every agent runs the same command, which starts showntell as a stdio MCP server:
+Every agent runs the same command, which starts talktrack as a stdio MCP server:
 
 ```zsh
-uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell mcp
+uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp
 ```
 
-The tag after `@` installs that release; leave it off for the latest commit. Once showntell is on PyPI this shortens to `uvx showntell mcp`. Pick your agent under [Install per client](#-install-per-client), then ask it something like *"walk me through how a request gets retried in this codebase"*. The agent replies with a link; open it and press play.
+The tag after `@` installs that release; leave it off for the latest commit. Once talktrack is on PyPI this shortens to `uvx talktrack mcp`. Pick your agent under [Install per client](#-install-per-client), then ask it something like *"walk me through how a request gets retried in this codebase"*. The agent replies with a link; open it and press play.
 
 The first walkthrough takes a few seconds longer while the models load.
 
 The base install leaves out the browser that draws slides. With it, `finish_walkthrough` checks every slide's layout and shows the agent pictures of slides that look alike, each walkthrough gets a poster in the gallery, and MP4 export works. To add it, use the `video` extra in place of the command above and fetch Chromium once:
 
 ```zsh
-uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.8' showntell mcp
-uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.8' playwright install chromium
+uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' talktrack mcp
+uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' playwright install chromium
 ```
 
-`showntell doctor` says whether the browser was found. Without it, finish tells the agent the slides were not drawn.
+`talktrack doctor` says whether the browser was found. Without it, finish tells the agent the slides were not drawn.
 
 Or paste this into your agent and let it set itself up:
 
 ```text
-Install showntell, an MCP server that turns Markdown into narrated slide walkthroughs voiced on this machine: https://github.com/rahimnathwani/showntell
+Install talktrack, an MCP server that turns Markdown into narrated slide walkthroughs voiced on this machine: https://github.com/AhmedElhadarey/talktrack
 
 1. If `uv` is missing, install it: curl -LsSf https://astral.sh/uv/install.sh | sh
-2. Add a stdio MCP server named showntell to your own MCP configuration, for all my projects, with this command:
-   uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell mcp
-3. Run `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell doctor` and fix anything it marks with ✗. The first run downloads the voice model, a few hundred MB.
+2. Add a stdio MCP server named talktrack to your own MCP configuration, for all my projects, with this command:
+   uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp
+3. Run `uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack doctor` and fix anything it marks with ✗. The first run downloads the voice model, a few hundred MB.
 4. Tell me whether I need to restart you or reload MCP servers before the tools appear. Once they do, make a three-slide walkthrough of this project and send me the link.
 ```
 
@@ -147,10 +147,10 @@ From a checkout, without a voice model:
 ```zsh
 uv sync
 uv run pytest -m "not slow and not browser and not mlx and not onnx"   # fast tests, no models or browser
-uv run showntell serve --speech fake                                   # run without a voice model
+uv run talktrack serve --speech fake                                   # run without a voice model
 ```
 
-You can also write a walkthrough by hand and play it with `showntell play talk.md`.
+You can also write a walkthrough by hand and play it with `talktrack play talk.md`.
 
 ### Run the tests
 
@@ -165,27 +165,27 @@ The first command in the block above runs the fast tests. The rest of the suites
 1. Add the server for all your projects:
 
    ```zsh
-   claude mcp add --scope user showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell mcp
+   claude mcp add --scope user talktrack -- uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp
    ```
 
-2. Start a new `claude` session and run `/mcp`; `showntell` should be listed as connected.
-3. Ask for a walkthrough, or use a built-in prompt: `/mcp__showntell__diff HEAD~1..HEAD`, `/mcp__showntell__file src/app.py` or `/mcp__showntell__topic how TLS works`.
+2. Start a new `claude` session and run `/mcp`; `talktrack` should be listed as connected.
+3. Ask for a walkthrough, or use a built-in prompt: `/mcp__talktrack__diff HEAD~1..HEAD`, `/mcp__talktrack__file src/app.py` or `/mcp__talktrack__topic how TLS works`.
 
 **Or install the plugin** instead of step 1. You get the MCP server plus a skill: guidance on when a walkthrough beats a written answer, and how to pace one:
 
 ```zsh
-claude plugin marketplace add rahimnathwani/showntell
-claude plugin install showntell@showntell
+claude plugin marketplace add AhmedElhadarey/talktrack
+claude plugin install talktrack@talktrack
 ```
 
-Claude Code 2.1.275 or later does both in one step: `claude plugin install showntell --marketplace rahimnathwani/showntell`. Check it with `claude plugin list`. A new release arrives with `claude plugin marketplace update showntell` and then `claude plugin update showntell@showntell`. Use the plugin or `claude mcp add`, not both, or Claude sees two copies of the tools.
+Claude Code 2.1.275 or later does both in one step: `claude plugin install talktrack --marketplace AhmedElhadarey/talktrack`. Check it with `claude plugin list`. A new release arrives with `claude plugin marketplace update talktrack` and then `claude plugin update talktrack@talktrack`. Use the plugin or `claude mcp add`, not both, or Claude sees two copies of the tools.
 
 ### Codex CLI
 
 1. Add the server (this writes `~/.codex/config.toml`):
 
    ```zsh
-   codex mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell mcp
+   codex mcp add talktrack -- uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp
    ```
 
 2. Check it with `codex mcp list`, or run `/mcp` inside a `codex` session.
@@ -194,9 +194,9 @@ Claude Code 2.1.275 or later does both in one step: `claude plugin install shown
 If you prefer to edit the config file yourself, add:
 
 ```toml
-[mcp_servers.showntell]
+[mcp_servers.talktrack]
 command = "uvx"
-args = ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.8", "showntell", "mcp"]
+args = ["--from", "git+https://github.com/AhmedElhadarey/talktrack@v0.2.0", "talktrack", "mcp"]
 ```
 
 ### Antigravity CLI (agy)
@@ -204,22 +204,22 @@ args = ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.8", "show
 1. Add the server (this writes `~/.gemini/config/mcp_config.json`, which the Antigravity IDE shares). Flags go before the name, and the `--` keeps `--from` from being read as an agy flag:
 
    ```zsh
-   agy mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell mcp
+   agy mcp add talktrack -- uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp
    ```
 
 2. Check it with `agy mcp list`.
-3. Start `agy` in your project and ask for a walkthrough. MCP tools ask for approval by default, so allow showntell's tools when prompted. In print mode there is no prompt, so the calls may be refused.
+3. Start `agy` in your project and ask for a walkthrough. MCP tools ask for approval by default, so allow talktrack's tools when prompted. In print mode there is no prompt, so the calls may be refused.
 
 ### Gemini CLI
 
 1. Install the extension. It adds the server and a context file ([GEMINI.md](GEMINI.md)) with the same guidance as the Claude Code skill:
 
    ```zsh
-   gemini extensions install https://github.com/rahimnathwani/showntell
+   gemini extensions install https://github.com/AhmedElhadarey/talktrack
    ```
 
 2. Check it with `gemini extensions list`, or run `/mcp` inside a `gemini` session.
-3. Start `gemini` in your project and ask for a walkthrough. Update later with `gemini extensions update showntell`.
+3. Start `gemini` in your project and ask for a walkthrough. Update later with `gemini extensions update talktrack`.
 
 ### Pi
 
@@ -228,10 +228,10 @@ Recent Pi (checked with 1.3.0) has MCP built in.
 1. Add the server (this writes `~/.pi/agent/mcp.json`; add `-l` to write `.pi/mcp.json` in the current project instead):
 
    ```zsh
-   pi mcp add showntell -- uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell mcp
+   pi mcp add talktrack -- uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp
    ```
 
-2. Check it with `pi mcp list`. It should say `showntell: connected, 7 tools`.
+2. Check it with `pi mcp list`. It should say `talktrack: connected, 7 tools`.
 3. Start `pi` in your project and ask for a walkthrough.
 
 Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) extension instead. Run `pi install npm:pi-mcp-adapter`, then put this in `~/.config/mcp/mcp.json`:
@@ -239,9 +239,9 @@ Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobail
 ```json
 {
   "mcpServers": {
-    "showntell": {
+    "talktrack": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/rahimnathwani/showntell@v0.1.8", "showntell", "mcp"]
+      "args": ["--from", "git+https://github.com/AhmedElhadarey/talktrack@v0.2.0", "talktrack", "mcp"]
     }
   }
 }
@@ -249,15 +249,15 @@ Older Pi without `pi mcp` needs the [pi-mcp-adapter](https://github.com/nicobail
 
 ### Other clients
 
-- **VS Code:** add the server to your user profile from a terminal, then pick `showntell` under **MCP: List Servers**:
+- **VS Code:** add the server to your user profile from a terminal, then pick `talktrack` under **MCP: List Servers**:
 
   ```zsh
-  code --add-mcp '{"name":"showntell","command":"uvx","args":["--from","git+https://github.com/rahimnathwani/showntell@v0.1.8","showntell","mcp"]}'
+  code --add-mcp '{"name":"talktrack","command":"uvx","args":["--from","git+https://github.com/AhmedElhadarey/talktrack@v0.2.0","talktrack","mcp"]}'
   ```
 
-- **GitHub Copilot CLI:** its plugin system reads the same marketplace file as Claude Code: `copilot plugin marketplace add rahimnathwani/showntell`, then `copilot plugin install showntell@showntell`.
-- **Cursor, Claude Desktop and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell mcp`. Most use the same `mcpServers` JSON as the older-Pi example.
-- **Over HTTP:** run `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell serve` and connect the client to `http://localhost:4747/mcp`.
+- **GitHub Copilot CLI:** its plugin system reads the same marketplace file as Claude Code: `copilot plugin marketplace add AhmedElhadarey/talktrack`, then `copilot plugin install talktrack@talktrack`.
+- **Cursor, Claude Desktop and others:** add a stdio server with command `uvx` and arguments `--from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp`. Most use the same `mcpServers` JSON as the older-Pi example.
+- **Over HTTP:** run `uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack serve` and connect the client to `http://localhost:4747/mcp`.
 
 ### Agents in a sandbox or a chat app
 
@@ -266,9 +266,9 @@ When the agent runs in a sandbox, or you talk to it through WhatsApp, Telegram o
 ```zsh
 # inside the sandbox image, once (Debian or Ubuntu)
 apt-get install -y ffmpeg
-uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.8' playwright install --with-deps chromium
+uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' playwright install --with-deps chromium
 # the MCP server the agent runs
-uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.8' showntell mcp --deliver file
+uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' talktrack mcp --deliver file
 ```
 
 | Part | What happens |
@@ -277,33 +277,33 @@ uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0
 | **File** | an MP4 named after the title in the project folder, or `path` |
 | **Size** | kept within 16 MB, WhatsApp's video limit, by lowering the audio bitrate and then the picture to 720p; the agent passes `max_mb` for other apps (Telegram bots 50, Signal 100). Narration is most of the size: a 3.5-minute walkthrough is about 4 MB |
 | **Frame** | the agent is told you are likely on a phone, so it picks portrait or square unless the code is wide |
-| **Checks** | `showntell doctor` says whether ffmpeg and Chromium are there |
+| **Checks** | `talktrack doctor` says whether ffmpeg and Chromium are there |
 
 To set it up, paste this into the agent:
 
 ```text
-Install showntell, an MCP server that turns Markdown into narrated slide walkthroughs: https://github.com/rahimnathwani/showntell
+Install talktrack, an MCP server that turns Markdown into narrated slide walkthroughs: https://github.com/AhmedElhadarey/talktrack
 I can't open links on your machine, so you'll send me walkthroughs as MP4 files.
 
 1. Install what's missing in your environment: uv (curl -LsSf https://astral.sh/uv/install.sh | sh) and ffmpeg with ffprobe (apt-get install -y ffmpeg, your package manager, or a static build on PATH).
 2. Install Chromium for video rendering:
-   uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.8' playwright install --with-deps chromium
+   uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' playwright install --with-deps chromium
    If you can't install system packages, drop --with-deps and tell me if Chromium fails to start.
-3. Add a stdio MCP server named showntell to your own MCP configuration, running inside this environment, not on a host outside it:
-   uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.8' showntell mcp --deliver file
-4. Run `uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.8' showntell doctor` and fix anything marked ✗ or about video export. The first run downloads the voice model, about 100 MB.
+3. Add a stdio MCP server named talktrack to your own MCP configuration, running inside this environment, not on a host outside it:
+   uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' talktrack mcp --deliver file
+4. Run `uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' talktrack doctor` and fix anything marked ✗ or about video export. The first run downloads the voice model, about 100 MB.
 5. If this environment is rebuilt between sessions, add steps 1 to 3 to whatever sets it up, so they persist.
 6. Once the tools appear (restart or reload MCP servers if you must), make a three-slide walkthrough on any topic, export it with export_walkthrough, and send me the MP4 as an attachment. If you have no way to attach files, tell me so instead of sending a path.
 ```
 
-`SHOWNTELL_DELIVER=file` does the same as the flag. In link mode the agent can still call `export_walkthrough` whenever you want an MP4 or a page to forward. To watch live links from your phone instead, serve over a private network such as Tailscale (or self-hosted Headscale) with `SHOWNTELL_PUBLIC_URL`.
+`TALKTRACK_DELIVER=file` does the same as the flag. In link mode the agent can still call `export_walkthrough` whenever you want an MP4 or a page to forward. To watch live links from your phone instead, serve over a private network such as Tailscale (or self-hosted Headscale) with `TALKTRACK_PUBLIC_URL`.
 
 ### Good to know
 
-- **One shared daemon:** the first `showntell mcp` starts a background daemon, and later ones reuse it. The voice model stays loaded and every agent shares one port. A newer copy of showntell replaces an idle daemon running older code; an older copy uses the newer daemon as it is. `showntell stop` stops it, and the next client starts its own.
-- **Checking the setup:** `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell doctor` checks the models, speech speed, port and daemon.
-- **Your walkthroughs:** http://localhost:4747/ lists them. They and their audio stay until you delete them, or run `showntell prune --older-than 60d`. The daemon log is `~/.local/share/showntell/daemon.log`, kept under 5 MB with the part before in `daemon.log.1`.
-- **Faster mornings on a Mac:** `uvx --from git+https://github.com/rahimnathwani/showntell@v0.1.8 showntell autostart on` starts the daemon at login, so even the first walkthrough of the day comes back as fast as the rest.
+- **One shared daemon:** the first `talktrack mcp` starts a background daemon, and later ones reuse it. The voice model stays loaded and every agent shares one port. A newer copy of talktrack replaces an idle daemon running older code; an older copy uses the newer daemon as it is. `talktrack stop` stops it, and the next client starts its own.
+- **Checking the setup:** `uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack doctor` checks the models, speech speed, port and daemon.
+- **Your walkthroughs:** http://localhost:4747/ lists them. They and their audio stay until you delete them, or run `talktrack prune --older-than 60d`. The daemon log is `~/.local/share/talktrack/daemon.log`, kept under 5 MB with the part before in `daemon.log.1`.
+- **Faster mornings on a Mac:** `uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack autostart on` starts the daemon at login, so even the first walkthrough of the day comes back as fast as the rest.
 
 ---
 
@@ -349,7 +349,7 @@ After [the final attempt](#L55) the error goes back to the caller.
 
 - **Step reveal:** `.build` on a heading reveals parts as the narration reaches them.
 - **Pointer:** a cue can send a dot along diagram edges (`#client->api->db`), and a style after it changes the pointer: `{.circle}`, `{.underline}`, `{.arrow}`, `{.highlight}`, or `{.zoom}` to move the camera in.
-- **Themes:** seven themes (`dark`, `light`, `paper`, `night`, `ocean`, `studio`, `contrast`) are chosen with `theme`, in front matter or in the project's `showntell.theme.json`, and viewers can switch. The project file can also override single colour tokens.
+- **Themes:** seven themes (`dark`, `light`, `paper`, `night`, `ocean`, `studio`, `contrast`) are chosen with `theme`, in front matter or in the project's `talktrack.theme.json`, and viewers can switch. The project file can also override single colour tokens.
 - **Frames:** `landscape` (1280 × 720), `square` (960 × 960) and `portrait` (720 × 1280).
 
 The full reference is [docs/format.md](docs/format.md).
@@ -358,7 +358,7 @@ The full reference is [docs/format.md](docs/format.md).
 
 ## 🧰 MCP Tools, Prompts and Resources
 
-The server exposes seven tools. Their descriptions, and everything else the agent reads, live in [`src/showntell/text/`](src/showntell/text/).
+The server exposes seven tools. Their descriptions, and everything else the agent reads, live in [`src/talktrack/text/`](src/talktrack/text/).
 
 | Tool | What it does |
 |---|---|
@@ -379,9 +379,9 @@ The server exposes seven tools. Their descriptions, and everything else the agen
 
 | Resource | Contents |
 |---|---|
-| **`showntell://walkthroughs`** | recent walkthroughs with titles, links and handles |
-| **`showntell://slide-kinds`** | every kind of visual a slide can show, with an example |
-| **`showntell://walkthroughs/{id}`** | the Markdown a walkthrough was written in |
+| **`talktrack://walkthroughs`** | recent walkthroughs with titles, links and handles |
+| **`talktrack://slide-kinds`** | every kind of visual a slide can show, with an example |
+| **`talktrack://walkthroughs/{id}`** | the Markdown a walkthrough was written in |
 
 ---
 
@@ -389,25 +389,25 @@ The server exposes seven tools. Their descriptions, and everything else the agen
 
 | Command | What it does |
 |---|---|
-| **`showntell mcp`** | stdio MCP server; starts or reuses the daemon. `--deliver file` has the agent send an MP4 instead of a link |
-| **`showntell serve`** | the daemon in the foreground: MCP over HTTP at `/mcp`, the player, and the list of walkthroughs at `/` |
-| **`showntell play FILE.md`** | voice a Markdown walkthrough and open it |
-| **`showntell export ID\|LINK\|FILE.md OUT.html`** | one self-contained page: player, slides, MP3 narration and only the libraries its slides use; plays offline from a double-click and makes no network requests |
-| **`showntell export ID\|LINK\|FILE.md OUT [--mp3]`** | a static folder that plays from any web server, with WebVTT captions and a `poster.png` |
-| **`showntell export ID\|LINK\|FILE.md OUT.mp4`** | an MP4 video; `--fps`, `--workers`, `--burn-captions`, `--max-mb` to shrink it to fit |
-| **`showntell list`** | recent walkthroughs |
-| **`showntell doctor`** | check models, speech speed, port and daemon |
-| **`showntell prune --older-than 60d`** | delete walkthroughs unchanged for that long and cached audio nothing uses; `--dry-run` lists them first |
-| **`showntell stop`** | stop the daemon; the next client starts one from its own copy |
-| **`showntell autostart on\|off\|status`** | macOS: keep the daemon running from login |
-| **`showntell version`** | print the version |
+| **`talktrack mcp`** | stdio MCP server; starts or reuses the daemon. `--deliver file` has the agent send an MP4 instead of a link |
+| **`talktrack serve`** | the daemon in the foreground: MCP over HTTP at `/mcp`, the player, and the list of walkthroughs at `/` |
+| **`talktrack play FILE.md`** | voice a Markdown walkthrough and open it |
+| **`talktrack export ID\|LINK\|FILE.md OUT.html`** | one self-contained page: player, slides, MP3 narration and only the libraries its slides use; plays offline from a double-click and makes no network requests |
+| **`talktrack export ID\|LINK\|FILE.md OUT [--mp3]`** | a static folder that plays from any web server, with WebVTT captions and a `poster.png` |
+| **`talktrack export ID\|LINK\|FILE.md OUT.mp4`** | an MP4 video; `--fps`, `--workers`, `--burn-captions`, `--max-mb` to shrink it to fit |
+| **`talktrack list`** | recent walkthroughs |
+| **`talktrack doctor`** | check models, speech speed, port and daemon |
+| **`talktrack prune --older-than 60d`** | delete walkthroughs unchanged for that long and cached audio nothing uses; `--dry-run` lists them first |
+| **`talktrack stop`** | stop the daemon; the next client starts one from its own copy |
+| **`talktrack autostart on\|off\|status`** | macOS: keep the daemon running from login |
+| **`talktrack version`** | print the version |
 
-Run with no command from a terminal, `showntell` prints help; launched by an MCP client (stdin not a terminal), it runs `showntell mcp`.
+Run with no command from a terminal, `talktrack` prints help; launched by an MCP client (stdin not a terminal), it runs `talktrack mcp`.
 
 | Flag | Commands | Meaning |
 |---|---|---|
-| **`--data`**, **`--port`**, **`--host`** | all | data folder, port and interface; override `SHOWNTELL_DATA`, `SHOWNTELL_PORT`, `SHOWNTELL_HOST` |
-| **`--deliver link\|file`** | `mcp`, `serve` | how the user gets a walkthrough; overrides `SHOWNTELL_DELIVER` |
+| **`--data`**, **`--port`**, **`--host`** | all | data folder, port and interface; override `TALKTRACK_DATA`, `TALKTRACK_PORT`, `TALKTRACK_HOST` |
+| **`--deliver link\|file`** | `mcp`, `serve` | how the user gets a walkthrough; overrides `TALKTRACK_DELIVER` |
 | **`--voice`**, **`--speech`** | `serve` (and `--speech` on `doctor`) | default voice and speech backend (`auto`, `mlx`, `onnx`, `fake`) |
 | **`--public-url`**, **`--open`** | `serve` | base URL for links on other devices; open each walkthrough in the browser once playable |
 | **`--project`**, **`--no-open`** | `play` | folder that `file=` paths are relative to (default: the git root or the file's folder); do not open the browser |
@@ -417,8 +417,8 @@ Run with no command from a terminal, `showntell` prints help; launched by an MCP
 An output path ending in `.mp4` renders a video. Each frame is captured by seeking the player in headless Chromium, so rendering runs faster than real time and never drops a frame: a 4.4-minute walkthrough renders in 16 to 20 s on an M-series Mac.
 
 ```zsh
-uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.8' playwright install chromium   # once
-uvx --from 'showntell[video] @ git+https://github.com/rahimnathwani/showntell@v0.1.8' showntell export <id> talk.mp4
+uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' playwright install chromium   # once
+uvx --from 'talktrack[video] @ git+https://github.com/AhmedElhadarey/talktrack@v0.2.0' talktrack export <id> talk.mp4
 ```
 
 | Part | What you get |
@@ -450,7 +450,7 @@ Needs [FFmpeg](https://ffmpeg.org/) on PATH and the `video` extra (Playwright). 
 
 ```html
 <script src="https://your.host/static/embed.js"></script>
-<showntell-player src="https://your.host/my-walkthrough/" poster="https://your.host/my-walkthrough/poster.png"></showntell-player>
+<talktrack-player src="https://your.host/my-walkthrough/" poster="https://your.host/my-walkthrough/poster.png"></talktrack-player>
 ```
 
 The element plays an exported folder or a live link in an iframe, forwards `ready`, `slidechange`, `timeupdate`, `durationchange`, `waiting`, `play`, `pause`, `ended`, `playbackerror` and `error` events, and has `play()`, `pause()` and `seek(seconds)` and the read-only `currentTime`, `duration`, `paused` and `slide`. A `frame` attribute (`landscape`, `square` or `portrait`) sets its aspect ratio. With `poster`, the player loads on the first click. Browsers block public pages from loading a link on your own machine, so embed exported folders, not `localhost` links.
@@ -463,22 +463,22 @@ Environment variables, also listed in [.env.example](.env.example). Command-line
 
 | Variable | Default | Meaning |
 |---|---|---|
-| **`SHOWNTELL_PORT`** | 4747 | daemon port; the next free one is used if taken |
-| **`SHOWNTELL_HOST`** | 127.0.0.1 | interface; anything else requires an access token, which is generated and added to links |
-| **`SHOWNTELL_DATA`** | `~/.local/share/showntell` | walkthroughs, audio cache, models, lockfile and log |
-| **`SHOWNTELL_VOICE`** | `af_heart` | default voice; any English Kokoro voice, such as `am_michael` or `bf_emma` |
-| **`SHOWNTELL_SPEECH`** | `auto` | `mlx` on Apple silicon (`onnx` if MLX fails to load), `onnx` elsewhere, or `fake` for tests |
-| **`SHOWNTELL_PUBLIC_URL`** | | base URL for links when viewing from another device, such as a Tailscale name; links then carry an access token |
-| **`SHOWNTELL_ACCESS_TOKEN`** | generated | the access token used when `SHOWNTELL_HOST` is not a loopback address or `SHOWNTELL_PUBLIC_URL` is set; the only secret here |
-| **`SHOWNTELL_OPEN`** | | `1` opens each walkthrough in the browser as soon as it is playable (the same as `serve --open`) |
-| **`SHOWNTELL_ONNX_MODEL`** | `model_quantized` | ONNX variant; `model` (fp32) can be faster on CPUs without AVX2 |
-| **`SHOWNTELL_THREADS`** | up to 6 | CPU threads for ONNX speech |
-| **`SHOWNTELL_DELIVER`** | `link` | `file`: the agent sends an exported MP4 instead of the player's link, for agents in a sandbox or behind a chat app |
-| **`SHOWNTELL_FINISH_CHECK`** | 1 | `0` skips drawing every slide headless at `finish_walkthrough` (needs Playwright) |
+| **`TALKTRACK_PORT`** | 4747 | daemon port; the next free one is used if taken |
+| **`TALKTRACK_HOST`** | 127.0.0.1 | interface; anything else requires an access token, which is generated and added to links |
+| **`TALKTRACK_DATA`** | `~/.local/share/talktrack` | walkthroughs, audio cache, models, lockfile and log |
+| **`TALKTRACK_VOICE`** | `af_heart` | default voice; any English Kokoro voice, such as `am_michael` or `bf_emma` |
+| **`TALKTRACK_SPEECH`** | `auto` | `mlx` on Apple silicon (`onnx` if MLX fails to load), `onnx` elsewhere, or `fake` for tests |
+| **`TALKTRACK_PUBLIC_URL`** | | base URL for links when viewing from another device, such as a Tailscale name; links then carry an access token |
+| **`TALKTRACK_ACCESS_TOKEN`** | generated | the access token used when `TALKTRACK_HOST` is not a loopback address or `TALKTRACK_PUBLIC_URL` is set; the only secret here |
+| **`TALKTRACK_OPEN`** | | `1` opens each walkthrough in the browser as soon as it is playable (the same as `serve --open`) |
+| **`TALKTRACK_ONNX_MODEL`** | `model_quantized` | ONNX variant; `model` (fp32) can be faster on CPUs without AVX2 |
+| **`TALKTRACK_THREADS`** | up to 6 | CPU threads for ONNX speech |
+| **`TALKTRACK_DELIVER`** | `link` | `file`: the agent sends an exported MP4 instead of the player's link, for agents in a sandbox or behind a chat app |
+| **`TALKTRACK_FINISH_CHECK`** | 1 | `0` skips drawing every slide headless at `finish_walkthrough` (needs Playwright) |
 
-**Pronunciations:** put `word = spoken form` lines in `~/.local/share/showntell/lexicon.txt`. A lowercase word matches any capitalisation, and the spoken form may be misaki phonemes between slashes (`kubectl = /kjˈubkˌʌtəl/`). showntell already knows several hundred technical terms.
+**Pronunciations:** put `word = spoken form` lines in `~/.local/share/talktrack/lexicon.txt`. A lowercase word matches any capitalisation, and the spoken form may be misaki phonemes between slashes (`kubectl = /kjˈubkˌʌtəl/`). talktrack already knows several hundred technical terms.
 
-**Project theme:** a `showntell.theme.json` in the project root picks a theme and may replace single colours, for example `{ "theme": "light", "tokens": { "accent": "#0969da" } }`. See [docs/format.md](docs/format.md#themes).
+**Project theme:** a `talktrack.theme.json` in the project root picks a theme and may replace single colours, for example `{ "theme": "light", "tokens": { "accent": "#0969da" } }`. See [docs/format.md](docs/format.md#themes).
 
 **Where things are kept**, inside the data folder:
 
@@ -497,7 +497,7 @@ Voice models live in the Hugging Face cache (`~/.cache/huggingface`).
 
 ## 🔒 Privacy and Security
 
-- **Network:** showntell listens on localhost only, checks the Host and Origin of every request, and accepts only JSON POSTs.
+- **Network:** talktrack listens on localhost only, checks the Host and Origin of every request, and accepts only JSON POSTs.
 - **Links:** walkthrough ids are 128-bit random values; writing needs a separate key, which the agent gets and any MCP client on this machine can list.
 - **Files:** code and images are read only from the project folder, with symbolic links resolved. When the MCP client shares its folders, the project folder must be inside one of them, so an agent cannot show files from elsewhere on the machine.
 - **Git:** only `git rev-parse` and `git cat-file` run, with fsmonitor disabled; diffs are computed in Python.
@@ -512,10 +512,10 @@ The threat model is in [SECURITY.md](SECURITY.md). Report vulnerabilities privat
 ## 📂 Project Structure
 
 ```text
-showntell/
-├── src/showntell/            # the Python package
-│   ├── cli.py                # the `showntell` command and its subcommands
-│   ├── config.py             # SHOWNTELL_* settings and their defaults
+talktrack/
+├── src/talktrack/            # the Python package
+│   ├── cli.py                # the `talktrack` command and its subcommands
+│   ├── config.py             # TALKTRACK_* settings and their defaults
 │   ├── daemon.py             # start, reuse or replace the background daemon; lockfile and log cap
 │   ├── app.py                # the daemon: server wiring and the request guard
 │   ├── server.py             # MCP tools, prompts, resources and web routes
@@ -539,7 +539,7 @@ showntell/
 │   ├── text/                 # what the agent reads; text/file/ replaces the link parts for --deliver file
 │   ├── data/                 # Lucide icons and the built-in pronunciation word list
 │   └── static/               # the player: HTML, CSS, ES modules, embed.js, vendored libraries
-├── claude-plugin/            # Claude Code plugin: .mcp.json and the showntell skill
+├── claude-plugin/            # Claude Code plugin: .mcp.json and the talktrack skill
 ├── .claude-plugin/           # marketplace manifest pointing at claude-plugin/
 ├── gemini-extension.json     # Gemini CLI extension manifest (generated)
 ├── GEMINI.md                 # Gemini CLI context file (generated from the skill)
@@ -560,9 +560,9 @@ showntell/
 The repository is also a GitHub Action: it voices a walkthrough's Markdown on the runner, with no API key, and posts the outline, the transcript and a download link on the pull request.
 
 ```yaml
-- uses: rahimnathwani/showntell@v0.1.7
+- uses: AhmedElhadarey/talktrack@v0.1.7
   with:
-    markdown: .showntell/pr.md
+    markdown: .talktrack/pr.md
 ```
 
 | Input | Default | What |
@@ -606,7 +606,7 @@ node --test tests/js/*.test.js         # player logic
 | **`onnx`** | the cached Kokoro ONNX model |
 | **`slow`** | nothing extra; takes more than a few seconds |
 | **`browser`** | headless Chromium through Playwright |
-| **`claude`** | the real Claude Code CLI; opt in with `SHOWNTELL_TEST_CLAUDE=1 uv run pytest -m claude` (costs a few cents, CI cannot run it) |
+| **`claude`** | the real Claude Code CLI; opt in with `TALKTRACK_TEST_CLAUDE=1 uv run pytest -m claude` (costs a few cents, CI cannot run it) |
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs four jobs: Linux with fake speech, the browser tests and ONNX; macOS on Apple silicon with MLX; the GitHub Action on its own example; and the built wheel installed outside the repository (`scripts/wheel_smoke.sh`).
 
@@ -645,7 +645,7 @@ Parked work, each with what would settle it, is in [TODO.md](TODO.md).
 | [`docs/architecture.md`](docs/architecture.md) | daemon, builder, player modules, capture and export |
 | [`docs/comparison.md`](docs/comparison.md) | against screen recordings, written PR descriptions and rendered explainers |
 | [`docs/github-action.md`](docs/github-action.md) | the GitHub Action |
-| [`claude-plugin/skills/showntell/SKILL.md`](claude-plugin/skills/showntell/SKILL.md) | the skill shipped with the Claude Code plugin |
+| [`claude-plugin/skills/talktrack/SKILL.md`](claude-plugin/skills/talktrack/SKILL.md) | the skill shipped with the Claude Code plugin |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | setup, where things live, changes, adding a slide kind, releasing |
 | [`SECURITY.md`](SECURITY.md) | threat model and how to report a vulnerability |
 | [`ROADMAP.md`](ROADMAP.md) | decisions, launch criteria, status, what comes after 1.0 |
@@ -659,12 +659,12 @@ Parked work, each with what would settle it, is in [TODO.md](TODO.md).
 See [CONTRIBUTING.md](CONTRIBUTING.md). The main rules:
 
 - **Format changes** go into `docs/format.md` first and must not break existing walkthroughs.
-- **Agent-facing text** in `src/showntell/text/` is tuned against `scripts/eval.py`; include the before and after table in the pull request.
+- **Agent-facing text** in `src/talktrack/text/` is tuned against `scripts/eval.py`; include the before and after table in the pull request.
 - **Player changes** need a screenshot of each affected slide kind, and `timeline.js` changes need a `node --test` case.
 - **Dependencies:** nothing GPL in the default install. Optional extras may be.
-- **Bug reports:** include `showntell doctor` output, the walkthrough's `source.md` (in the data folder under `walkthroughs/<id>/`), and what you expected.
+- **Bug reports:** include `talktrack doctor` output, the walkthrough's `source.md` (in the data folder under `walkthroughs/<id>/`), and what you expected.
 
-**Who uses it:** using showntell on a team or project? Add a line to [ADOPTERS.md](ADOPTERS.md).
+**Who uses it:** using talktrack on a team or project? Add a line to [ADOPTERS.md](ADOPTERS.md).
 
 ---
 

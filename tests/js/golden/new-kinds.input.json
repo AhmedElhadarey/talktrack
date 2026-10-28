@@ -603,42 +603,42 @@
       "note": ""
      },
      {
-      "id": "src/showntell",
-      "name": "showntell/",
+      "id": "src/talktrack",
+      "name": "talktrack/",
       "depth": 1,
       "folder": true,
       "note": ""
      },
      {
-      "id": "src/showntell/build.py",
+      "id": "src/talktrack/build.py",
       "name": "build.py",
       "depth": 2,
       "folder": false,
       "note": "Markdown to slides"
      },
      {
-      "id": "src/showntell/kinds.py",
+      "id": "src/talktrack/kinds.py",
       "name": "kinds.py",
       "depth": 2,
       "folder": false,
       "note": "charts, terminals, trees"
      },
      {
-      "id": "src/showntell/static",
+      "id": "src/talktrack/static",
       "name": "static/",
       "depth": 2,
       "folder": true,
       "note": ""
      },
      {
-      "id": "src/showntell/static/js",
+      "id": "src/talktrack/static/js",
       "name": "js/",
       "depth": 3,
       "folder": true,
       "note": ""
      },
      {
-      "id": "src/showntell/static/js/render.js",
+      "id": "src/talktrack/static/js/render.js",
       "name": "render.js",
       "depth": 4,
       "folder": false,
@@ -661,12 +661,12 @@
     ],
     "ids": [
      "src",
-     "src/showntell",
-     "src/showntell/build.py",
-     "src/showntell/kinds.py",
-     "src/showntell/static",
-     "src/showntell/static/js",
-     "src/showntell/static/js/render.js",
+     "src/talktrack",
+     "src/talktrack/build.py",
+     "src/talktrack/kinds.py",
+     "src/talktrack/static",
+     "src/talktrack/static/js",
+     "src/talktrack/static/js/render.js",
      "tests",
      "README.md"
     ],
@@ -685,7 +685,7 @@
        "target": "build.py",
        "text": "",
        "kind": "item",
-       "id": "src/showntell/build.py",
+       "id": "src/talktrack/build.py",
        "t": 0.3
       },
       {
@@ -695,7 +695,7 @@
        "target": "render.js",
        "text": "",
        "kind": "item",
-       "id": "src/showntell/static/js/render.js",
+       "id": "src/talktrack/static/js/render.js",
        "t": 1.8
       }
      ],

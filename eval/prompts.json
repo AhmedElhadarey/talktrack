@@ -2,12 +2,12 @@
  {
   "id": "parser",
   "kind": "file",
-  "prompt": "Use showntell to make me a narrated walkthrough of src/showntell/format.py: how the incremental Markdown parser works and why chunk boundaries matter."
+  "prompt": "Use talktrack to make me a narrated walkthrough of src/talktrack/format.py: how the incremental Markdown parser works and why chunk boundaries matter."
  },
  {
   "id": "diff",
   "kind": "diff",
-  "prompt": "Use showntell to make a narrated walkthrough of what changed between commits 8d0619a and f2a4a93 in this repo, for a reviewer.",
+  "prompt": "Use talktrack to make a narrated walkthrough of what changed between commits 8d0619a and f2a4a93 in this repo, for a reviewer.",
   "expect": [
    "diff"
   ]
@@ -15,7 +15,7 @@
  {
   "id": "arch",
   "kind": "architecture",
-  "prompt": "Use showntell to give me an architecture overview of this project: the daemon, the MCP tools, speech, and the player. Keep it under three minutes.",
+  "prompt": "Use talktrack to give me an architecture overview of this project: the daemon, the MCP tools, speech, and the player. Keep it under three minutes.",
   "expect": [
    "diagram"
   ]
@@ -23,7 +23,7 @@
  {
   "id": "timing",
   "kind": "code",
-  "prompt": "Use showntell to explain how word timings from the speech model become pointer cues in this project. Look at src/showntell/speech/narrator.py and src/showntell/static/js/timeline.js.",
+  "prompt": "Use talktrack to explain how word timings from the speech model become pointer cues in this project. Look at src/talktrack/speech/narrator.py and src/talktrack/static/js/timeline.js.",
   "expect": [
    "diagram"
   ]
@@ -31,7 +31,7 @@
  {
   "id": "dns",
   "kind": "concept",
-  "prompt": "Use showntell to explain how DNS resolution works, from typing a URL to getting an IP address.",
+  "prompt": "Use talktrack to explain how DNS resolution works, from typing a URL to getting an IP address.",
   "expect": [
    "diagram"
   ]
@@ -39,7 +39,7 @@
  {
   "id": "hashmap",
   "kind": "concept-code",
-  "prompt": "Use showntell to explain how a hash map handles collisions, with a short code example.",
+  "prompt": "Use talktrack to explain how a hash map handles collisions, with a short code example.",
   "expect": [
    "diagram",
    "svg"
@@ -48,7 +48,7 @@
  {
   "id": "gradient",
   "kind": "maths",
-  "prompt": "Use showntell to explain gradient descent: the update rule, the learning rate, and a tiny worked example.",
+  "prompt": "Use talktrack to explain gradient descent: the update rule, the learning rate, and a tiny worked example.",
   "expect": [
    "chart",
    "svg"
@@ -57,7 +57,7 @@
  {
   "id": "tcp",
   "kind": "concept",
-  "prompt": "Use showntell to explain the TCP three-way handshake and why it needs three steps.",
+  "prompt": "Use talktrack to explain the TCP three-way handshake and why it needs three steps.",
   "expect": [
    "diagram"
   ]
@@ -65,7 +65,7 @@
  {
   "id": "csrf",
   "kind": "security",
-  "prompt": "Use showntell to explain how CSRF attacks work and how SameSite cookies prevent them.",
+  "prompt": "Use talktrack to explain how CSRF attacks work and how SameSite cookies prevent them.",
   "expect": [
    "diagram",
    "chat"
@@ -74,7 +74,7 @@
  {
   "id": "rebase",
   "kind": "concept",
-  "prompt": "Use showntell to explain git rebase versus merge, with diagrams of the commit graph.",
+  "prompt": "Use talktrack to explain git rebase versus merge, with diagrams of the commit graph.",
   "expect": [
    "diagram"
   ]
@@ -82,12 +82,12 @@
  {
   "id": "refactor",
   "kind": "refactor",
-  "prompt": "Use showntell to show how the parse_tree function in src/showntell/kinds/tree.py could be made simpler, walking through the code as it changes step by step."
+  "prompt": "Use talktrack to show how the parse_tree function in src/talktrack/kinds/tree.py could be made simpler, walking through the code as it changes step by step."
  },
  {
   "id": "request",
   "kind": "architecture",
-  "prompt": "Use showntell to show how one add_slides call travels from the coding agent through the stdio shim, the daemon, the builder and the narrator, and into the browser player.",
+  "prompt": "Use talktrack to show how one add_slides call travels from the coding agent through the stdio shim, the daemon, the builder and the narrator, and into the browser player.",
   "expect": [
    "diagram"
   ]
@@ -95,7 +95,7 @@
  {
   "id": "speedup",
   "kind": "numbers",
-  "prompt": "Use showntell to explain how MP4 export got faster: the first version rendered at 3.6 times real time, skipping unchanged frames reached 8.3, a faster x264 preset 10.2, and JPEG frames 16. Show the numbers and what each change did.",
+  "prompt": "Use talktrack to explain how MP4 export got faster: the first version rendered at 3.6 times real time, skipping unchanged frames reached 8.3, a faster x264 preset 10.2, and JPEG frames 16. Show the numbers and what each change did.",
   "expect": [
    "chart",
    "stat"
@@ -104,7 +104,7 @@
  {
   "id": "setup",
   "kind": "howto",
-  "prompt": "Use showntell to show a new contributor how to set up this repo and run its tests: the commands from the README and CONTRIBUTING, real output from `uv run pytest --collect-only -q` and `uv run showntell --help` (you may run those two), and where the tests live.",
+  "prompt": "Use talktrack to show a new contributor how to set up this repo and run its tests: the commands from the README and CONTRIBUTING, real output from `uv run pytest --collect-only -q` and `uv run talktrack --help` (you may run those two), and where the tests live.",
   "expect": [
    "terminal"
   ]
@@ -112,7 +112,7 @@
  {
   "id": "mcp",
   "kind": "concept",
-  "prompt": "Use showntell to explain what an MCP client and server say to each other when a tool is called: initialize, tools/list and tools/call, with the messages they exchange.",
+  "prompt": "Use talktrack to explain what an MCP client and server say to each other when a tool is called: initialize, tools/list and tools/call, with the messages they exchange.",
   "expect": [
    "chat",
    "diagram"
@@ -121,7 +121,7 @@
  {
   "id": "sky",
   "kind": "science",
-  "prompt": "Use showntell to explain why the sky is blue.",
+  "prompt": "Use talktrack to explain why the sky is blue.",
   "expect": [
    "svg"
   ]
@@ -129,7 +129,7 @@
  {
   "id": "tides",
   "kind": "science",
-  "prompt": "Use showntell to explain what causes ocean tides, and why most coasts get two a day.",
+  "prompt": "Use talktrack to explain what causes ocean tides, and why most coasts get two a day.",
   "expect": [
    "svg"
   ]
@@ -137,7 +137,7 @@
  {
   "id": "seasons",
   "kind": "science",
-  "prompt": "Use showntell to explain why Earth has seasons.",
+  "prompt": "Use talktrack to explain why Earth has seasons.",
   "expect": [
    "svg"
   ]
@@ -145,7 +145,7 @@
  {
   "id": "lens",
   "kind": "science",
-  "prompt": "Use showntell to explain how a magnifying glass focuses light.",
+  "prompt": "Use talktrack to explain how a magnifying glass focuses light.",
   "expect": [
    "svg"
   ]
@@ -156,12 +156,12 @@
   "expect": [
    "diff"
   ],
-  "prompt": "I'm reviewing commit 22e5e2a in this repo. Use showntell to walk me through it."
+  "prompt": "I'm reviewing commit 22e5e2a in this repo. Use talktrack to walk me through it."
  },
  {
   "id": "history",
   "kind": "history",
-  "prompt": "Use showntell to tell the story of how the World Wide Web was invented."
+  "prompt": "Use talktrack to tell the story of how the World Wide Web was invented."
  },
  {
   "id": "business",
@@ -171,7 +171,7 @@
    "stat",
    "diagram"
   ],
-  "prompt": "Use showntell to explain why Netflix moved from mailing DVDs to streaming."
+  "prompt": "Use talktrack to explain why Netflix moved from mailing DVDs to streaming."
  },
  {
   "id": "money",
@@ -179,7 +179,7 @@
   "expect": [
    "chart"
   ],
-  "prompt": "Use showntell to explain how compound interest works."
+  "prompt": "Use talktrack to explain how compound interest works."
  },
  {
   "id": "review",
@@ -187,6 +187,6 @@
   "expect": [
    "diff"
   ],
-  "prompt": "Use showntell to review commit dbb81ae in this repo as a careful code reviewer: is it correct, what could go wrong, and what would you ask the author to change?"
+  "prompt": "Use talktrack to review commit dbb81ae in this repo as a careful code reviewer: is it correct, what could go wrong, and what would you ask the author to change?"
  }
 ]

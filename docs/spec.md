@@ -1,6 +1,6 @@
-# showntell functional spec
+# talktrack functional spec
 
-This is the reference for how showntell behaves. The slide format is in [format.md](format.md).
+This is the reference for how talktrack behaves. The slide format is in [format.md](format.md).
 
 ## Flow
 
@@ -11,7 +11,7 @@ graph TB
     L --> M[add_slides one to three slides at a time]
     M --> F[finish_walkthrough]
   end
-  subgraph daemon [showntell daemon]
+  subgraph daemon [talktrack daemon]
     P[Incremental parser] --> B[Slide builder and checks]
     B --> Q[Speech queue]
     Q --> T[Kokoro MLX or ONNX]
@@ -40,15 +40,15 @@ graph TB
 | **finish_walkthrough** | `handle`, `questions` (optional list) | summary, `issues`; with Playwright, findings from drawing every slide headless |
 | **list_walkthroughs** | none | recent walkthroughs with handles, titles and links |
 | **export_walkthrough** | `handle`, `format` (mp4, html), `path` (optional), `max_mb` (optional) | `path`, `bytes`, `duration_s`, `shrunk`; waits for the narration, then writes an MP4 (needs ffmpeg and Playwright) or one offline HTML page, by default in the project folder named after the title |
-| **preview_slides** | `handle`, `slides` (optional ids) | a 640×360 picture of each slide fully revealed (up to twelve), plus layout findings from drawing them. Needs Playwright where showntell runs. |
+| **preview_slides** | `handle`, `slides` (optional ids) | a 640×360 picture of each slide fully revealed (up to twelve), plus layout findings from drawing them. Needs Playwright where talktrack runs. |
 
-**Delivery modes:** `showntell mcp --deliver file` (or `SHOWNTELL_DELIVER=file`) is for users who cannot open links on the agent's machine. The instructions, `start_walkthrough` and `finish_walkthrough` descriptions and the link-bearing replies come from `text/file/`: none hands the agent the link, and the flow ends with `export_walkthrough`, whose `max_mb` then defaults to 16. The mode belongs to each MCP connection, not the daemon.
+**Delivery modes:** `talktrack mcp --deliver file` (or `TALKTRACK_DELIVER=file`) is for users who cannot open links on the agent's machine. The instructions, `start_walkthrough` and `finish_walkthrough` descriptions and the link-bearing replies come from `text/file/`: none hands the agent the link, and the flow ends with `export_walkthrough`, whose `max_mb` then defaults to 16. The mode belongs to each MCP connection, not the daemon.
 
 All tools return structured content and a readable text version. Tools carry titles and annotations: `list_walkthroughs` is read-only, none destroy data, all work in a closed world.
 
 **Prompts:** `diff`, `review`, `file` and `topic` return a ready-made request for a walkthrough of a change, a review of a change (verdict, one finding per slide, ranked findings), a file or a concept. Claude Code shows them as slash commands.
 
-**Resources:** `showntell://walkthroughs` lists recent walkthroughs, `showntell://walkthroughs/{id}` holds one walkthrough's Markdown source, so a later session can read and revise it, and `showntell://slide-kinds` describes every kind of visual with an example.
+**Resources:** `talktrack://walkthroughs` lists recent walkthroughs, `talktrack://walkthroughs/{id}` holds one walkthrough's Markdown source, so a later session can read and revise it, and `talktrack://slide-kinds` describes every kind of visual with an example.
 
 ## Project root
 
@@ -75,11 +75,11 @@ Audio files are named by a hash of model, voice, speed and spoken text and kept 
 
 State is saved as JSON next to the source after each change (debounced) and reloaded on demand. Narration still waiting for audio after a restart is queued again.
 
-While a player is connected, a revised slide replaces the old one only once all its narration has audio, so a revision never makes a viewer wait. The revised Markdown takes the old slide's place in the stored source, so the source (the `showntell://walkthroughs/{id}` resource and an export's `source.md`) always reads as the walkthrough now is.
+While a player is connected, a revised slide replaces the old one only once all its narration has audio, so a revision never makes a viewer wait. The revised Markdown takes the old slide's place in the stored source, so the source (the `talktrack://walkthroughs/{id}` resource and an export's `source.md`) always reads as the walkthrough now is.
 
 ## Speech
 
-- **Backends:** one interface, two implementations. MLX (mlx-audio) on Apple silicon, ONNX Runtime elsewhere. Both run Kokoro-82M and share everything around the model: misaki for English phonemes (with espeak-ng for unknown words only when the `espeak` extra is installed), chunking, style vectors and per-word timings. From mlx-audio, showntell uses only the model loader and forward pass. On Apple silicon with `auto`, a failure to load MLX or voice a first sentence switches to ONNX; `/health` and `doctor` say why.
+- **Backends:** one interface, two implementations. MLX (mlx-audio) on Apple silicon, ONNX Runtime elsewhere. Both run Kokoro-82M and share everything around the model: misaki for English phonemes (with espeak-ng for unknown words only when the `espeak` extra is installed), chunking, style vectors and per-word timings. From mlx-audio, talktrack uses only the model loader and forward pass. On Apple silicon with `auto`, a failure to load MLX or voice a first sentence switches to ONNX; `/health` and `doctor` say why.
 - **Queue:** one worker. Jobs are ordered by their position in their walkthrough, so the opening narration of a new walkthrough jumps ahead of a backlog.
 - **Pronunciation:** narration is rewritten into speakable text before synthesis: identifiers are split, symbols, units, versions and paths are read aloud, and a user word list applies. A character map ties spoken words back to the display text, so captions and cues use what the agent wrote.
 - **Timings:** each spoken token is located in the spoken text, then mapped to display offsets. A cue's time is the start time of the first word at or after its position; the player fires it 0.3 s earlier, so the pointer lands as the word is heard.
@@ -113,7 +113,7 @@ Findings from the server, found while parsing, building and voicing:
 | `block_open` | warning | a code block is still open at the end of a call |
 | `block_dropped` | error | a code block was never closed and was dropped |
 | `front_matter` | warning | a front matter value is invalid and was ignored |
-| `theme_file` | warning | the project's showntell.theme.json has a value that was ignored |
+| `theme_file` | warning | the project's talktrack.theme.json has a value that was ignored |
 | `extra_visual` | warning | a slide got a second visual, which moved to a new slide |
 | `old_without_new` | warning | an `old` block had no `new` block after it |
 | `code_body_ignored` | info | a `file=` block had a body, which was ignored |
@@ -181,15 +181,15 @@ Findings from the open player, measured after a slide has settled. Their message
 | `slow_render` | info | a slide took longer to draw than the player waits |
 | `viewer_waited` | info | the viewer caught up with the writer and waited |
 
-`finish_walkthrough` draws every slide fully revealed in headless Chromium (up to 60 slides, 25 s at most; `SHOWNTELL_FINISH_CHECK=0` turns it off), so render and layout findings reach the agent before it stops, not only when someone opens the link. The base install has no browser: then finish reports `no_browser` (warning), the reply carries no layout findings, pictures of alike slides or poster, and `showntell doctor` prints the two commands that add it (the `video` extra, then `playwright install chromium`). `not_checked` (info) covers the rest: the drawing failed or timed out, no player has opened the walkthrough, or some narration has no audio yet.
+`finish_walkthrough` draws every slide fully revealed in headless Chromium (up to 60 slides, 25 s at most; `TALKTRACK_FINISH_CHECK=0` turns it off), so render and layout findings reach the agent before it stops, not only when someone opens the link. The base install has no browser: then finish reports `no_browser` (warning), the reply carries no layout findings, pictures of alike slides or poster, and `talktrack doctor` prints the two commands that add it (the `video` extra, then `playwright install chromium`). `not_checked` (info) covers the rest: the drawing failed or timed out, no player has opened the walkthrough, or some narration has no audio yet.
 
 ## Install and daemon
 
-- **Commands:** `showntell mcp` (stdio server for MCP clients), `showntell serve` (the daemon), `showntell play FILE.md`, `showntell export`, `showntell doctor`, `showntell list`, `showntell prune`, `showntell stop`.
-- **Shared daemon:** `showntell mcp` reads the lockfile in the data folder (pid, port, version, build id, build time, token). If the daemon is not running, it starts one in the background and waits for `/health`. If the daemon runs other code, it is replaced once idle when this copy is newer (a later version, or the same version with files written later); otherwise the newer daemon is used as it is, so two installs never replace each other in turn. `showntell stop` stops it.
+- **Commands:** `talktrack mcp` (stdio server for MCP clients), `talktrack serve` (the daemon), `talktrack play FILE.md`, `talktrack export`, `talktrack doctor`, `talktrack list`, `talktrack prune`, `talktrack stop`.
+- **Shared daemon:** `talktrack mcp` reads the lockfile in the data folder (pid, port, version, build id, build time, token). If the daemon is not running, it starts one in the background and waits for `/health`. If the daemon runs other code, it is replaced once idle when this copy is newer (a later version, or the same version with files written later); otherwise the newer daemon is used as it is, so two installs never replace each other in turn. `talktrack stop` stops it.
 - **Port:** 4747 by default; the next free port if that one is taken.
 - **Direct HTTP:** MCP clients can also connect straight to `http://localhost:4747/mcp`.
-- **First run:** downloads the Kokoro weights and the spaCy English model, with progress on stderr. `showntell doctor` checks models, port, voices and speech speed.
+- **First run:** downloads the Kokoro weights and the spaCy English model, with progress on stderr. `talktrack doctor` checks models, port, voices and speech speed.
 
 ## Security
 

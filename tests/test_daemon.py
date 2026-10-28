@@ -14,9 +14,9 @@ from pathlib import Path
 
 import pytest
 
-from showntell import __version__, daemon
-from showntell.config import Config
-from showntell.service import RemoteService
+from talktrack import __version__, daemon
+from talktrack.config import Config
+from talktrack.service import RemoteService
 
 
 @pytest.fixture
@@ -92,7 +92,7 @@ def test_health_is_none_when_nothing_listens(free_port):
 def test_a_port_a_stopped_daemon_left_in_time_wait_is_picked_again(free_port):
     import socket
 
-    from showntell.app import pick_port
+    from talktrack.app import pick_port
 
     # The side that closes first keeps the port in TIME_WAIT, as a daemon does when it stops.
     with socket.socket() as srv:
@@ -108,7 +108,7 @@ def test_a_port_a_stopped_daemon_left_in_time_wait_is_picked_again(free_port):
 
 
 def test_ensure_passes_the_data_folder_to_the_child(cfg, monkeypatch):
-    monkeypatch.delenv("SHOWNTELL_DATA", raising=False)
+    monkeypatch.delenv("TALKTRACK_DATA", raising=False)
     seen = {}
 
     class FakePopen:
@@ -120,7 +120,7 @@ def test_ensure_passes_the_data_folder_to_the_child(cfg, monkeypatch):
     monkeypatch.setattr(daemon.subprocess, "Popen", FakePopen)
     daemon.ensure(cfg, log=lambda m: None)
     args = seen["args"]
-    given = args[args.index("--data") + 1] if "--data" in args else seen["env"].get("SHOWNTELL_DATA")
+    given = args[args.index("--data") + 1] if "--data" in args else seen["env"].get("TALKTRACK_DATA")
     assert given == str(cfg.data_dir)
 
 
@@ -163,7 +163,7 @@ def test_ensure_keeps_a_daemon_newer_than_this_copy(cfg, monkeypatch, theirs):
     monkeypatch.setattr(daemon, "_shutdown", lambda lock: pytest.fail("must not stop a newer daemon"))
     messages = []
     assert daemon.ensure(cfg, log=messages.append) is lock
-    assert "newer" in messages[0] and "showntell stop" in messages[0]
+    assert "newer" in messages[0] and "talktrack stop" in messages[0]
 
 
 def test_newer_than_compares_versions_then_build_times():
@@ -178,7 +178,7 @@ def test_newer_than_compares_versions_then_build_times():
 def test_build_id_changes_with_the_code(monkeypatch, tmp_path):
     import shutil
 
-    pkg = tmp_path / "showntell"
+    pkg = tmp_path / "talktrack"
     shutil.copytree(Path(daemon.__file__).parent, pkg, ignore=shutil.ignore_patterns("vendor", "__pycache__"))
     daemon.build_id.cache_clear()
     monkeypatch.setattr(daemon, "__file__", str(pkg / "daemon.py"))
@@ -212,7 +212,7 @@ async def test_the_shim_reports_a_plain_text_refusal_readably():
 
 def test_exporting_a_markdown_file_draws_no_slides_while_it_waits(cfg, monkeypatch, tmp_path):
     """Waiting for the audio polls finish; each poll must not launch a browser to check layout."""
-    from showntell import export, service
+    from talktrack import export, service
 
     calls = []
 
@@ -279,10 +279,10 @@ def _reap(pid: int, timeout: float) -> bool:
 @pytest.fixture
 def fake_daemon_env(cfg, monkeypatch):
     """Environment for a child daemon: fake speech, data in tmp, no browser, no token."""
-    monkeypatch.setenv("SHOWNTELL_SPEECH", "fake")
-    monkeypatch.setenv("SHOWNTELL_DATA", str(cfg.data_dir))
-    monkeypatch.delenv("SHOWNTELL_OPEN", raising=False)
-    monkeypatch.delenv("SHOWNTELL_ACCESS_TOKEN", raising=False)
+    monkeypatch.setenv("TALKTRACK_SPEECH", "fake")
+    monkeypatch.setenv("TALKTRACK_DATA", str(cfg.data_dir))
+    monkeypatch.delenv("TALKTRACK_OPEN", raising=False)
+    monkeypatch.delenv("TALKTRACK_ACCESS_TOKEN", raising=False)
     started: list[int] = []
     yield started
     for pid in started:  # never leave a daemon behind
@@ -306,7 +306,7 @@ async def test_ensure_starts_a_daemon_that_serves_and_shuts_down(cfg, fake_daemo
     assert lock["port"] == cfg.port and lock["version"] == __version__ and pid != os.getpid()
     assert stat.S_IMODE(cfg.lockfile.stat().st_mode) == 0o600
     health = _get_json(f"http://127.0.0.1:{cfg.port}/health")
-    assert health["app"] == "showntell" and health["speech"]["backend"] == "fake"
+    assert health["app"] == "talktrack" and health["speech"]["backend"] == "fake"
     assert daemon.ensure(cfg, log=lambda m: None)["pid"] == pid  # a second ensure reuses it
 
     svc = RemoteService(f"http://127.0.0.1:{cfg.port}", lock["token"])
@@ -338,14 +338,14 @@ def test_concurrent_clients_share_one_daemon(tmp_path):
     import socket
     import urllib.request
 
-    from showntell import daemon
-    from showntell.config import Config
+    from talktrack import daemon
+    from talktrack.config import Config
 
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
-    old = os.environ.get("SHOWNTELL_SPEECH")
-    os.environ["SHOWNTELL_SPEECH"] = "fake"
+    old = os.environ.get("TALKTRACK_SPEECH")
+    os.environ["TALKTRACK_SPEECH"] = "fake"
     try:
 
         def start(_):
@@ -366,9 +366,9 @@ def test_concurrent_clients_share_one_daemon(tmp_path):
         urllib.request.urlopen(req, timeout=3).read()
     finally:
         if old is None:
-            os.environ.pop("SHOWNTELL_SPEECH", None)
+            os.environ.pop("TALKTRACK_SPEECH", None)
         else:
-            os.environ["SHOWNTELL_SPEECH"] = old
+            os.environ["TALKTRACK_SPEECH"] = old
 
 
 @pytest.mark.parametrize("ours", [True, False])

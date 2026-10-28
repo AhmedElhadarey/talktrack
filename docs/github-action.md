@@ -1,12 +1,12 @@
 # The GitHub Action
 
-`rahimnathwani/showntell` is also a GitHub Action. It voices a walkthrough's Markdown on the runner with the open Kokoro model (ONNX on Linux), so no API key or hosted service is involved, and attaches the result to the run. On a pull request it posts one comment with the outline, the transcript and a download link, and updates that comment on each push.
+`AhmedElhadarey/talktrack` is also a GitHub Action. It voices a walkthrough's Markdown on the runner with the open Kokoro model (ONNX on Linux), so no API key or hosted service is involved, and attaches the result to the run. On a pull request it posts one comment with the outline, the transcript and a download link, and updates that comment on each push.
 
 ```yaml
 name: Walkthrough
 on:
   pull_request:
-    paths: [".showntell/**"]
+    paths: [".talktrack/**"]
 
 permissions:
   contents: read
@@ -19,9 +19,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0   # `diff ... rev=` blocks read commits
-      - uses: rahimnathwani/showntell@v0.1.7
+      - uses: AhmedElhadarey/talktrack@v0.1.7
         with:
-          markdown: .showntell/pr.md
+          markdown: .talktrack/pr.md
 ```
 
 | Input | Default | What |
@@ -36,7 +36,7 @@ Outputs: `folder` (holding `walkthrough.html`, `walkthrough.mp4` and `summary.md
 
 ## Where the Markdown comes from
 
-- **Written with the change:** ask your agent to write the walkthrough to `.showntell/pr.md` in the [format](format.md) and commit it with the change. The `diff file=... rev=...` blocks keep it tied to the code: reviewers hear about the lines they are reviewing, read from the commit.
+- **Written with the change:** ask your agent to write the walkthrough to `.talktrack/pr.md` in the [format](format.md) and commit it with the change. The `diff file=... rev=...` blocks keep it tied to the code: reviewers hear about the lines they are reviewing, read from the commit.
 - **Written in CI:** any earlier step that writes the file works, such as an agent step with its own credentials. The action itself only voices and publishes.
 
 ## Good to know

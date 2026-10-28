@@ -5,7 +5,7 @@
     uv run python scripts/build_gallery.py --add --from-results ... --only refactor,request
 
 gallery.json lists entries: [{"slug": "...", "id": "<walkthrough id>", "blurb": "..."}], read
-from the data folder in SHOWNTELL_DATA (default ~/.local/share/showntell). With
+from the data folder in TALKTRACK_DATA (default ~/.local/share/talktrack). With
 --from-results, the entries come from an eval run made with --keep, using each prompt as
 the blurb. --add keeps the walkthroughs already in gallery/ (their data folders may be gone),
 refreshes the shared player, and lists every exported folder on the index page, in the order of
@@ -23,9 +23,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from showntell.config import Config  # noqa: E402
-from showntell.export import copy_player, export, timeline  # noqa: E402
-from showntell.model import Walkthrough  # noqa: E402
+from talktrack.config import Config  # noqa: E402
+from talktrack.export import copy_player, export, timeline  # noqa: E402
+from talktrack.model import Walkthrough  # noqa: E402
 
 OUT = ROOT / "gallery"
 
@@ -55,7 +55,7 @@ def _entries() -> tuple[list[dict], Config]:
         for r in json.loads(Path(args.from_results).read_text()):
             if not r.get("url"):
                 continue
-            blurb = prompts.get(r["id"], "").removeprefix("Use showntell to ").split(". ")[0].rstrip(".")
+            blurb = prompts.get(r["id"], "").removeprefix("Use talktrack to ").split(". ")[0].rstrip(".")
             entries.append(
                 {
                     "slug": r["id"],
@@ -100,7 +100,7 @@ def main() -> None:
         (d for d in OUT.iterdir() if (d / "data.json").is_file()), key=lambda d: (order.index(d.name) if d.name in order else -1, d.name)
     )
     cards = []
-    from showntell.server import render_player
+    from talktrack.server import render_player
 
     for d in folders:
         w = _exported(d)
@@ -122,7 +122,7 @@ def main() -> None:
 
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>showntell gallery</title><link rel="icon" href="static/icon.svg" type="image/svg+xml">
+<title>talktrack gallery</title><link rel="icon" href="static/icon.svg" type="image/svg+xml">
 <style>
 :root { color-scheme: dark; --bg: #0a0c10; --panel: #151a22; --line: #262e3b; --fg: #ebeef3; --muted: #98a2b3; --accent: #ffc857; }
 * { box-sizing: border-box; }
@@ -146,12 +146,12 @@ footer { margin-top: 48px; color: var(--muted); font-size: 14px; }
 code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
 </style></head>
 <body><main>
-<header><img src="static/icon.svg" alt=""><h1>showntell</h1></header>
-<p class="lede">Narrated walkthroughs written by coding agents and voiced on a laptop with Kokoro. Each one below was made by asking an agent a question; nothing was edited by hand. <a href="https://github.com/rahimnathwani/showntell">Get showntell</a>.</p>
+<header><img src="static/icon.svg" alt=""><h1>talktrack</h1></header>
+<p class="lede">Narrated walkthroughs written by coding agents and voiced on a laptop with Kokoro. Each one below was made by asking an agent a question; nothing was edited by hand. <a href="https://github.com/AhmedElhadarey/talktrack">Get talktrack</a>.</p>
 <ul>
 {{CARDS}}
 </ul>
-<footer>Exported with <code>showntell export</code>. Audio is MP3; captions are in each folder as <code>captions.vtt</code>.</footer>
+<footer>Exported with <code>talktrack export</code>. Audio is MP3; captions are in each folder as <code>captions.vtt</code>.</footer>
 </main></body></html>
 """
 

@@ -65,16 +65,16 @@ async def record(url: str, size: tuple[int, int], workdir: Path) -> tuple[Path, 
         t_page = time.time()
         page = await ctx.new_page()
         await page.goto(url)
-        await page.wait_for_function("window.__showntell !== undefined && !document.querySelector('#big-play').disabled")
+        await page.wait_for_function("window.__talktrack !== undefined && !document.querySelector('#big-play').disabled")
         await page.wait_for_timeout(800)
         offset = time.monotonic() - t_start
         await page.click("#big-play")
         while True:
             await page.wait_for_timeout(500)
-            if await page.evaluate("window.__showntell.ended"):
+            if await page.evaluate("window.__talktrack.ended"):
                 break
         await page.wait_for_timeout(2500)  # hold the end card
-        starts = await page.evaluate("window.__showntell.starts")
+        starts = await page.evaluate("window.__talktrack.starts")
         video = await page.video.path()
         await ctx.close()
         await b.close()

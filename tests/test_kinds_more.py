@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import pytest
 
-from showntell.format import parse_item, parse_narration
-from showntell.kinds import parse_chart, parse_chat, parse_stat
+from talktrack.format import parse_item, parse_narration
+from talktrack.kinds import parse_chart, parse_chat, parse_stat
 
 OPEN = "# T\n\nOpening.\n\n"
 

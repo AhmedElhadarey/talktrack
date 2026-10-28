@@ -7,8 +7,8 @@ import subprocess
 
 import pytest
 
-from showntell import sources
-from showntell.sources import SourceError
+from talktrack import sources
+from talktrack.sources import SourceError
 
 # -- paths ------------------------------------------------------------------------------------
 

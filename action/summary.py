@@ -12,8 +12,8 @@ import json
 import sys
 from pathlib import Path
 
-from showntell.export import slide_starts, timeline_total
-from showntell.model import Walkthrough
+from talktrack.export import slide_starts, timeline_total
+from talktrack.model import Walkthrough
 
 
 def mmss(t: float) -> str:
@@ -29,7 +29,7 @@ def summary(data: dict) -> str:
         "",
         f"A narrated walkthrough, {len(w.slides)} slides, {mmss(total)}. "
         "**[Download it]({{ARTIFACT_URL}})**, unzip, and open `walkthrough.html` in a browser: it plays offline. "
-        "Voiced on the runner by [showntell](https://github.com/rahimnathwani/showntell).",
+        "Voiced on the runner by [talktrack](https://github.com/AhmedElhadarey/talktrack).",
         "",
         "| Starts | Slide |",
         "|---|---|",

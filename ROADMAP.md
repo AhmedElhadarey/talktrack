@@ -1,6 +1,6 @@
-# showntell roadmap
+# talktrack roadmap
 
-showntell is a local MCP server for narrated slide walkthroughs. A coding agent writes slides and narration; the server voices them on your machine and returns a link that plays within seconds, while the rest is still being written.
+talktrack is a local MCP server for narrated slide walkthroughs. A coding agent writes slides and narration; the server voices them on your machine and returns a link that plays within seconds, while the rest is still being written.
 
 Version 1.0 ships when it meets the launch criteria below. Everything else waits until after 1.0.
 
@@ -8,7 +8,7 @@ Version 1.0 ships when it meets the launch criteria below. Everything else waits
 
 | Decision | Choice |
 |---|---|
-| **Name** | showntell. Free on PyPI. The npm name is taken (a dormant React library) and so is the GitHub organisation, so the repo lives under a personal account. USPTO TSDR, checked 16 October 2026: SHOWNTELL (Reg. 4700403, narrative-story software) was cancelled on 2 March 2022 for want of a Section 8 declaration; SHOW 'N TELL (toys) and SHOW&TELL (filmmaker collaboration software) are dead applications. Not a full clearance search. A 2015 university screen-recording tool also used the name. |
+| **Name** | talktrack. Free on PyPI. The npm name is taken (a dormant React library) and so is the GitHub organisation, so the repo lives under a personal account. USPTO TSDR, checked 16 October 2026: TALKTRACK (Reg. 4700403, narrative-story software) was cancelled on 2 March 2022 for want of a Section 8 declaration; SHOW 'N TELL (toys) and SHOW&TELL (filmmaker collaboration software) are dead applications. Not a full clearance search. A 2015 university screen-recording tool also used the name. |
 | **Licence** | MIT |
 | **Slide format** | Markdown-based |
 | **Speech** | Kokoro-82M, English. MLX on Apple silicon; ONNX (the timestamped export, which returns per-token durations) everywhere else |
@@ -26,7 +26,7 @@ Version 1.0 ships when it meets the launch criteria below. Everything else waits
 
 ## Status (18 October 2026)
 
-Phases 0 to 2 are built, every launch criterion is met, and the repository is public at https://github.com/rahimnathwani/showntell with the gallery at https://rahimnathwani.github.io/showntell/.
+Phases 0 to 2 are built, every launch criterion is met, and the repository is public at https://github.com/AhmedElhadarey/talktrack with the gallery at https://ahmedelhadarey.github.io/talktrack/.
 
 | Launch criterion | Measured | Result |
 |---|---|---|
@@ -42,7 +42,7 @@ Phases 0 to 2 are built, every launch criterion is met, and the repository is pu
 | **0** | clean room, spec, Markdown format, document model, code from disk, packaging, rename, licence files |
 | **1** | security, revise, cue inference, checks, `play`, step reveals, pronunciation, MLX and ONNX backends, time-driven player, transcript, seeking, accessibility, shared daemon with start and instance locks, `doctor`, `autostart`, plugin and skill, prompts, resources, tests, evaluation |
 | **2** | static export with captions, docs, CI, release and gallery workflows, recorder for demo video, a five-walkthrough gallery made with Opus (links 0.38 to 0.81 s, $0.22 to $0.64 each), README demo |
-| **2.5** | ideas adapted from a study of HyperFrames (an HTML-to-video framework): coded findings with fixes, layout findings measured by the open player, timing and coverage checks, slide-ready wait, MP4 export by frame capture, posters, `preview_slides`, themes with contrast tests, charts, terminal sessions and file trees, a slide-kind catalogue, ranges, presenter mode, `<showntell-player>`, pause-aware captions, golden player state and Linux pixel baselines, plugin marketplace and Gemini extension, one version everywhere, a wheel smoke test |
+| **2.5** | ideas adapted from a study of HyperFrames (an HTML-to-video framework): coded findings with fixes, layout findings measured by the open player, timing and coverage checks, slide-ready wait, MP4 export by frame capture, posters, `preview_slides`, themes with contrast tests, charts, terminal sessions and file trees, a slide-kind catalogue, ranges, presenter mode, `<talktrack-player>`, pause-aware captions, golden player state and Linux pixel baselines, plugin marketplace and Gemini extension, one version everywhere, a wheel smoke test |
 | **2.6** | daemon replaced when its code changes, five eval prompts for the newer kinds, an opt-in test through the real Claude Code CLI, a shorter guide checked by A/B evaluation, layout checks at `finish_walkthrough`, builder and player split into modules with one Python and one JS module per bundled kind, word-level code morphs at a steady scale, reduced motion and announcements for moving cues, sequence-message and row-number cues, screenshot baselines for every kind in every frame |
 | **0.1.x** | releases 0.1.0 to 0.1.4: MLX narrowed to the model loader and forward pass, findings that steer agents to the visual that fits (A/B: word-only slides fell from 27% to 2%), timelines, `export_walkthrough` and `--deliver file` for agents in a sandbox or behind a chat app, first-run fixes. 865 fast tests |
 
@@ -97,13 +97,13 @@ A short functional spec in our own words, written before any rewrite. It covers:
 ### Packaging
 
 - **spaCy model:** downloaded on first run instead of coming from a URL dependency, which PyPI rejects.
-- **MLX:** `mlx-audio` is limited to macOS on Apple silicon and pinned exactly. showntell uses two of its calls, `load_model` and the model's forward pass; phonemes, chunking, voices and word timings are its own, shared with the ONNX engine. A test fails loudly when an mlx-audio release changes either call, and at runtime speech falls back to ONNX.
+- **MLX:** `mlx-audio` is limited to macOS on Apple silicon and pinned exactly. talktrack uses two of its calls, `load_model` and the model's forward pass; phonemes, chunking, voices and word timings are its own, shared with the ONNX engine. A test fails loudly when an mlx-audio release changes either call, and at runtime speech falls back to ONNX.
 - **No GPL in the default install:** misaki's English path runs without the espeak-ng fallback.
 - **Vendored libraries:** sha256 pins in the vendor script.
 
 ### Rename and hygiene
 
-- **Rename:** package, command, `SHOWNTELL_*` env vars, data folder, launchd label, MCP server name, README.
+- **Rename:** package, command, `TALKTRACK_*` env vars, data folder, launchd label, MCP server name, README.
 - **Repo files:** `LICENSE` (MIT), `THIRD_PARTY_NOTICES`, `.gitignore` covering `.env`, and a `.env.example` listing the options.
 - **Existing tests:** count as zero, because they test the parser being replaced.
 
@@ -135,7 +135,7 @@ The new format runs end to end, the provenance check is clean, and the first com
   - **Pacing:** too little narration for the code shown.
   - **Repetition:** narration reading on-screen text word for word.
   - **Sameness:** repeated opening phrases.
-- **Walkthrough files:** `showntell play file.md` voices and plays a Markdown walkthrough without an agent.
+- **Walkthrough files:** `talktrack play file.md` voices and plays a Markdown walkthrough without an agent.
 
 ### Slide kinds
 
@@ -157,9 +157,9 @@ The nine existing kinds (intro, code, diff, diagram, math, image, cards, bullet 
 
 ### Install
 
-- **One-line install:** `uvx showntell`. In stdio mode it starts the shared background server or reuses a running one.
+- **One-line install:** `uvx talktrack`. In stdio mode it starts the shared background server or reuses a running one.
 - **Daemon:** a lockfile holding pid, port, version and token, a `/health` route, and a restart when idle if versions differ.
-- **First run:** first-run download progress and `showntell doctor`.
+- **First run:** first-run download progress and `talktrack doctor`.
 - **Claude Code:** a plugin with `.mcp.json` and a skill; MCP prompts for diff, file and concept walkthroughs.
 
 ### Testing
@@ -194,4 +194,4 @@ All Phase 1 items are done and the evaluation meets the launch criteria.
 ## Not planned
 
 - **Background music and sound effects:** studies show they reduce learning.
-- **A hosted service:** showntell runs on your machine; static export covers sharing.
+- **A hosted service:** talktrack runs on your machine; static export covers sharing.

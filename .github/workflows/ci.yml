@@ -37,9 +37,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
-          key: hf-onnx-${{ hashFiles('src/showntell/speech/onnx_backend.py') }}
+          key: hf-onnx-${{ hashFiles('src/talktrack/speech/onnx_backend.py') }}
       - name: Download the ONNX voice model and the spaCy English model
-        run: uv run showntell doctor --speech onnx
+        run: uv run talktrack doctor --speech onnx
       - run: uv run pytest -m onnx -rs
 
   macos:
@@ -56,9 +56,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
-          key: hf-mlx-${{ hashFiles('src/showntell/speech/mlx_backend.py') }}
+          key: hf-mlx-${{ hashFiles('src/talktrack/speech/mlx_backend.py') }}
       - name: Download the MLX voice model and the spaCy English model
-        run: uv run showntell doctor --speech mlx
+        run: uv run talktrack doctor --speech mlx
       - run: uv run pytest -m mlx -rs
 
   action:

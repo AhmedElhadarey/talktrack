@@ -31,9 +31,9 @@ from pathlib import Path
 import numpy as np
 from num2words import num2words
 
-from showntell.format import parse_narration
-from showntell.speech.base import SAMPLE_RATE
-from showntell.speech.narrator import timed_words
+from talktrack.format import parse_narration
+from talktrack.speech.base import SAMPLE_RATE
+from talktrack.speech.narrator import timed_words
 
 WHISPER = "mlx-community/whisper-large-v3-turbo"
 
@@ -428,7 +428,7 @@ def check(transcript: str, terms: dict[str, list[str]]) -> list[str]:
 
 def load_speakable(path: str | None):
     if not path:
-        from showntell.pronounce import speakable
+        from talktrack.pronounce import speakable
 
         return speakable
     spec = importlib.util.spec_from_file_location("pronounce_under_test", path)
@@ -449,8 +449,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument(
         "--data-dir",
-        default=str(Path.home() / ".local/share/showntell"),
-        help="showntell data folder, where the spaCy model is kept (default: %(default)s)",
+        default=str(Path.home() / ".local/share/talktrack"),
+        help="talktrack data folder, where the spaCy model is kept (default: %(default)s)",
     )
     ap.add_argument("--voice", default="af_heart")
     ap.add_argument("--pronounce", help="load speakable() from this file instead, e.g. an older pronounce.py")
@@ -471,7 +471,7 @@ def main() -> int:
     import mlx_whisper
     from scipy.signal import resample_poly
 
-    from showntell.speech.mlx_backend import MlxBackend
+    from talktrack.speech.mlx_backend import MlxBackend
 
     speakable = load_speakable(args.pronounce)
     # a British voice gets British phonemes, when this speakable() can give them

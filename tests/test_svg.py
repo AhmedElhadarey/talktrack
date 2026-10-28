@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from showntell.kinds.svg import find, parse_svg
+from talktrack.kinds.svg import find, parse_svg
 
 OPEN = "# T\n\nOpening.\n\n"
 DRAWING = """<svg viewBox="0 0 400 200">

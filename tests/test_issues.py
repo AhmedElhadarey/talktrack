@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from showntell.issues import CODES, Issue, as_dict, line_text, player_issue, summarize
+from talktrack.issues import CODES, Issue, as_dict, line_text, player_issue, summarize
 
 OPENING = "# How caching works\n\nA cache keeps answers close.\n"
 
@@ -73,7 +73,7 @@ def test_every_code_is_documented_in_the_spec():
 
 
 def test_every_code_used_in_the_source_exists():
-    src = Path(__file__).parent.parent / "src" / "showntell"
+    src = Path(__file__).parent.parent / "src" / "talktrack"
     used = set()
     for f in src.glob("*.py"):
         used |= set(re.findall(r"""(?:_issue|Issue)\(\s*["']([a-z_]+)["']""", f.read_text()))

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from showntell.build import LIMITS
+from talktrack.build import LIMITS
 
 
 def code_block(lines: int, width: int = 10) -> str:

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0 (2026-10-28)
+
+- **Renamed to talktrack:** the package, the `talktrack` command, the `<talktrack-player>` element, the Claude Code plugin, the Gemini extension and the GitHub Action all carry the new name, and installs come from `AhmedElhadarey/talktrack`. Settings are now `TALKTRACK_*` (`TALKTRACK_PORT`, `TALKTRACK_DATA` and the rest); the old `SHOWNTELL_*` variables are no longer read. The data folder moves with the name, so the voice model downloads again on first run. Entries below keep the old name.
+
 ## 0.1.8 (2026-10-27)
 
 - **Memory on Apple silicon:** the MLX voice kept every freed GPU buffer for reuse, and sentences of different lengths leave buffers of different sizes, so the cache grew to most of the Mac's memory (25 GB of 32 after ten sentences) and stayed there while the daemon ran. Macs swapped and froze. It is now cleared after each chunk: the cache stays near zero, about 3 GB at peak, and synthesis is faster (80 sentences in 33 s instead of 92 s on an M1 Max).

@@ -15,8 +15,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from showntell.speech.base import SAMPLE_RATE
-from showntell.speech.kokoro import FRAME_SAMPLES
+from talktrack.speech.base import SAMPLE_RATE
+from talktrack.speech.kokoro import FRAME_SAMPLES
 
 pytestmark = pytest.mark.mlx
 
@@ -28,7 +28,7 @@ def _missing() -> str | None:
     """Why these tests cannot run here, or None. Checked lazily so collection stays fast."""
     if sys.platform != "darwin" or platform.machine() != "arm64":
         return "needs macOS on Apple silicon"
-    from showntell.speech import mlx_backend
+    from talktrack.speech import mlx_backend
 
     if not mlx_backend.available():
         return "mlx-audio is not installed"
@@ -39,15 +39,15 @@ def _missing() -> str | None:
             return f"{REPO} is not cached ({name})"
     import spacy
 
-    from showntell.speech.assets import SPACY_NAME, spacy_dir
+    from talktrack.speech.assets import SPACY_NAME, spacy_dir
 
     if not (spacy.util.is_package(SPACY_NAME) or (spacy_dir(_data_dir()) / "config.cfg").is_file()):
-        return "the spaCy English model is not downloaded (run showntell doctor)"
+        return "the spaCy English model is not downloaded (run talktrack doctor)"
     return None
 
 
 def _data_dir() -> Path:
-    from showntell.config import Config
+    from talktrack.config import Config
 
     return Config().data_dir  # where the daemon keeps the spaCy model; only read here
 
@@ -59,7 +59,7 @@ def backend():
         pytest.skip(why)
     from huggingface_hub import constants
 
-    from showntell.speech.mlx_backend import MlxBackend
+    from talktrack.speech.mlx_backend import MlxBackend
 
     with pytest.MonkeyPatch.context() as mp:  # load() switches huggingface_hub offline; undo that afterwards
         mp.setenv("HF_HUB_OFFLINE", "1")

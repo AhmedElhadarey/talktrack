@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from showntell.format import Parser, parse_attrs, parse_info, parse_item, parse_table
+from talktrack.format import Parser, parse_attrs, parse_info, parse_item, parse_table
 
 
 def parse(text: str):

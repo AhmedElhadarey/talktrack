@@ -1,10 +1,10 @@
 {
-  "name": "showntell",
-  "version": "0.1.8",
+  "name": "talktrack",
+  "version": "0.2.0",
   "description": "Narrated slide walkthroughs of code, diffs and concepts, voiced on your machine. The link plays within seconds while the rest is written.",
-  "author": { "name": "Rahim Nathwani", "url": "https://github.com/rahimnathwani" },
-  "homepage": "https://github.com/rahimnathwani/showntell",
-  "repository": "https://github.com/rahimnathwani/showntell",
+  "author": { "name": "Ahmed Samer", "url": "https://github.com/AhmedElhadarey" },
+  "homepage": "https://github.com/AhmedElhadarey/talktrack",
+  "repository": "https://github.com/AhmedElhadarey/talktrack",
   "license": "MIT",
   "keywords": ["walkthrough", "code review", "tts", "kokoro", "mcp", "local"]
 }

@@ -40,7 +40,7 @@ def test_drawio_renders_offline_points_at_cells_and_reveals(daemon, browser):  #
     )
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto(url)
-    page.wait_for_function("window.__showntell !== undefined")
+    page.wait_for_function("window.__talktrack !== undefined")
     t = _at(page, "arch", 0, 0.3)
     page.goto(f"{url}?at={t:.2f}")
     page.wait_for_selector(".drawio svg")
@@ -55,8 +55,8 @@ def test_drawio_renders_offline_points_at_cells_and_reveals(daemon, browser):  #
     assert state["veiled"] > 0  # later parts wait for their cues
     assert state["page"]["right"] <= state["body"]["right"] + 1 and state["page"]["bottom"] <= state["body"]["bottom"] + 1
     page.goto(url + "?capture=1")
-    page.wait_for_function("window.__showntell?.duration?.() > 0")
-    page.evaluate("(t) => window.__showntell.seek(t)", page.evaluate("window.__showntell.duration()") - 0.1)
+    page.wait_for_function("window.__talktrack?.duration?.() > 0")
+    page.evaluate("(t) => window.__talktrack.seek(t)", page.evaluate("window.__talktrack.duration()") - 0.1)
     assert page.evaluate("document.querySelectorAll('.drawio .veiled').length") == 0
     assert not outside, outside
     assert not errors, errors

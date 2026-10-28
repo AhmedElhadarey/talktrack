@@ -17,12 +17,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from showntell.pronounce import Spoken
-from showntell.speech import onnx_backend
-from showntell.speech.base import SAMPLE_RATE
-from showntell.speech.kokoro import MAX_PHONEMES, chunks, word_times
-from showntell.speech.narrator import timed_words
-from showntell.speech.onnx_backend import OnnxBackend
+from talktrack.pronounce import Spoken
+from talktrack.speech import onnx_backend
+from talktrack.speech.base import SAMPLE_RATE
+from talktrack.speech.kokoro import MAX_PHONEMES, chunks, word_times
+from talktrack.speech.narrator import timed_words
+from talktrack.speech.onnx_backend import OnnxBackend
 
 SENTENCE = "The cache answers most requests in a few microseconds."
 PARAGRAPH = (
@@ -91,7 +91,7 @@ def test_model_id_names_the_variant(tmp_path):
 
 
 def _data_dir() -> Path:
-    from showntell.config import Config
+    from talktrack.config import Config
 
     return Config().data_dir  # where the daemon keeps the spaCy model; only read here
 
@@ -110,10 +110,10 @@ def _missing() -> str | None:
         return f"{onnx_backend.REPO} is not cached ({', '.join(lost)})"
     import spacy
 
-    from showntell.speech.assets import SPACY_NAME, spacy_dir
+    from talktrack.speech.assets import SPACY_NAME, spacy_dir
 
     if not (spacy.util.is_package(SPACY_NAME) or (spacy_dir(_data_dir()) / "config.cfg").is_file()):
-        return "the spaCy English model is not downloaded (run showntell doctor)"
+        return "the spaCy English model is not downloaded (run talktrack doctor)"
     return None
 
 
@@ -221,7 +221,7 @@ def test_british_voice_and_unknown_voice(backend):
 def test_never_imports_mlx(backend):
     code = (
         "import sys; from pathlib import Path\n"
-        "from showntell.speech.onnx_backend import OnnxBackend\n"
+        "from talktrack.speech.onnx_backend import OnnxBackend\n"
         f"b = OnnxBackend(Path({str(_data_dir())!r})); b.load(); b.synth('Hello there.', 'af_heart', 1.0)\n"
         "print(sorted(m for m in sys.modules if m.split('.')[0] in ('mlx', 'mlx_audio')))\n"
     )

@@ -1,6 +1,6 @@
 # Third-party notices
 
-showntell bundles these libraries in `src/showntell/static/vendor/`, unmodified:
+talktrack bundles these libraries in `src/talktrack/static/vendor/`, unmodified:
 
 | Library | Version | Licence | Source |
 |---|---|---|---|
@@ -14,9 +14,9 @@ showntell bundles these libraries in `src/showntell/static/vendor/`, unmodified:
 | **Bricolage Grotesque** (font, Latin subset via Fontsource) | 5.3.0 | OFL-1.1 | https://github.com/ateliertriay/bricolage |
 | **JetBrains Mono** (font, Latin subset via Fontsource) | 5.3.0 | OFL-1.1 | https://github.com/JetBrains/JetBrainsMono |
 
-The Lucide icons (`lucide-static` 1.50.0, ISC, https://github.com/lucide-icons/lucide) are bundled as `src/showntell/data/icons.json`: each icon's SVG elements and search tags, converted from the package's `icon-nodes.json` and `tags.json` by `scripts/vendor.sh`. The licence is in `static/vendor/LICENSES/lucide.txt`.
+The Lucide icons (`lucide-static` 1.50.0, ISC, https://github.com/lucide-icons/lucide) are bundled as `src/talktrack/data/icons.json`: each icon's SVG elements and search tags, converted from the package's `icon-nodes.json` and `tags.json` by `scripts/vendor.sh`. The licence is in `static/vendor/LICENSES/lucide.txt`.
 
-showntell downloads these models on first run; they are not part of the package:
+talktrack downloads these models on first run; they are not part of the package:
 
 | Model | Licence | Source |
 |---|---|---|
@@ -25,4 +25,4 @@ showntell downloads these models on first run; they are not part of the package:
 
 Runtime dependencies are installed from PyPI under their own licences. The optional `espeak` extra installs espeak-ng (GPL-3.0); it is not installed by default.
 
-The full licence texts of the bundled libraries are in `src/showntell/static/vendor/LICENSES/`.
+The full licence texts of the bundled libraries are in `src/talktrack/static/vendor/LICENSES/`.

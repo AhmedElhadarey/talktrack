@@ -11,11 +11,11 @@ import time
 
 import pytest
 
-from showntell import pronounce
-from showntell.format import parse_narration
-from showntell.pronounce import Spoken, speak_code, speakable, split_identifier
-from showntell.speech.base import Token
-from showntell.speech.narrator import timed_words
+from talktrack import pronounce
+from talktrack.format import parse_narration
+from talktrack.pronounce import Spoken, speak_code, speakable, split_identifier
+from talktrack.speech.base import Token
+from talktrack.speech.narrator import timed_words
 
 INLINE = re.compile(r"\[([^\]]+)\]\(/([^)]*)/\)")  # misaki's inline pronunciation, as speakable writes it
 
@@ -307,10 +307,10 @@ def test_british_voices_get_british_phonemes():
 
 
 def test_user_lexicon_applies_in_prose_and_code():
-    lex = {"showntell": "show and tell", "Acme": "/ˈækmi/"}
-    assert said("The showntell player and `showntell`.", lex) == "The show and tell player and show and tell."
+    lex = {"talktrack": "show and tell", "Acme": "/ˈækmi/"}
+    assert said("The talktrack player and `talktrack`.", lex) == "The show and tell player and show and tell."
     assert said("Acme ships.", lex) == "Acme/ˈækmi/ ships."
-    assert said("Run `showntell.app` now.", lex) == "Run show and tell dot app now."
+    assert said("Run `talktrack.app` now.", lex) == "Run show and tell dot app now."
 
 
 # -- the word list ---------------------------------------------------------------------------------------
