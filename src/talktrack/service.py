@@ -8,6 +8,7 @@ MCP client shares one daemon and one loaded voice model.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -127,6 +128,36 @@ class LocalService:
     async def list(self) -> list[dict]:
         return self.store.list(20)
 
+    def _playlist_row(self, pl: dict) -> dict:
+        from . import playlists as pls
+
+        rows = pls.entries(self.store.data_dir, pl)
+        st = self.store
+        base = f"{st.base_url}/p/{pl['id']}{st.link_suffix}"
+        sep = "&" if "?" in base else "?"
+        return {
+            "id": pl["id"],
+            "title": pl["title"],
+            "description": pl["description"],
+            "url": base,
+            "created": pl["created"],
+            "duration_s": round(sum(r["duration"] for r in rows), 1),
+            "entries": [
+                {"n": i, "id": r["id"], "title": r["title"], "duration_s": round(r["duration"], 1), "url": f"{base}{sep}n={i}"}
+                for i, r in enumerate(rows, 1)
+            ],
+        }
+
+    async def create_playlist(self, title: str, walkthroughs: list[str], description: str = "") -> dict:
+        from . import playlists as pls
+
+        return self._playlist_row(pls.create(self.store.data_dir, title, walkthroughs, description))
+
+    async def playlists(self) -> list[dict]:
+        from . import playlists as pls
+
+        return [self._playlist_row(pl) for pl in pls.list_all(self.store.data_dir)]
+
     async def _check_layout(self, s, shoot: list[str] = (), shots: dict | None = None) -> tuple[str, str]:
         """Draw every slide fully revealed in headless Chromium, so the player's render and layout
         checks report before the agent stops; pictures of the slides in `shoot` go into `shots`.
@@ -202,20 +233,36 @@ class LocalService:
             "player_issues": _dicts(s.take_player_issues()),
         }
 
-    async def export(self, handle: str, path: str = "", format: str = "mp4", max_mb: float = 0, wait_s: float | None = None) -> dict:
+    async def export(
+        self, handle: str, path: str = "", format: str = "mp4", max_mb: float | None = 0, wait_s: float | None = None, default_mb: float = 0
+    ) -> dict:
         """Write the walkthrough to a file the agent can attach: an MP4, or one HTML page that plays
         offline. A relative or empty `path` is in the project folder. Waits for the narration first."""
         import asyncio
 
-        from .export import export_html, timeline_total
+        from . import playlists as pls
+        from .export import export_html, export_playlist_html, timeline_total
         from .video import render_mp4
 
         wait_s = EXPORT_WAIT_S if wait_s is None else wait_s
-        s = self.store.by_handle(handle)
         if format not in ("mp4", "html"):
             raise ValueError("format must be mp4 or html")
-        out = export_path(s.w.title, s.w.root, path, format)
-        says = [x for sl in s.w.slides for x in sl.says if x.text]
+        pl = self._playlist_of(handle)
+        if pl:  # a playlist's id or link in place of a handle
+            if format != "html":
+                raise ValueError("a playlist exports as html only; export its walkthroughs one by one for MP4")
+            sessions = [self.store.get(r["id"]) for r in pls.entries(self.store.data_dir, pl)]
+            sessions = [s for s in sessions if s]
+            if not sessions:
+                raise ValueError("every walkthrough in this playlist has been deleted")
+            title, root = pl["title"], sessions[0].w.root
+        else:
+            s = self.store.by_handle(handle)
+            sessions, title, root = [s], s.w.title, s.w.root
+        out = export_path(title, root, path, format)
+        # No limit given: the server's default, except for a playlist page, which goes as a document, not a video.
+        max_mb = max(0.0, max_mb) if max_mb is not None else 0.0 if pl else default_mb
+        says = [x for s in sessions for sl in s.w.slides for x in sl.says if x.text]
         if not says:
             raise ValueError("nothing to export yet: the walkthrough has no narration")
         t0 = time.monotonic()
@@ -225,14 +272,18 @@ class LocalService:
         if pending:
             raise ValueError(f"{pending} paragraph(s) are still being voiced after {wait_s:.0f} s; try again shortly")
         silent = sum(1 for x in says if x.status != "ready")
-        s.save_now()  # the exporters read the saved state
+        for s in sessions:
+            s.save_now()  # the exporters read the saved state
         data_dir = self.store.data_dir
         try:
             if format == "mp4":
-                r = await asyncio.to_thread(render_mp4, data_dir, s.w.id, out, quiet=True, max_bytes=int(max_mb * 1e6))
+                r = await asyncio.to_thread(render_mp4, data_dir, sessions[0].w.id, out, quiet=True, max_bytes=int(max_mb * 1e6))
                 shrunk, errors = r["shrunk"], r["errors"]
             else:
-                await asyncio.to_thread(export_html, data_dir, s.w.id, out)
+                if pl:
+                    await asyncio.to_thread(export_playlist_html, data_dir, pl, out)
+                else:
+                    await asyncio.to_thread(export_html, data_dir, sessions[0].w.id, out)
                 shrunk, errors = "", []
                 size = out.stat().st_size
                 if max_mb and size > max_mb * 1e6:
@@ -244,12 +295,18 @@ class LocalService:
             "path": str(out),
             "format": format,
             "bytes": out.stat().st_size,
-            "duration_s": round(timeline_total(s.w), 1),
+            "duration_s": round(sum(timeline_total(s.w) for s in sessions), 1),
             "shrunk": shrunk,
             "silent": silent,
             "errors": errors,
             "seconds": round(time.monotonic() - t0, 1),
         }
+
+    def _playlist_of(self, handle: str) -> dict | None:
+        from . import playlists as pls
+
+        m = re.search(r"/p/([A-Za-z0-9_-]{16,64})", handle)
+        return pls.get(self.store.data_dir, m.group(1) if m else handle.strip().partition(".")[0])
 
     async def source(self, wid: str) -> str:
         s = self.store.get(wid)
@@ -303,15 +360,23 @@ class RemoteService:
     async def source(self, wid):
         return await self._call("source", wid=wid)
 
+    async def create_playlist(self, title, walkthroughs, description=""):
+        return await self._call("create_playlist", title=title, walkthroughs=walkthroughs, description=description)
+
+    async def playlists(self):
+        return await self._call("playlists")
+
     async def preview(self, handle, slides=None, short=360):
         return await self._call("preview", handle=handle, slides=slides, short=short)
 
-    async def export(self, handle, path="", format="mp4", max_mb=0):
+    async def export(self, handle, path="", format="mp4", max_mb=0, default_mb=0):
         # Rendering takes a while: about a tenth of the video's length, plus waiting for the voice.
-        return await self._call("export", http_timeout=EXPORT_WAIT_S + 900, handle=handle, path=path, format=format, max_mb=max_mb)
+        return await self._call(
+            "export", http_timeout=EXPORT_WAIT_S + 900, handle=handle, path=path, format=format, max_mb=max_mb, default_mb=default_mb
+        )
 
 
-RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list", "source", "preview", "export"}
+RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list", "source", "preview", "export", "create_playlist", "playlists"}
 EXPORT_WAIT_S = 300.0  # for the narration to finish voicing before an export
 PREVIEW_MAX = 12
 LAYOUT_CHECK_MAX = 60  # slides drawn by the finish-time layout check

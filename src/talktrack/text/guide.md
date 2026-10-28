@@ -190,6 +190,8 @@ Code keeps its reading size: a diff too wide side by side stacks, before above a
 2. **Check:** the reply lists render and layout problems from drawing every slide, and each slide's look, with pictures of runs that look alike; fix problems with `revise_slide`, and give one slide in each run a different look. Call `preview_slides` only for slides it names, a picture you want to see, or when asked.
 3. {{TELL_USER}}
 
+{{PARTS}}
+
 ## Example slide
 
 ````markdown

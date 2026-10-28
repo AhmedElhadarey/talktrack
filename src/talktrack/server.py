@@ -6,6 +6,7 @@ import asyncio
 import html
 import json
 import logging
+import re
 import secrets
 import time
 from functools import lru_cache
@@ -90,6 +91,7 @@ def guide(frame: str, deliver: str = "link") -> str:
     for k, v in {
         "SEND_LINK": reply("guide_send_link", "", deliver),
         "TELL_USER": reply("guide_tell_user", "", deliver),
+        "PARTS": reply("guide_parts", "", deliver),
         "FRAME": frame,
         "LINES": lim["lines"],
         "WIDTH": lim["width"],
@@ -423,11 +425,12 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
         max_mb: Annotated[float | None, Field(description=arg_text("export_walkthrough", "max_mb"))] = None,
         shared: Annotated[ListRootsResult | None, Resolve(_shared_folders)] = None,
     ) -> CallToolResult:
-        limit = (FILE_MAX_MB if by_file else 0.0) if max_mb is None else max(0.0, max_mb)
+        default = FILE_MAX_MB if by_file else 0.0
+        limit = default if max_mb is None else max(0.0, max_mb)
         try:
             if path and Path(path).expanduser().is_absolute():
                 _check_inside(shared, path, "path")
-            r = await service.export(handle, path, format, limit)
+            r = await service.export(handle, path, format, max_mb, default_mb=default)
         except ValueError as e:
             return _error(str(e))
         text = reply(
@@ -492,6 +495,32 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
         # No structured content here: clients that prefer it would drop the pictures.
         return CallToolResult(content=content)
 
+    @mcp.tool(
+        title=tool_text("create_playlist", "title", "Create playlist"),
+        description=tool_text("create_playlist"),
+        annotations=WRITE,
+    )
+    async def create_playlist(
+        title: Annotated[str, Field(description=arg_text("create_playlist", "title"))],
+        walkthroughs: Annotated[list[str], Field(description=arg_text("create_playlist", "walkthroughs"))],
+        description: Annotated[str, Field(description=arg_text("create_playlist", "description"))] = "",
+    ) -> CallToolResult:
+        try:
+            r = await service.create_playlist(title, walkthroughs, description)
+        except ValueError as e:
+            return _error(str(e))
+        text = reply(
+            "playlist_created",
+            "Playlist `{title}`: {count} walkthroughs, {duration}. Id: {id}\nLink: {url}\nTell the user it is ready, with the link.",
+            title=r["title"],
+            count=len(r["entries"]),
+            duration=mmss(r["duration_s"]),
+            id=r["id"],
+            url=r["url"],
+        )
+        text += "\n" + "\n".join(f"{e['n']}. {e['title']} ({mmss(e['duration_s'])})" for e in r["entries"])
+        return _result(text, {"status": "created", **r})
+
     for name, p in texts(deliver)["prompts"].items():
         _register_prompt(mcp, name, p)
 
@@ -504,6 +533,16 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
     )
     async def walkthroughs_resource() -> str:
         return json.dumps(await service.list(), indent=1)
+
+    @mcp.resource(
+        "talktrack://playlists",
+        name="playlists",
+        title="Playlists",
+        description="Playlists with their ids, links and the walkthroughs in each, in order",
+        mime_type="application/json",
+    )
+    async def playlists_resource() -> str:
+        return json.dumps(await service.playlists(), indent=1)
 
     @mcp.resource(
         "talktrack://slide-kinds",
@@ -582,6 +621,23 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
             ),
             headers={"Cache-Control": "no-store"},
         )
+
+    @mcp.custom_route("/p/{pid}", methods=["GET"])
+    async def playlist_redirect(request: Request) -> Response:
+        q = f"?{request.url.query}" if request.url.query else ""
+        return RedirectResponse(f"/p/{request.path_params['pid']}/{q}", status_code=308)
+
+    @mcp.custom_route("/p/{pid}/", methods=["GET"])
+    async def playlist(request: Request) -> Response:
+        from . import playlists
+
+        pl = playlists.get(store.data_dir, request.path_params["pid"])
+        rows = playlists.entries(store.data_dir, pl) if pl else []
+        if not rows:
+            return HTMLResponse("Playlist not found", status_code=404)
+        for r in rows:
+            r["src"] = f"/w/{r['id']}/{store.link_suffix}"
+        return HTMLResponse(render_playlist(pl, rows, "../../static", rows[0]["theme"]), headers={"Cache-Control": "no-store"})
 
     @mcp.custom_route("/w/{wid}/data.json", methods=["GET"])
     async def data(request: Request) -> Response:
@@ -782,3 +838,38 @@ def render_index(rows: list[dict], suffix: str) -> str:
         )
     body = "\n".join(items) or '<li class="empty">No walkthroughs yet. Ask your coding agent for one.</li>'
     return (STATIC / "index.html").read_text().replace("{{ROWS}}", body).replace("{{VERSION}}", __version__)
+
+
+def render_playlist(pl: dict, rows: list[dict], static: str, theme: str = "dark") -> str:
+    """The playlist page. Each row has `title`, `duration` and where its player comes from: `src`
+    (a link, for the live page) or `doc` (a whole single-page export, for an exported file)."""
+    from .export import _script_json
+    from .themes import THEMES
+
+    li = "\n".join(
+        f'<li><button type="button" aria-current="false"><span class="n">{i}</span>'
+        f'<span class="t">{html.escape(r["title"] or "Untitled")}</span><span class="d">{mmss(r["duration"])}</span></button></li>'
+        for i, r in enumerate(rows, 1)
+    )
+    desc = " ".join((pl.get("description") or "").split())
+    meta = (
+        f'<meta name="description" content="{html.escape(desc)}">\n<meta property="og:description" content="{html.escape(desc)}">'
+        if desc
+        else ""
+    )
+    lede = f'<p class="lede">{html.escape(desc)}</p>' if desc else ""
+    count = f"{len(rows)} walkthrough{'s' if len(rows) != 1 else ''} · {mmss(sum(r['duration'] for r in rows))}"
+    data = _script_json({"entries": [{k: r[k] for k in ("src", "doc") if k in r} for r in rows]})
+    fill = {
+        "DESCRIPTION": meta,
+        "LEDE": lede,
+        "COUNT": count,
+        "ROWS": li,
+        "DATA": data,
+        "THEME": theme if theme in THEMES else "dark",
+        "STATIC": static,
+        "VERSION": __version__,
+        "TITLE": html.escape(pl["title"]),
+    }
+    # One pass, so a title or an exported page that happens to contain "{{TITLE}}" is left alone.
+    return re.sub(r"\{\{([A-Z]+)\}\}", lambda m: fill.get(m.group(1), m.group(0)), (STATIC / "playlist.html").read_text())

@@ -251,3 +251,45 @@ def test_a_drawio_diagram_plays_offline_from_one_page(tmp_path):
         shapes = page.evaluate("document.querySelectorAll('.drawio svg g').length")
         b.close()
     assert shapes > 3 and not other and not errors, (shapes, other, errors)
+
+
+@pytest.mark.browser
+def test_a_playlist_page_plays_on_to_the_next_entry_offline(tmp_path):
+    pw = pytest.importorskip("playwright.sync_api")
+    from talktrack import playlists
+    from talktrack.export import export_playlist_html
+
+    data = tmp_path / "data"
+    ids = [_voiced(data, f"# Part {k}\n\nJust one short sentence.\n", str(tmp_path)) for k in (1, 2)]
+    pl = playlists.create(data, "Course", ids)
+    url = export_playlist_html(data, pl, tmp_path / "course.html").as_uri()
+    with pw.sync_playwright() as p:
+        try:
+            b = p.chromium.launch(args=["--autoplay-policy=no-user-gesture-required", "--mute-audio"])
+        except Exception as e:  # browsers not installed
+            pytest.skip(f"Chromium unavailable: {e}")
+        page = b.new_page(viewport={"width": 1280, "height": 720})
+        other, errors = [], []
+
+        def only_the_file(route):
+            if route.request.url.split("?")[0].startswith(("file:", "data:", "blob:", "about:")):
+                return route.continue_()
+            other.append(route.request.url)
+            return route.abort()
+
+        page.route("**/*", only_the_file)
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.goto(url)
+        title = "document.getElementById('frame').contentDocument.querySelector('.slide h1')?.textContent"
+        page.wait_for_function(f"{title} === 'Part 1'", timeout=15000)
+        page.frame_locator("#frame").locator("#big-play").click()
+        page.wait_for_function("new URL(location.href).searchParams.get('n') === '2'", timeout=20000)
+        page.wait_for_function(f"{title} === 'Part 2'", timeout=10000)
+        page.wait_for_function(
+            "document.getElementById('frame').contentWindow.__talktrack?.starts?.length > 0", timeout=15000
+        )  # told to play
+        page.goto(url + "?n=2")  # a link opens at its entry
+        page.wait_for_function(f"{title} === 'Part 2'", timeout=15000)
+        assert page.get_attribute("#entries li:nth-child(2) button", "aria-current") == "true"
+        assert not other and not errors, (other, errors)
+        b.close()

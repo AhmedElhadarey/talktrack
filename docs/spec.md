@@ -38,6 +38,7 @@ graph TB
 | **add_slides** | `handle`, `markdown` | `status`, `url` once playable, `issues`, progress, the guide on the first playable reply |
 | **revise_slide** | `handle`, `slide` (id), `markdown` (one slide) | `issues`; only changed narration is voiced again |
 | **finish_walkthrough** | `handle`, `questions` (optional list) | summary, `issues`; with Playwright, findings from drawing every slide headless |
+| **create_playlist** | `title`, `walkthroughs` (ids, handles or links, in order), `description` (optional) | `id`, `url`, the entries with their own links (`?n=N`); an unknown walkthrough is an error naming it. Every call makes a new playlist |
 | **list_walkthroughs** | none | recent walkthroughs with handles, titles and links |
 | **export_walkthrough** | `handle`, `format` (mp4, html), `path` (optional), `max_mb` (optional) | `path`, `bytes`, `duration_s`, `shrunk`; waits for the narration, then writes an MP4 (needs ffmpeg; Chromium is fetched on first need) or one offline HTML page, by default in the project folder named after the title |
 | **preview_slides** | `handle`, `slides` (optional ids) | a 640×360 picture of each slide fully revealed (up to twelve), plus layout findings from drawing them. Needs Playwright's Chromium where talktrack runs (fetched on first need). |
@@ -48,7 +49,7 @@ All tools return structured content and a readable text version. Tools carry tit
 
 **Prompts:** `diff`, `review`, `file` and `topic` return a ready-made request for a walkthrough of a change, a review of a change (verdict, one finding per slide, ranked findings), a file or a concept. Claude Code shows them as slash commands.
 
-**Resources:** `talktrack://walkthroughs` lists recent walkthroughs, `talktrack://walkthroughs/{id}` holds one walkthrough's Markdown source, so a later session can read and revise it, and `talktrack://slide-kinds` describes every kind of visual with an example.
+**Resources:** `talktrack://playlists` lists playlists with their links and entries, `talktrack://walkthroughs` lists recent walkthroughs, `talktrack://walkthroughs/{id}` holds one walkthrough's Markdown source, so a later session can read and revise it, and `talktrack://slide-kinds` describes every kind of visual with an example.
 
 ## Project root
 
@@ -90,6 +91,12 @@ While a player is connected, a revised slide replaces the old one only once all 
 - **Time-driven:** every narration has a start time on one timeline, and the visible state (slide, revealed parts, pointer, highlighted entry, caption word) is computed from the current time. Playback, seeking and export all use that one function. Slide transitions (a rise, a push between alike slides, a zoom into title and chapter slides, a drawing gliding from the previous slide's) and the staggered arrival of cards, numbers and rows are driven by the same clock, so MP4 export shows them too.
 - **Waiting:** when playback reaches narration without audio yet, it pauses and shows that the next slide is being written.
 - **Reports:** render errors are posted back to the server with the per-walkthrough report key and reach the agent, marked as player reports, on its next call.
+
+## Playlists
+
+- **Storage:** `playlists/<id>.json` in the data folder: title, description and the walkthrough ids in order, written the way `state.json` is (a `.part` file, then renamed). Titles and durations are read from the walkthroughs when the page is drawn, so a deleted walkthrough drops out of the list. Only finished walkthroughs can be added.
+- **Page:** `/p/<id>/` shows the table of contents (titles, durations) and one frame holding the current walkthrough's own player, so the keyboard shortcuts, captions and speed are the player's. When the player reports `ended`, the next entry loads and is told to play; a click in the contents jumps to an entry. `?n=N` (from 1) opens entry N and follows the playing one in the address bar; other query parameters, such as `?t=`, are kept. N counts the entries that still exist, so deleting a walkthrough shifts the numbers in links already shared.
+- **Export:** `export_walkthrough` with the playlist's id as `handle` and format `html`, or `talktrack export PLAYLIST OUT.html`, writes one offline page: the contents page with each walkthrough's single-page export inside it, loaded into the frame as it is played. Playlists have no MP4. With `--deliver file` the page has no size limit unless `max_mb` is given (the 16 MB default is for videos); one entry with a diagram is about 1.6 MB plus its narration.
 
 ## Checks returned to the agent
 

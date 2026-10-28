@@ -42,10 +42,19 @@
     "title": "Export walkthrough",
     "description": "Save a walkthrough as one file the user can keep or forward: an MP4 video (H.264 and AAC, with a subtitle track) or a self-contained HTML page that plays offline in a browser. Call it after finish_walkthrough and the fixes its reply names. It waits up to five minutes for narration still being voiced, then renders; an MP4 takes about a tenth of its length plus a few seconds. Use it when the user asks for a video, or for a file to share, send or attach. MP4 needs ffmpeg and Playwright Chromium, HTML neither; the error says what is missing.",
     "args": {
-      "handle": "Handle from start_walkthrough or list_walkthroughs.",
+      "handle": "Handle from start_walkthrough or list_walkthroughs; or, with format html, a playlist's id or link.",
       "format": "mp4 (default): a video for chat apps, email and phones. html: one page that plays offline in a browser.",
       "path": "Where to write. Empty: a file named after the title in the project folder. Relative: inside the project folder. Absolute: that path, inside a folder the client shares. Must end in .mp4 or .html to match `format`. An existing file is overwritten.",
       "max_mb": "Size limit in MB. An MP4 over it is shrunk, first lower audio bitrate, then 720p; if it still does not fit, the call fails: split the walkthrough or raise the limit. An HTML page over it fails. 0: no limit. Omit for the server default: 16 (WhatsApp's video limit) when the user receives files, otherwise none. Other channels: Telegram bots 50, Signal 100, email often 25."
+    }
+  },
+  "create_playlist": {
+    "title": "Create playlist",
+    "description": "Group finished walkthroughs into one course: an order, one page with a table of contents and one link. The page plays each walkthrough and moves to the next when one ends; the viewer can jump to any entry. Use it when several walkthroughs belong together, after each is finished. Every call makes a new playlist. For a file the user can keep, pass the playlist id as `handle` to export_walkthrough with format html: one offline page (no MP4 for playlists). The resource talktrack://playlists lists existing ones.",
+    "args": {
+      "title": "Playlist title, shown above the contents. Under about 50 characters.",
+      "walkthroughs": "The walkthroughs in play order, each an id, a handle or a link from list_walkthroughs. An unknown one fails the call and is named.",
+      "description": "One or two sentences on what the course covers, up to 200 characters. Shown on the page and in link previews."
     }
   },
   "list_walkthroughs": {

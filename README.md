@@ -358,7 +358,7 @@ The full reference is [docs/format.md](docs/format.md).
 
 ## 🧰 MCP Tools, Prompts and Resources
 
-The server exposes seven tools. Their descriptions, and everything else the agent reads, live in [`src/talktrack/text/`](src/talktrack/text/).
+The server exposes eight tools. Their descriptions, and everything else the agent reads, live in [`src/talktrack/text/`](src/talktrack/text/).
 
 | Tool | What it does |
 |---|---|
@@ -367,6 +367,7 @@ The server exposes seven tools. Their descriptions, and everything else the agen
 | **`revise_slide`** | replaces one slide, found by its id, and replies with a link that plays that slide |
 | **`finish_walkthrough`** | closes the walkthrough and returns render and layout findings |
 | **`export_walkthrough`** | saves an MP4 (`format` `mp4`, the default) or a self-contained HTML page (`html`); `path` and `max_mb` are optional |
+| **`create_playlist`** | joins finished walkthroughs, in order, into one page with a table of contents and one link; it plays on to the next entry when one ends. `export_walkthrough` takes the playlist's id and `html` for an offline file |
 | **`list_walkthroughs`** | recent walkthroughs with handles, titles and links |
 | **`preview_slides`** | small pictures of slides as the viewer sees them, plus any layout problems found while drawing them |
 
@@ -380,6 +381,7 @@ The server exposes seven tools. Their descriptions, and everything else the agen
 | Resource | Contents |
 |---|---|
 | **`talktrack://walkthroughs`** | recent walkthroughs with titles, links and handles |
+| **`talktrack://playlists`** | playlists with their links and the walkthroughs in each, in order |
 | **`talktrack://slide-kinds`** | every kind of visual a slide can show, with an example |
 | **`talktrack://walkthroughs/{id}`** | the Markdown a walkthrough was written in |
 
@@ -392,6 +394,7 @@ The server exposes seven tools. Their descriptions, and everything else the agen
 | **`talktrack mcp`** | stdio MCP server; starts or reuses the daemon. `--deliver file` has the agent send an MP4 instead of a link |
 | **`talktrack serve`** | the daemon in the foreground: MCP over HTTP at `/mcp`, the player, and the list of walkthroughs at `/` |
 | **`talktrack play FILE.md`** | voice a Markdown walkthrough and open it |
+| **`talktrack export PLAYLIST_ID\|LINK OUT.html`** | a playlist as one self-contained page: its contents and every walkthrough in it, playing on from one to the next offline |
 | **`talktrack export ID\|LINK\|FILE.md OUT.html`** | one self-contained page: player, slides, MP3 narration and only the libraries its slides use; plays offline from a double-click and makes no network requests |
 | **`talktrack export ID\|LINK\|FILE.md OUT [--mp3]`** | a static folder that plays from any web server, with WebVTT captions and a `poster.png` |
 | **`talktrack export ID\|LINK\|FILE.md OUT.mp4`** | an MP4 video; `--fps`, `--workers`, `--burn-captions`, `--max-mb` to shrink it to fit |
@@ -519,6 +522,7 @@ talktrack/
 │   ├── daemon.py             # start, reuse or replace the background daemon; lockfile and log cap
 │   ├── app.py                # the daemon: server wiring and the request guard
 │   ├── server.py             # MCP tools, prompts, resources and web routes
+│   ├── playlists.py          # playlists: walkthrough ids in an order, saved in the data folder
 │   ├── service.py            # LocalService (the tools' logic) and RemoteService (the shim's client)
 │   ├── store.py              # walkthrough sessions, speech requests, events, persistence
 │   ├── format.py             # the incremental Markdown parser

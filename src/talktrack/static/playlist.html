@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en" data-theme="{{THEME}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="generator" content="talktrack {{VERSION}}">
+<title>{{TITLE}}</title>
+<meta property="og:title" content="{{TITLE}}">
+{{DESCRIPTION}}
+<link rel="icon" href="{{STATIC}}/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="{{STATIC}}/themes.css">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 15px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+#pl { display: grid; grid-template-columns: 320px 1fr; height: 100%; }
+#contents { overflow-y: auto; padding: 24px 16px; border-right: 1px solid var(--line); background: var(--panel-deep); }
+#contents h1 { margin: 0 0 4px; font-size: 20px; line-height: 1.2; letter-spacing: -0.01em; }
+#contents .lede { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+#contents .total { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+ol { list-style: none; margin: 0; padding: 0; }
+li button { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: baseline; width: 100%; padding: 10px 8px; text-align: left; font: inherit; color: var(--fg); background: none; border: 0; border-left: 3px solid transparent; border-radius: 6px; cursor: pointer; }
+li button:hover, li button:focus-visible { background: var(--panel); }
+li button[aria-current="true"] { background: var(--panel-2); border-left-color: var(--accent); }
+li .n, li .d { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+#stage { min-width: 0; background: var(--stage); }
+#frame { display: block; width: 100%; height: 100%; border: 0; }
+@media (max-width: 800px) {
+  #pl { grid-template-columns: 1fr; grid-template-rows: 56vh 1fr; }
+  #stage { order: -1; }
+  #contents { border-right: 0; border-top: 1px solid var(--line); }
+}
+</style>
+</head>
+<body>
+<div id="pl">
+  <nav id="contents" aria-label="Contents">
+    <h1>{{TITLE}}</h1>
+    {{LEDE}}
+    <p class="total">{{COUNT}}</p>
+    <ol id="entries">
+{{ROWS}}
+    </ol>
+  </nav>
+  <main id="stage"><iframe id="frame" title="Walkthrough" allow="autoplay; fullscreen; clipboard-write"></iframe></main>
+</div>
+<script type="application/json" id="playlist-data">{{DATA}}</script>
+<script>
+// One player at a time, in an iframe: the walkthrough's own page, or in an exported file its whole
+// single-page export. When it reports `ended`, the next entry loads and is told to play.
+(function () {
+  var data = JSON.parse(document.getElementById("playlist-data").textContent);
+  var entries = data.entries, frame = document.getElementById("frame");
+  var buttons = Array.prototype.slice.call(document.querySelectorAll("#entries button"));
+  var current = -1, playNext = false, focusNext = true;  // focus the player on the first load and after a click, not on every auto-advance
+
+  function show(i, play) {
+    if (i < 0 || i >= entries.length) return;
+    current = i;
+    playNext = play;
+    buttons.forEach(function (b, k) { b.setAttribute("aria-current", k === i ? "true" : "false"); });
+    var url = new URL(location.href);
+    url.searchParams.set("n", String(i + 1));
+    history.replaceState(null, "", url);
+    // `srcdoc` of a page left in place would not reload; clearing the other attribute keeps one source.
+    if (entries[i].doc !== undefined) { frame.removeAttribute("src"); frame.srcdoc = entries[i].doc; }
+    else { frame.removeAttribute("srcdoc"); frame.src = entries[i].src; }
+  }
+
+  buttons.forEach(function (b, k) { b.onclick = function () { focusNext = true; show(k, true); }; });
+  frame.addEventListener("load", function () { if (focusNext) { focusNext = false; frame.focus(); } });  // the player's keys work at once
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (e.source !== frame.contentWindow || !m || m.source !== "talktrack") return;
+    if (m.type === "ready" && playNext) { playNext = false; frame.contentWindow.postMessage({ target: "talktrack", type: "play" }, "*"); }
+    else if (m.type === "ended" && !m.range) show(current + 1, true);
+  });
+
+  var n = parseInt(new URLSearchParams(location.search).get("n"), 10);
+  show(n >= 1 && n <= entries.length ? n - 1 : 0, false);
+})();
+</script>
+</body>
+</html>

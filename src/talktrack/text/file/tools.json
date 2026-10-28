@@ -7,5 +7,8 @@
   },
   "finish_walkthrough": {
     "description": "Close the walkthrough after its last slide. Records the end questions and returns a summary: remaining problems, each slide's start time and look (kind, layout, takeaway, icons) and what could not be checked. It names runs of slides that look alike, with pictures of them; revise one in each run into a different look before telling the user. With Playwright installed it first draws every slide, so the summary already reports render and layout problems (render errors, text_too_small, overflow, drawing_overlap); fix them with revise_slide before exporting. Call preview_slides only for slides it names, a drawing or diagram you want to see, or when the user asks. Then call export_walkthrough and send the user the file it saves; never the link."
+  },
+  "create_playlist": {
+    "description": "Group finished walkthroughs into one course as a single self-contained HTML page: a table of contents, each walkthrough playing in turn. Use it only when the user asks for a course as one file to open in a browser; the user otherwise receives each walkthrough as its own MP4, in order. It makes no link: export the page with export_walkthrough, passing the playlist id as `handle` and format html (no size limit by default; no MP4 for playlists), and send the file. Every call makes a new playlist."
   }
 }

@@ -130,6 +130,10 @@ The same module writes `poster.png` for folder exports and returns PNG frames at
 | **Walkthrough** | `data.json` in a `<script type="application/json">` at the end of the page; narration MP3s and images inside it as `data:` URLs, turned into `blob:` URLs before the player starts |
 | **Libraries** | only those the slide kinds need (Mermaid for diagrams, KaTeX for formulas, highlight.js for code), in a registry `loadScript` and `loadCss` read before the network; scripts over 100 KB gzipped and unpacked with `DecompressionStream` |
 
+## Playlists
+
+`playlist.html` is a thin page: a table of contents and one iframe. The frame holds a walkthrough's own player (`/w/<id>/` live) and the page listens for the `ended` event the embedding protocol already sends, then loads the next entry and sends it `play`. The single-file export puts each walkthrough's `export_html` page in the playlist page as an `srcdoc`, so nothing about the player or the single-page export is duplicated in code, only carried once per entry.
+
 ## Data
 
 | Path in the data folder | Contents |
@@ -139,6 +143,7 @@ The same module writes `poster.png` for folder exports and returns PNG frames at
 | `walkthroughs/<id>/state.json` | the walkthrough: slides, narration, cues, timings |
 | `walkthroughs/<id>/source.md` | the Markdown as received |
 | `walkthroughs/<id>/assets/` | images copied from the project |
+| `playlists/<id>.json` | a playlist: title, description and walkthrough ids in order |
 | `audio/<key>.wav` and `.json` | voiced narration and its word timings, shared by all walkthroughs |
 | `models/` | the spaCy English model |
 | `lexicon.txt` | your pronunciations, `word = spoken form` |
