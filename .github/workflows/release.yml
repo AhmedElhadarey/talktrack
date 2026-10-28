@@ -6,12 +6,19 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      target:
+        description: "Index to publish to. A published release always goes to PyPI."
+        type: choice
+        options: [pypi, testpypi]
+        default: pypi
 
 jobs:
   publish:
-    name: Build and publish to PyPI
+    name: Build and publish
     runs-on: ubuntu-latest
-    environment: pypi
+    # Each index has its own environment, so each carries its own trusted publisher and protection.
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi' && 'testpypi' || 'pypi' }}
     permissions:
       contents: read
       id-token: write  # PyPI trusted publishing; no API token stored anywhere
@@ -29,4 +36,12 @@ jobs:
       - run: uv build
       - name: Install the wheel outside the repo and play a walkthrough with fake speech
         run: bash scripts/wheel_smoke.sh
-      - run: uv publish --trusted-publishing always
+      - name: Publish to PyPI
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.target != 'testpypi' }}
+        run: uv publish --trusted-publishing always
+      - name: Publish to TestPyPI
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi' }}
+        run: >-
+          uv publish --trusted-publishing always
+          --publish-url https://test.pypi.org/legacy/
+          --check-url https://test.pypi.org/simple/

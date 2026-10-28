@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 (unreleased)
+
+- **Test releases:** running `release.yml` by hand on a release tag can now publish to TestPyPI instead of PyPI, so a release is rehearsed before it reaches the real index. Each index uses its own GitHub environment (`pypi`, `testpypi`) and trusted publisher, a published release still goes only to PyPI, and a test checks the workflow never falls back to a stored token.
+
 ## 0.2.0 (2026-10-28)
 
 - **Renamed to talktrack:** the package, the `talktrack` command, the `<talktrack-player>` element, the Claude Code plugin, the Gemini extension and the GitHub Action all carry the new name, and installs come from `AhmedElhadarey/talktrack`. Settings are now `TALKTRACK_*` (`TALKTRACK_PORT`, `TALKTRACK_DATA` and the rest); the old `SHOWNTELL_*` variables are no longer read. The data folder moves with the name, so the voice model downloads again on first run. Entries below keep the old name.
