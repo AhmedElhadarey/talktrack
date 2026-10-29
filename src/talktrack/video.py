@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -26,6 +25,7 @@ from . import __version__
 from .capture import Capturer, CaptureUnavailable, launch, require_playwright, serve_folder
 from .export import export, timeline, timeline_total
 from .model import Walkthrough
+from .resources import GB, WORKER_BYTES, Budget, budget
 
 TOLERANCE = 0.2  # seconds between the timeline and the file's duration
 # Measured on a 263 s walkthrough, 4 workers: PNG frames and x264 medium 8.3x real time,
@@ -44,8 +44,21 @@ def require_ffmpeg() -> None:
         )
 
 
-def default_workers() -> int:
-    return max(1, min(4, os.cpu_count() or 1))
+def default_workers(b: Budget | None = None) -> int:
+    """Up to 4 workers, fewer when the CPUs or the free memory cannot carry them (resources.py)."""
+    return (b or budget()).export_workers()
+
+
+def warn_workers(workers: int, b: Budget, quiet: bool) -> None:
+    """An explicit --workers is kept, but one line says when it is more than fits in memory."""
+    fit = b.workers_fit()
+    if quiet or fit is None or workers <= fit:
+        return
+    print(
+        f"warning: --workers {workers} needs about {workers * WORKER_BYTES / GB:.1f} GB and about "
+        f"{fit * WORKER_BYTES / GB:.1f} GB fits now ({fit} workers); the machine may swap. Keeping {workers}.",
+        file=sys.stderr,
+    )
 
 
 # -- sound ----------------------------------------------------------------------------------
@@ -85,7 +98,7 @@ def soundtrack(folder: Path, total: float, dest: Path) -> int:
 # -- frames ---------------------------------------------------------------------------------
 
 
-def _segment_cmd(fps: int, out: Path, image: str) -> list[str]:
+def _segment_cmd(fps: int, out: Path, image: str, threads: int = 1) -> list[str]:
     return [
         "ffmpeg",
         "-y",
@@ -102,6 +115,8 @@ def _segment_cmd(fps: int, out: Path, image: str) -> list[str]:
         "-an",
         "-c:v",
         "libx264",
+        "-threads",  # unset, every x264 takes all cores, and N workers fight over them
+        str(threads),
         "-preset",
         PRESET,
         "-crf",
@@ -120,9 +135,11 @@ def _segment_cmd(fps: int, out: Path, image: str) -> list[str]:
     ]
 
 
-async def _render_range(browser, url: str, fps: int, a: int, b: int, out: Path, image: str, captions: bool, progress: list[int]) -> dict:
+async def _render_range(
+    browser, url: str, fps: int, a: int, b: int, out: Path, image: str, captions: bool, progress: list[int], threads: int = 1
+) -> dict:
     """Frames a..b-1 into one segment file. Returns counts for the speed report."""
-    proc = await asyncio.create_subprocess_exec(*_segment_cmd(fps, out, image), stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = await asyncio.create_subprocess_exec(*_segment_cmd(fps, out, image, threads), stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     shots = 0
     try:
         async with Capturer(url, captions=captions, image=image, browser=browser) as c:
@@ -148,7 +165,7 @@ async def _render_range(browser, url: str, fps: int, a: int, b: int, out: Path, 
 
 
 async def _render_frames(
-    url: str, fps: int, n: int, workers: int, work: Path, image: str, captions: bool, quiet: bool
+    url: str, fps: int, n: int, workers: int, work: Path, image: str, captions: bool, quiet: bool, threads: int = 1
 ) -> tuple[list[Path], dict]:
     async_playwright = require_playwright()
     bounds = [round(n * k / workers) for k in range(workers + 1)]
@@ -160,7 +177,7 @@ async def _render_frames(
         browsers = await asyncio.gather(*(launch(pw) for _ in ranges))
         try:
             tasks = [
-                asyncio.create_task(_render_range(br, url, fps, a, b, seg, image, captions, progress))
+                asyncio.create_task(_render_range(br, url, fps, a, b, seg, image, captions, progress, threads))
                 for br, (a, b), seg in zip(browsers, ranges, segs, strict=True)
             ]
             pending = set(tasks)
@@ -315,7 +332,11 @@ def render_mp4(
         raise SystemExit(f"MP4 export: {e}") from e
     if fps < 1 or fps > 120:
         raise SystemExit("--fps must be between 1 and 120")
-    workers = workers or default_workers()
+    b = budget()
+    if workers:
+        warn_workers(workers, b, quiet)
+    else:
+        workers = default_workers(b)
     t0 = time.monotonic()
     out.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="talktrack-mp4-") as tmp:
@@ -327,7 +348,7 @@ def render_mp4(
         workers = max(1, min(workers, n))
         with serve_folder(folder) as url:
             try:
-                segs, stats = asyncio.run(_render_frames(url, fps, n, workers, work, image, captions, quiet))
+                segs, stats = asyncio.run(_render_frames(url, fps, n, workers, work, image, captions, quiet, b.ffmpeg_threads(workers)))
             except CaptureUnavailable as e:
                 raise SystemExit(f"MP4 export: {e}") from e
         if abs(stats["total"] - total) > 0.05:

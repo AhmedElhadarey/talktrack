@@ -70,7 +70,11 @@ def main(argv: list[str] | None = None) -> None:
     ex.add_argument("out", help="a file ending in .html (one page that plays offline), .mp4 (a video), or a folder")
     ex.add_argument("--mp3", action="store_true", help="folder: compress audio to MP3")
     ex.add_argument("--fps", type=int, default=30, help="MP4: frames per second (default 30)")
-    ex.add_argument("--workers", type=int, help="MP4: browsers rendering frames in parallel (default min(4, CPUs))")
+    ex.add_argument(
+        "--workers",
+        type=int,
+        help="MP4: browsers rendering frames in parallel (default: up to 4, fewer when CPUs or free memory are short)",
+    )
     ex.add_argument("--burn-captions", action="store_true", help="MP4: draw captions into the picture as well as the subtitle track")
     ex.add_argument("--max-mb", type=float, default=0, help="MP4: shrink the video to fit this many MB, or fail (WhatsApp: 16)")
     ls = sub.add_parser("list", help="list recent walkthroughs")

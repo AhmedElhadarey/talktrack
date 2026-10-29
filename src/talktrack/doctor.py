@@ -10,6 +10,7 @@ import time
 
 from . import __version__, daemon
 from .config import Config
+from .resources import budget, describe
 
 # Until talktrack is on PyPI, where this becomes `uvx talktrack mcp`.
 INSTALL = "uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack mcp"
@@ -93,6 +94,9 @@ def doctor(cfg: Config, args) -> None:
     # the finish-time layout check, and MP4 export
     _row(*_browser_check())
     _row(*_ffmpeg_check())
+
+    # RAM and CPUs, and what export and speech may use of them
+    _row(OK, "resources", describe(budget()))
 
     # speech backend and models
     from .speech import Status, make_backend

@@ -486,7 +486,7 @@ uvx --from git+https://github.com/AhmedElhadarey/talktrack@v0.2.0 talktrack expo
 | **Picture** | H.264, 30 fps (`--fps`), 1920x1080 for landscape, 1080x1080 square, 1080x1920 portrait; only the slide, no player controls |
 | **Sound** | AAC, built from the narration clips at their places on the timeline |
 | **Captions** | a mov_text subtitle track; `--burn-captions` also draws them into the picture |
-| **Speed** | `--workers` browsers render frame ranges in parallel (default: up to 4); unchanged frames reuse the last screenshot |
+| **Speed** | `--workers` browsers render frame ranges in parallel (default: up to 4, fewer when CPUs or free memory are short, about 0.7 GB each; a larger number is kept with a warning); each encoder gets its share of the CPUs; unchanged frames reuse the last screenshot |
 | **Size** | `--max-mb 16` lowers the audio bitrate, then the picture to 720p, until the file fits, or fails |
 | **Checks** | the file's duration must match the timeline within 0.2 s, or the export fails |
 
@@ -532,7 +532,8 @@ Environment variables, also listed in [.env.example](.env.example). Command-line
 | **`TALKTRACK_ACCESS_TOKEN`** | generated | the access token used when `TALKTRACK_HOST` is not a loopback address or `TALKTRACK_PUBLIC_URL` is set; the only secret here |
 | **`TALKTRACK_OPEN`** | | `1` opens each walkthrough in the browser as soon as it is playable (the same as `serve --open`) |
 | **`TALKTRACK_ONNX_MODEL`** | `model_quantized` | ONNX variant; `model` (fp32) can be faster on CPUs without AVX2 |
-| **`TALKTRACK_THREADS`** | up to 6 | CPU threads for ONNX speech |
+| **`TALKTRACK_THREADS`** | up to 6 (2 under 8 GB RAM) | CPU threads for ONNX speech |
+| **`TALKTRACK_MAX_MEMORY`** | 50% of RAM | most memory export and speech may use, such as `6GB`, `512MB` or `50%`; 2 GB of RAM is always left free. Sets the export worker count and the MLX memory limit (40% of it, at least 2 GB) |
 | **`TALKTRACK_DELIVER`** | `link` | `file`: the agent sends an exported MP4 instead of the player's link, for agents in a sandbox or behind a chat app |
 | **`TALKTRACK_FINISH_CHECK`** | 1 | `0` skips drawing every slide headless at `finish_walkthrough` |
 | **`TALKTRACK_AUTO_BROWSER`** | 1 | `0` stops talktrack from downloading Playwright's Chromium on first need; slide checks, posters and MP4 export then ask you to install it |
