@@ -10,7 +10,7 @@ pronunciation against speech recognition.
     uv run --with mlx-whisper python scripts/eval.py --prompts eval/prompts-walkthrough.json --runs all
 
 eval/prompts.json is what `--runs all` runs. eval/prompts-walkthrough.json holds before/after pairs
-for the MCP prompts (`feature`, `course`, `bug`, `audience`, `review` with a spec); an entry there
+for the MCP prompts (`feature`, `course`, `bug`, `audience`, `review` with a spec, `explain` on four kinds of source); an entry there
 names the prompt to render with `mcp_prompt` instead of writing the request out.
 
 Playwright comes from the project environment: `--with playwright` would resolve a newer release
@@ -94,6 +94,7 @@ async def run_agent(prompt: dict, model: str, data_dir: Path, port: int, play: b
         "--verbose",
         "--allowedTools",
         *ALLOWED,
+        *prompt.get("allow", []),  # tools one entry needs, such as WebFetch for a link to read
     ]
     t0 = time.time()
     # stderr goes to a file: an unread pipe would block the agent once it filled.

@@ -74,9 +74,20 @@ def test_table_shows_course_columns_only_when_a_run_made_parts_or_a_playlist(cap
 def test_walkthrough_entries_are_before_after_pairs_and_all_render():
     entries = _load("prompts-walkthrough.json")
     ids = [e["id"] for e in entries]
-    assert len(ids) == len(set(ids)) == 10
-    for stem in ("feature", "course", "bug", "audience", "review-spec"):
+    assert len(ids) == len(set(ids)) == 18
+    for stem in ("feature", "course", "bug", "audience", "review-spec", "explain-text", "explain-article", "explain-pdf", "explain-image"):
         assert f"{stem}-before" in ids and f"{stem}-after" in ids
     assert not set(ids) & {e["id"] for e in _load("prompts.json")}
     for e in entries:
         assert _eval().prompt_text(e).strip()
+
+
+def test_explain_pairs_differ_only_in_the_prompt():
+    by_id = {e["id"]: e for e in _load("prompts-walkthrough.json")}
+    for stem in ("text", "article", "pdf", "image"):
+        before, after = by_id[f"explain-{stem}-before"], by_id[f"explain-{stem}-after"]
+        assert (before["mcp_prompt"]["name"], after["mcp_prompt"]["name"]) == ("topic", "explain")
+        assert after["mcp_prompt"]["args"]["source"] in before["mcp_prompt"]["args"]["topic"]
+        assert before["mcp_prompt"]["args"]["audience"] == after["mcp_prompt"]["args"]["audience"]
+        assert [before.get(k) for k in ("timeout", "expect", "allow")] == [after.get(k) for k in ("timeout", "expect", "allow")]
+    assert by_id["explain-article-before"]["allow"] == ["WebFetch"]

@@ -18,6 +18,7 @@ One question per walkthrough, 6 to 12 slides, two to four minutes: purpose, then
 | **A bug** | the symptom as the user saw it, the cause with evidence on screen, the fix as a diff, evidence it now works, how to keep it from coming back; with no fix yet, cause and suspected fix marked verified or suspected |
 | **A feature** | its entry point, then one real path through the code across files in run order, code from disk on each mechanism slide, the behaviour after two or three code slides, then edge cases, limits and where to change it; "not sure" over a guess |
 | **A course** | plan 3 to 6 parts, one learning goal each, in dependency order, and say the plan in part one; each part its own 1 to 3 minute walkthrough ending in a quiz; share each link as it plays, then `create_playlist` and share its link (file mode: export and send each MP4 in order) |
+| **Anything to explain** (an article, PDF, image, notes or an idea) | read links and files with `read_source`; the big idea first, then one idea per slide with a picture, in dependency order; only what the source says, and say when you add background; name the source; a quiz; past about 20 pages or 10,000 words, a course |
 | **Architecture** | components, then one request's path through them |
 | **Concept, maths** | the problem, how it works, trade-offs, real project code if any |
 

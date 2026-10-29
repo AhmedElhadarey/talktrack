@@ -69,5 +69,15 @@
       "handle": "Handle from start_walkthrough or list_walkthroughs.",
       "slides": "Slide ids to show. Omit for all slides, up to twelve; with more, the last twelve."
     }
+  },
+  "read_source": {
+    "title": "Read a source",
+    "description": "Read, word for word, something the user wants explained: a web page (its article text as Markdown, without menus or ads, with its image links and formulas), a PDF (its outline with page numbers, then the text page by page), an image (returned so you can look at it) or a text file. Use it for a link or a file the user gives you rather than a tool that summarises, so the walkthrough rests on what the source says. A long source comes in pieces, and the reply says how to ask for the next. Links must be public web addresses and files must be inside the project folder. It cannot read scanned PDFs without a text layer, pages that need JavaScript to show their text, video or audio.",
+    "args": {
+      "source": "A link (http or https) or the path of a file inside the project folder: .pdf, .png, .jpg, .gif, .webp, .html, .md or .txt.",
+      "pages": "PDF only: the pages to read, such as 1-20 or 45-60. Empty: from page 1. A reply stops at about 10,000 words and says where to go on.",
+      "part": "Web pages and text files only: which piece of a long text to read, from 1. The reply says how many pieces there are.",
+      "project_dir": "The folder that file paths are relative to. Normally empty: the project folder."
+    }
   }
 }

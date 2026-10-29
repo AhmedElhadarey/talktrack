@@ -114,5 +114,151 @@
   "expect": [
    "diff"
   ]
+ },
+ {
+  "id": "explain-text-before",
+  "kind": "explain",
+  "mcp_prompt": {
+   "name": "topic",
+   "args": {
+    "topic": "this paragraph: Compound interest means you earn interest on your interest. Put $1,000 in an account paying 5% a year: after the first year you have $1,050. In the second year the 5% applies to $1,050, so you earn $52.50, not $50, and you end with $1,102.50. The gap grows every year: after 10 years you have about $1,629, after 30 years about $4,322, while simple interest on the original $1,000 would give only $2,500 after 30 years. The rule of 72 estimates the doubling time: divide 72 by the rate, so at 5% money doubles in about 14.4 years. The formula is A = P(1 + r)^t.",
+    "audience": "a curious high-school student"
+   }
+  },
+  "expect": [
+   "chart",
+   "math",
+   "stat"
+  ]
+ },
+ {
+  "id": "explain-text-after",
+  "kind": "explain",
+  "mcp_prompt": {
+   "name": "explain",
+   "args": {
+    "source": "Compound interest means you earn interest on your interest. Put $1,000 in an account paying 5% a year: after the first year you have $1,050. In the second year the 5% applies to $1,050, so you earn $52.50, not $50, and you end with $1,102.50. The gap grows every year: after 10 years you have about $1,629, after 30 years about $4,322, while simple interest on the original $1,000 would give only $2,500 after 30 years. The rule of 72 estimates the doubling time: divide 72 by the rate, so at 5% money doubles in about 14.4 years. The formula is A = P(1 + r)^t.",
+    "audience": "a curious high-school student"
+   }
+  },
+  "expect": [
+   "chart",
+   "math",
+   "stat"
+  ]
+ },
+ {
+  "id": "explain-article-before",
+  "kind": "explain",
+  "mcp_prompt": {
+   "name": "topic",
+   "args": {
+    "topic": "the article at https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange",
+    "audience": "a curious high-school student"
+   }
+  },
+  "expect": [
+   "math",
+   "diagram",
+   "svg"
+  ],
+  "timeout": 900,
+  "allow": [
+   "WebFetch"
+  ]
+ },
+ {
+  "id": "explain-article-after",
+  "kind": "explain",
+  "mcp_prompt": {
+   "name": "explain",
+   "args": {
+    "source": "https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange",
+    "audience": "a curious high-school student"
+   }
+  },
+  "expect": [
+   "math",
+   "diagram",
+   "svg"
+  ],
+  "timeout": 900,
+  "allow": [
+   "WebFetch"
+  ]
+ },
+ {
+  "id": "explain-pdf-before",
+  "kind": "explain",
+  "mcp_prompt": {
+   "name": "topic",
+   "args": {
+    "topic": "the paper at https://arxiv.org/pdf/1706.03762",
+    "audience": "a curious high-school student"
+   }
+  },
+  "expect": [
+   "math",
+   "diagram",
+   "svg",
+   "chart"
+  ],
+  "timeout": 900,
+  "allow": [
+   "WebFetch"
+  ]
+ },
+ {
+  "id": "explain-pdf-after",
+  "kind": "explain",
+  "mcp_prompt": {
+   "name": "explain",
+   "args": {
+    "source": "https://arxiv.org/pdf/1706.03762",
+    "audience": "a curious high-school student"
+   }
+  },
+  "expect": [
+   "math",
+   "diagram",
+   "svg",
+   "chart"
+  ],
+  "timeout": 900,
+  "allow": [
+   "WebFetch"
+  ]
+ },
+ {
+  "id": "explain-image-before",
+  "kind": "explain",
+  "mcp_prompt": {
+   "name": "topic",
+   "args": {
+    "topic": "the chart in eval/sources/supply-and-demand.png",
+    "audience": "a curious high-school student"
+   }
+  },
+  "expect": [
+   "image",
+   "chart",
+   "svg"
+  ]
+ },
+ {
+  "id": "explain-image-after",
+  "kind": "explain",
+  "mcp_prompt": {
+   "name": "explain",
+   "args": {
+    "source": "eval/sources/supply-and-demand.png",
+    "audience": "a curious high-school student"
+   }
+  },
+  "expect": [
+   "image",
+   "chart",
+   "svg"
+  ]
  }
 ]
