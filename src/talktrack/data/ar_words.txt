@@ -1,0 +1,29 @@
+# Egyptian Arabic words whose reading the voice may get wrong, for narration in an ar_* voice.
+# A starting list: a native speaker should review it. The user's lexicon.txt and the agent's
+# [word]{say="..."} overrides always win over it. Matches allow the prefixes و ف ب ك ل and
+# ال → لل, so "والمؤشر" and "للمؤشر" match "المؤشر".
+#
+#   word = marked form             one reading in narration: talktrack marks it itself
+#   word ? reading | reading       readings that depend on the meaning: the agent is told to mark it
+#
+# One reading
+المؤشر = الْمُؤَشِّر
+مؤشر = مُؤَشِّر
+# Depends on the meaning
+معالج ? مُعَالِج (a processor, a therapist) | مُعَالَج (processed, treated)
+المعالج ? الْمُعَالِج (the processor) | الْمُعَالَج (the processed)
+مهمة ? مَهَمَّة (a task) | مُهِمَّة (important)
+المهمة ? الْمَهَمَّة (the task) | الْمُهِمَّة (the important one)
+المحرر ? الْمُحَرِّر (the editor) | الْمُحَرَّر (the edited, the freed)
+محرر ? مُحَرِّر (an editor) | مُحَرَّر (edited, freed)
+مؤقت ? مُؤَقَّت (temporary) | مُؤَقِّت (a timer)
+المؤقت ? الْمُؤَقَّت (the temporary) | الْمُؤَقِّت (the timer)
+مشغل ? مُشَغِّل (a player, an operator) | مَشْغَل (a workshop)
+المشغل ? الْمُشَغِّل (the player) | الْمَشْغَل (the workshop)
+بتتعرض ? بِتِتْعِرِض (is shown) | بِتِتْعَرَّض (is exposed to)
+تتعرض ? تِتْعِرِض (be shown) | تِتْعَرَّض (be exposed to)
+كتب ? كَتَب (wrote) | كُتُب (books)
+علم ? عِلْم (science) | عَلَم (a flag) | عَلِّم (teach)
+حمل ? حَمَل (carried) | حِمْل (a load) | حَمْل (pregnancy)
+عقد ? عَقْد (a contract) | عُقَد (knots)
+قدم ? قَدَّم (presented) | قَدَم (a foot) | قِدَم (antiquity, oldness)

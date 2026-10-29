@@ -30,6 +30,9 @@ HEADROOM = 2 * GB  # always left free for the OS, whatever the ceiling says
 # MLX Kokoro peaks near 3 GB (v0.1.8 measurement); below 2 GB it would spend its time evicting.
 SPEECH_SHARE = 0.4  # of the ceiling
 SPEECH_MIN = 2 * GB
+# VoxCPM2 4-bit (the Arabic voices) peaked at 4.66 GB with a 4 GB limit: MLX goes past a limit it
+# cannot meet by freeing its cache. While it is loaded, speech may hold up to this much.
+ARABIC_SPEECH_MAX = 6 * GB
 MAX_WORKERS = 4
 LOW_RAM = 8 * GB  # under this, speech uses at most 2 threads
 LOW_RAM_THREADS = 2
@@ -199,6 +202,10 @@ class Budget:
         """Bytes the MLX voice may hold, or None when RAM is unknown."""
         return None if self.ceiling is None else max(SPEECH_MIN, int(self.ceiling * SPEECH_SHARE))
 
+    def arabic_speech_limit(self) -> int:
+        """Bytes MLX may hold while the Arabic voice is loaded: 6 GB, or less under the ceiling."""
+        return ARABIC_SPEECH_MAX if self.ceiling is None else min(ARABIC_SPEECH_MAX, self.ceiling)
+
     def speech_threads(self, max_threads: int) -> int:
         total = self.machine.total
         cap = LOW_RAM_THREADS if total is not None and total < LOW_RAM else max_threads
@@ -226,4 +233,7 @@ def describe(b: Budget) -> str:
         ram += f" ({m.available / GB:.0f} GB free)"
     limit = b.speech_limit()
     speech = "unlimited" if limit is None else f"{limit / GB:.0f} GB"
-    return f"{ram}, {m.cpus} CPUs; export up to {b.export_workers()} workers, speech limit {speech}"
+    return (
+        f"{ram}, {m.cpus} CPUs; export up to {b.export_workers()} workers, speech limit {speech}"
+        f" ({b.arabic_speech_limit() / GB:.0f} GB with the Arabic voice)"
+    )

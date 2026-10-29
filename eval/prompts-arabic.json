@@ -1,0 +1,10 @@
+[
+ {"id": "arabic-code-before", "kind": "topic", "timeout": 900,
+  "prompt": "Use talktrack to make me a short narrated walkthrough, narrated in Egyptian Arabic, of how talktrack voices narration: from add_slides to the audio the player plays."},
+ {"id": "arabic-code-after", "kind": "topic", "timeout": 900,
+  "prompt": "Use talktrack to make me a short narrated walkthrough, narrated in Egyptian Arabic, of how talktrack voices narration: from add_slides to the audio the player plays."},
+ {"id": "arabic-explain-before", "kind": "explain", "timeout": 900,
+  "prompt": "Use talktrack to explain compound interest to a high-school student in a short narrated walkthrough, narrated in Egyptian Arabic. Use this source: Compound interest is interest earned on both the original amount and on the interest already added. If you put 1,000 pounds in a savings account at 10% a year, after one year you have 1,100; in the second year the 10% is earned on 1,100, giving 1,210. Over 20 years the balance grows to about 6,727 pounds, while simple interest would give only 3,000. The rule of 72 estimates the doubling time: divide 72 by the rate, so at 10% money doubles in about 7.2 years."},
+ {"id": "arabic-explain-after", "kind": "explain", "timeout": 900,
+  "prompt": "Use talktrack to explain compound interest to a high-school student in a short narrated walkthrough, narrated in Egyptian Arabic. Use this source: Compound interest is interest earned on both the original amount and on the interest already added. If you put 1,000 pounds in a savings account at 10% a year, after one year you have 1,100; in the second year the 10% is earned on 1,100, giving 1,210. Over 20 years the balance grows to about 6,727 pounds, while simple interest would give only 3,000. The rule of 72 estimates the doubling time: divide 72 by the rate, so at 10% money doubles in about 7.2 years."}
+]

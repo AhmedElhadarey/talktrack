@@ -2,7 +2,7 @@
 // step reveal and code version, the pointer, per-frame animation, the caption and the clock.
 
 import { stateAt } from "./timeline.js";
-import { fit, READABLE_PX } from "./draw.js";
+import { fit, READABLE_PX, rtl } from "./draw.js";
 import { kindOf, layoutOf, renderSlide } from "./render.js";
 import { $, emit, FRAMES, host, LIVE, now, pointer, reducedMotion, report, S, scale, stage } from "./state.js";
 import { camera, cueTarget, placePointer, scrollCode } from "./pointer.js";
@@ -83,7 +83,7 @@ function showSlide(i, since = Infinity) {
       view.measured = true;
     });
   });
-  announce(`Slide ${i + 1} of ${W.slides.length}: ${slide.title}`);
+  announce(rtl() ? `الشريحة ${i + 1} من ${W.slides.length}: ${slide.title}` : `Slide ${i + 1} of ${W.slides.length}: ${slide.title}`);
   markChapter(i);
   emit("slidechange", { index: i, id: slide.id, title: slide.title });
 }
@@ -150,8 +150,9 @@ function applyEntrance(st) {
   const p = e.type === "none" ? 1 : clamp(t / ENTER_S), k = easeOut(p);
   const r = e.root.style, o = e.old?.style;
   if (e.type === "push") {
-    r.transform = `translateX(${((1 - k) * 100).toFixed(2)}%)`;
-    if (o) o.transform = `translateX(${(-k * 100).toFixed(2)}%)`;
+    const dir = rtl() ? -1 : 1; // the next slide comes from the side the text runs toward
+    r.transform = `translateX(${(dir * (1 - k) * 100).toFixed(2)}%)`;
+    if (o) o.transform = `translateX(${(-dir * k * 100).toFixed(2)}%)`;
   } else if (e.type === "zoom") {
     r.opacity = k.toFixed(3);
     r.transform = `scale(${(1.04 - 0.04 * k).toFixed(4)})`;

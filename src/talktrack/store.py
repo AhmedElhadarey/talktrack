@@ -21,7 +21,8 @@ from .build import SPEED_RANGE, Builder
 from .format import Parser
 from .issues import Issue, player_issue
 from .model import FRAMES, STATE_VERSION, Say, Slide, Walkthrough, public_slide
-from .speech.base import VOICES
+from .pronounce import arabic_flags
+from .speech.base import VOICES, lang_of
 from .speech.narrator import Narrator, cue_time
 from .themes import THEMES
 
@@ -34,6 +35,14 @@ STILL_S = 20.0  # longest stretch of narration with nothing changing on screen
 MAX_DESCRIPTION = 200  # characters
 TARGET_S = 240.0  # the guide aims for 2 to 4 minutes of narration
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
+
+
+_INVISIBLE = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]")
+
+
+def _bare(text: str) -> str:
+    """Text for finding a word in narration: lowercase, without harakat or tatweel."""
+    return re.sub(r"[\u064B-\u0652\u0670\u0640]", "", text.lower())
 
 
 class Session:
@@ -83,6 +92,7 @@ class Session:
             )
         for slide, say in b.new_says:
             self._voice(slide, say)
+        b.issues += self._readings([(s, x) for s, x in b.new_says])
         self._changed(b.changed)
         return {"slides": len(self.w.slides) - before, "says": len(b.new_says), "issues": list(b.issues)}
 
@@ -143,6 +153,7 @@ class Session:
         for i, say in enumerate(new.says):
             if not say.pause:
                 voiced += self._voice(new, say, order=order + i)
+        issues += [x for x in self._readings([(new, x) for x in new.says]) if x not in issues]
         new.line = self._rewrite_source(old, text)
         if not stage:
             self._changed({new.id})
@@ -230,6 +241,42 @@ class Session:
         return list(b.issues)
 
     # -- speech -------------------------------------------------------------------------
+
+    def revoice_with(self, word: str) -> int:
+        """Voice again every narration that contains `word`; returns how many need new audio."""
+        changed, voiced = set(), 0
+        bare = _bare(word)
+        for slide in self.w.slides:
+            for say in slide.says:
+                if say.text and not say.pause and bare in _bare(say.text):
+                    voiced += self._voice(slide, say)
+                    changed.add(slide.id)
+        if changed:
+            self._changed(changed)
+        return voiced
+
+    def _readings(self, says: list[tuple[Slide, Say]]) -> list[Issue]:
+        """For Arabic narration: words whose reading depends on the meaning, one issue a slide."""
+        if lang_of(self.w.voice) != "ar":
+            return []
+        lexicon = self.store.narrator.lexicon if self.store.narrator else {}
+        per: dict[str, list[str]] = {}
+        for slide, say in says:
+            if say.pause or not say.text:
+                continue
+            for word, readings in arabic_flags(say.text, say.overrides, lexicon):
+                line = f"{word} ({' | '.join(readings)})"
+                if line not in per.setdefault(slide.id, []):
+                    per[slide.id].append(line)
+        return [
+            Issue(
+                "arabic_reading",
+                "These words read differently by meaning: " + "; ".join(lines) + ".",
+                'Mark the reading you mean, as in [بتتعرض]{say="بِتِتْعِرِض"}, then revise the slide.',
+                slide=sid,
+            )
+            for sid, lines in per.items()
+        ]
 
     def _voice(self, slide: Slide, say: Say, order: int | None = None) -> int:
         """Request audio for a narration. Returns 1 if it needs voicing, 0 if cached."""
@@ -452,6 +499,9 @@ class Store:
         voice = voice or self.default_voice
         if voice not in VOICES:
             raise ValueError(f"unknown voice {voice!r}; choose one of {', '.join(VOICES)}")
+        why = getattr(self.narrator.backend, "unavailable", lambda v: "")(voice) if self.narrator else ""
+        if why:
+            raise ValueError(f"voice {voice!r} cannot speak on this machine: {why}. Choose an English voice.")
         w = Walkthrough(
             id=secrets.token_urlsafe(16),
             key=secrets.token_urlsafe(16),
@@ -472,6 +522,35 @@ class Store:
         self.sessions[w.id] = s
         s.save_now()
         return s
+
+    def add_pronunciation(self, word: str, say: str, handle: str = "") -> dict:
+        """Save `word = say` in the user's word list (lexicon.txt), used from now on; with
+        `handle`, voice that walkthrough's narration containing the word again."""
+        # direction marks pasted with Arabic would keep the word from ever matching
+        word, say = (" ".join(_INVISIBLE.sub("", x).split()) for x in (word, say))
+        if re.search(r"[\u0621-\u064A]", word):  # Arabic is matched without harakat: save it that way
+            word = re.sub(r"[\u064B-\u0652\u0670\u0640]", "", word)
+        if not word or not say:
+            raise ValueError("word and say must both be given")
+        if "=" in word or word.startswith("#") or len(word) > 64 or len(say) > 200:
+            raise ValueError("word must be at most 64 characters, with no '=' and not starting with '#', and say at most 200")
+        session = self.by_handle(handle) if handle else None  # a bad handle fails before anything is written
+        path = self.data_dir / "lexicon.txt"
+        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+        entry = f"{word} = {say}"
+        replaced = False
+        for i, line in enumerate(lines):
+            if "=" in line and not line.lstrip().startswith("#") and line.split("=", 1)[0].strip() == word:
+                lines[i], replaced = entry, True
+        if not replaced:
+            lines.append(entry)
+        tmp = path.with_suffix(".txt.part")
+        tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        tmp.replace(path)
+        if self.narrator:
+            self.narrator.lexicon[word] = say
+        revoiced = session.revoice_with(word) if session else 0
+        return {"word": word, "say": say, "replaced": replaced, "file": str(path), "revoiced": revoiced}
 
     def get(self, wid: str) -> Session | None:
         if not ID_RE.match(wid or ""):

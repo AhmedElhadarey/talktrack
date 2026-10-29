@@ -12,6 +12,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -21,6 +22,9 @@ from .assets import Status, ensure_spacy, go_offline, hf_snapshot
 from .kokoro import KokoroEngine
 
 REPO = "mlx-community/Kokoro-82M-bf16"
+# Held around every MLX call in speech: the Arabic voice frees its memory from a timer thread
+# (voxcpm.py), and that must not run while Kokoro is inside MLX on the speech thread.
+MLX_LOCK = threading.RLock()
 PATTERNS = ["config.json", "kokoro-v1_0.safetensors", "voices/a*.safetensors", "voices/b*.safetensors"]
 
 
@@ -65,23 +69,25 @@ class MlxBackend(KokoroEngine):
         # The model takes phonemes as text and looks each one up in the same vocabulary.
         import mlx.core as mx
 
-        out = self._model("".join(self._phoneme[i] for i in ids), style, speed, return_output=True)
-        frames = np.asarray(out.pred_dur).reshape(-1)  # whole frames, pads included
-        audio = np.asarray(out.audio, dtype=np.float32).reshape(-1)
-        del out
-        # MLX keeps freed GPU buffers for reuse, and chunks of every length leave buffers of every
-        # size: kept, they grow to most of the Mac's memory (25 GB of 32 after ten sentences) and
-        # the machine swaps. Copied out to numpy, nothing here is needed again.
-        mx.clear_cache()
+        with MLX_LOCK:
+            out = self._model("".join(self._phoneme[i] for i in ids), style, speed, return_output=True)
+            frames = np.asarray(out.pred_dur).reshape(-1)  # whole frames, pads included
+            audio = np.asarray(out.audio, dtype=np.float32).reshape(-1)
+            del out
+            # MLX keeps freed GPU buffers for reuse, and chunks of every length leave buffers of every
+            # size: kept, they grow to most of the Mac's memory (25 GB of 32 after ten sentences) and
+            # the machine swaps. Copied out to numpy, nothing here is needed again.
+            mx.clear_cache()
         if len(frames) != len(ids) + 2:
             raise RuntimeError(f"mlx-audio returned {len(frames)} durations for {len(ids)} phonemes")
         return audio, frames
 
 
-def _limit_memory() -> None:
-    """Cap MLX at the speech share of the memory budget. The call moved from mx.metal in newer
-    mlx; whichever is missing or fails, speech goes on without a limit."""
-    limit = budget().speech_limit()
+def _limit_memory(limit: int | None = None) -> None:
+    """Cap MLX at `limit` bytes, by default the speech share of the memory budget. The call moved
+    from mx.metal in newer mlx; whichever is missing or fails, speech goes on without a limit."""
+    if limit is None:
+        limit = budget().speech_limit()
     if limit is None:
         return
     try:

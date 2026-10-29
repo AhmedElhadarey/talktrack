@@ -2,7 +2,7 @@
 // in, or a quiz whose answer shows when the narration points at it.
 
 import { icon } from "../deco.js";
-import { el } from "../draw.js";
+import { el, rtl } from "../draw.js";
 import { inline } from "../util.js";
 
 const TICK = '<svg viewBox="0 0 24 24" width="30" height="30"><rect x="2.5" y="2.5" width="19" height="19" rx="5" class="box"/><path d="M7 12.5l3.2 3.2L17 8.8" class="mark" pathLength="1"/></svg>';
@@ -51,7 +51,7 @@ export default {
 
 // A quiz choice: lettered, and a viewer can pick one before the answer shows.
 function quizChoice(item, it, i, parts) {
-  item.dataset.letter = String.fromCharCode(65 + i);
+  item.dataset.letter = rtl() ? "أبجدهوزحطي"[i] || String(i + 1) : String.fromCharCode(65 + i);
   if (it.check) item.classList.add("correct");
   if (document.body.classList.contains("capture")) return;
   item.tabIndex = 0;

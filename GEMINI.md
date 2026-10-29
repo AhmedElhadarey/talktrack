@@ -42,6 +42,10 @@ Open the files, run `git diff` or `git log`, and pick line ranges before `start_
 - **Changes:** a `diff` block with `file=path rev=A` compares commit A with the working tree; `rev=A..B` compares two commits.
 - **Never retype** code that is on disk or in git.
 
+## Egyptian Arabic
+
+When the user asks for Arabic, start with `voice` `ar_eg_female` or `ar_eg_male` and write the narration in Egyptian Arabic, without harakat. Mark only a word whose meaning changes with its vowels, as `[بتتعرض]{say="بِتِتْعِرِض"}`; the reply names words it knows are ambiguous (`arabic_reading`). When the user says a word sounds wrong, call `add_pronunciation` with the word, the harakat they want and the handle.
+
 ## Later changes
 
 `list_walkthroughs` finds an earlier handle, the resource `talktrack://walkthroughs/{id}` holds its Markdown, and `revise_slide` replaces one slide.

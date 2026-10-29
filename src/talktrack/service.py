@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from .issues import as_dict
+from .speech.base import lang_of
 from .store import Store, narration_seconds
 
 log = logging.getLogger("talktrack")
@@ -71,7 +72,13 @@ class LocalService:
         status = await s.wait_playable(timeout) if timeout > 0 else (s.first_say().status if s.first_say() else "empty")
         if give_up and status == "pending":
             s.w.link_shared = True
-        out: dict[str, Any] = {"status": status, "url": s.url, "speech": self.speech_status(), "frame": s.w.frame}
+        out: dict[str, Any] = {
+            "status": status,
+            "url": s.url,
+            "speech": self.speech_status(),
+            "frame": s.w.frame,
+            "lang": lang_of(s.w.voice),
+        }
         if status == "error":
             first = s.first_say()
             out["error"] = first.error if first else ""
@@ -124,6 +131,9 @@ class LocalService:
             "alike": [{"slides": run, "look": look(next(x for x in s.w.slides if x.id == run[0]))} for run in runs],
             "thumbs": [{"id": sid, "png": base64.b64encode(shots[sid]).decode()} for sid in want if sid in shots],
         }
+
+    async def add_pronunciation(self, word: str, say: str, handle: str = "") -> dict:
+        return self.store.add_pronunciation(word, say, handle)
 
     async def list(self) -> list[dict]:
         return self.store.list(20)
@@ -354,6 +364,9 @@ class RemoteService:
             return await self._call("finish", handle=handle, questions=questions)
         return await self._call("finish", handle=handle, questions=questions, check=False)
 
+    async def add_pronunciation(self, word, say, handle=""):
+        return await self._call("add_pronunciation", word=word, say=say, handle=handle)
+
     async def list(self):
         return await self._call("list")
 
@@ -376,7 +389,20 @@ class RemoteService:
         )
 
 
-RPC_METHODS = {"start", "add", "playable", "revise", "finish", "list", "source", "preview", "export", "create_playlist", "playlists"}
+RPC_METHODS = {
+    "start",
+    "add",
+    "add_pronunciation",
+    "playable",
+    "revise",
+    "finish",
+    "list",
+    "source",
+    "preview",
+    "export",
+    "create_playlist",
+    "playlists",
+}
 EXPORT_WAIT_S = 300.0  # for the narration to finish voicing before an export
 PREVIEW_MAX = 12
 LAYOUT_CHECK_MAX = 60  # slides drawn by the finish-time layout check
@@ -415,7 +441,9 @@ def export_path(title: str, root: str | None, path: str, format: str) -> Path:
     else:
         if not root:
             raise ValueError("no project folder to save in; pass an absolute path")
-        slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:60].strip("-") or "walkthrough"
+        # Arabic letters are kept, so two Arabic titles do not both save as walkthrough.mp4
+        bare = re.sub(r"[\u064B-\u0652\u0670\u0640]", "", title.lower())
+        slug = re.sub(r"[^a-z0-9\u0621-\u064A\u0660-\u0669]+", "-", bare).strip("-")[:60].strip("-") or "walkthrough"
         p = Path(root) / f"{slug}.{format}"
     p = p.resolve()
     want = (".mp4",) if format == "mp4" else (".html", ".htm")

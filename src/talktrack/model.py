@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field, fields
 
+from .speech.base import lang_of
+
 FORMAT_VERSION = 1  # docs/format.md
 STATE_VERSION = 1  # layout of walkthrough.json
 
@@ -94,6 +96,7 @@ class Walkthrough:
             "frame": self.frame,
             "theme": self.theme,
             "tokens": self.tokens,
+            "lang": lang_of(self.voice),
             "status": self.status,
             "questions": self.questions,
             "notes": self.notes,

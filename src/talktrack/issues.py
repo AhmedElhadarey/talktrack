@@ -26,6 +26,7 @@ CODES: dict[str, tuple[str, str]] = {
     "too_many_slides": ("warning", "the walkthrough is over the slide limit"),
     "too_long": ("warning", "narration is past the length the guide aims for"),
     "revise_kept_first": ("warning", "revise_slide got more than one slide and kept the first"),
+    "arabic_reading": ("warning", "an Arabic word reads differently by meaning and has no say= override"),
     # size
     "code_too_tall": ("warning", "code has more lines than the frame shows comfortably"),
     "code_too_wide": ("warning", "code lines are wider than the frame shows comfortably"),

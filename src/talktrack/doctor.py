@@ -73,6 +73,11 @@ def _ffmpeg_check() -> tuple[str, str, str]:
     return OK, "mp4 export", "ffmpeg and ffprobe found"
 
 
+def _arabic_row(result: tuple[str, str]) -> tuple[str, str, str]:
+    state, detail = result
+    return (OK if state == "ok" else WARN), "arabic voices", detail
+
+
 def doctor(cfg: Config, args) -> None:
     print(f"talktrack {__version__} on Python {platform.python_version()}, {platform.system()} {platform.machine()}")
     problems = 0
@@ -139,6 +144,10 @@ def doctor(cfg: Config, args) -> None:
     except Exception as e:
         _row(FAIL, "voice model", f"{type(e).__name__}: {e}")
         problems += 1
+
+    from .speech import voxcpm
+
+    _row(*_arabic_row(voxcpm.check()))
 
     # daemon and port
     lock = daemon.running(cfg)

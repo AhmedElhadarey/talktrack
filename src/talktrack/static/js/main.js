@@ -14,7 +14,7 @@ import { build, mmss, slideEnd, slideStart } from "./timeline.js";
 import { $, AUDIENCE, audio, body, currentSeg, emit, LIVE, now, params, PRESENT, report, S, sayOf, store } from "./state.js";
 import { play, seek, seekSlide, setRange, toggle } from "./playback.js";
 import { layoutStage, render } from "./view.js";
-import { renderChrome, setCaptions, setTranscript, showOverlay, stripMd } from "./chrome.js";
+import { renderChrome, setCaptions, setLang, setTranscript, showOverlay, stripMd } from "./chrome.js";
 import { followPresenter, presenterSync, startPresenting, stepBy } from "./present.js";
 
 new ResizeObserver(() => { layoutStage(); render(true); }).observe($("#viewport"));
@@ -32,6 +32,7 @@ function setData(w) {
   if (first) {
     body.classList.add(W.frame);
     document.title = W.title;
+    setLang(W.lang);
     layoutStage();
   }
   // Keep the playback position on the same paragraph, or the same slide if it was revised.

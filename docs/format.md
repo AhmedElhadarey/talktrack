@@ -62,6 +62,8 @@ A heading may end with attributes in braces: `## The lookup {#lookup .build}`.
 | **`.full`** | the visual over the whole slide, the title and takeaway in a small panel in the top corner |
 | **statement** | a slide with no visual: its first `>` line as one large sentence, the heading as a kicker above it (the heading alone when there is no `>` line), and further `>` lines smaller below |
 
+With an Arabic voice (`ar_eg_female`, `ar_eg_male`) the slides read right to left and every layout mirrors: `.side` puts the visual on the right, `.pair` starts on the right, quiz choices are lettered أ, ب, ج, د. Code, terminals, diffs, file trees, maths, charts, diagrams and drawings stay left to right.
+
 On a `.pair` slide a cue points into the first visual when it has the target, else into the second; give the two visuals different ids. Quoted text (`[label](# "text")`) is looked for in both. `.build` does not apply to a pair, and only the first visual may have `step` versions.
 
 Every content slide has a kicker above its title: its number among the content slides and the part it belongs to. Slides come in by the narration's clock, so seeking and MP4 export show the same motion: they rise in, a slide that shows the same kind of visual in the same layout as the one before slides across like a page, title and chapter slides zoom in, and cards, numbers, rows, messages and takeaways arrive one after another (except on `.build` slides).

@@ -1,7 +1,7 @@
 // Code with real line numbers; `scroll` for long code, `step` blocks for code that evolves.
 
 import { diffLines, lcs, tokenize } from "../diff.js";
-import { el, fit, highlight, textRange } from "../draw.js";
+import { el, fit, highlight, rtl, textRange } from "../draw.js";
 import { esc, splitLines } from "../util.js";
 
 // A code panel with real line numbers. marks: {removed:[bool], added:[bool]} for diffs.
@@ -33,7 +33,7 @@ export function codeBox(code, lang, start, title, tag, side, marks) {
 export default {
   render(slide, body, parts) {
     const v = slide.visual || {};
-    const tag = v.steps?.length > 1 ? `Step 1 of ${v.steps.length}` : null;
+    const tag = v.steps?.length > 1 ? stepLabel(1, v.steps.length) : null;
     const { box, lines } = codeBox(v.code, v.lang, v.start || 1, v.title, tag, "new", null);
     parts.lines.new = lines;
     parts.visual = box;
@@ -80,7 +80,7 @@ export function morphCode(parts, box, v, n, animate) {
   const d = animate ? diffLines(prev.code, next.code) : null;
   const edits = animate ? editedLines(d, prev.code.split("\n"), next.code.split("\n")) : [];
   const oldWords = edits.map(([ia]) => words(oldEls[ia]));
-  const fresh = codeBox(next.code, v.lang, next.start || 1, next.title || v.title, `Step ${n} of ${v.steps.length}`, "new", null);
+  const fresh = codeBox(next.code, v.lang, next.start || 1, next.title || v.title, stepLabel(n, v.steps.length), "new", null);
   box.replaceChildren(...fresh.box.childNodes);
   parts.lines.new = fresh.lines;
   parts.step = n;
@@ -185,4 +185,8 @@ function glideWords(box, edits, oldWords, newEls, k) {
     setTimeout(() => layer.remove(), 220);
   }, 480);
   return done;
+}
+
+function stepLabel(n, of) {
+  return rtl() ? `الخطوة ${n} من ${of}` : `Step ${n} of ${of}`;
 }

@@ -22,6 +22,8 @@ li button { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align
 li button:hover, li button:focus-visible { background: var(--panel); }
 li button[aria-current="true"] { background: var(--panel-2); border-left-color: var(--accent); }
 li .n, li .d { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+/* A title in Arabic reads right to left in this left-to-right list; the player itself turns RTL. */
+#contents h1, #contents .lede, li .t { unicode-bidi: plaintext; }
 #stage { min-width: 0; background: var(--stage); }
 #frame { display: block; width: 100%; height: 100%; border: 0; }
 @media (max-width: 800px) {
