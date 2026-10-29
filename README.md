@@ -39,6 +39,7 @@ How it compares with a screen recording, a written PR description and a rendered
 ## 📑 Table of Contents
 
 - [Architecture](#-architecture)
+  - [Architecture diagram: the tool stack](#architecture-diagram-the-tool-stack)
 - [Quick Start](#-quick-start)
 - [Install per Client](#-install-per-client)
 - [The Format](#-the-format)
@@ -96,6 +97,55 @@ graph TB
 7. **Checked.** `finish_walkthrough` draws every slide in headless Chromium (fetched on first need, below). The open player also posts its own findings (layout, render and audio errors) back to the daemon; they reach the agent marked as untrusted.
 
 The module-by-module description, the player's ES modules, capture and single-page export are in [docs/architecture.md](docs/architecture.md).
+
+### Architecture diagram: the tool stack
+
+What talktrack is built on, from the agent down to the hardware. Everything outside the dashed box ships today; the dashed box is a planned Arabic voice that is not in talktrack yet.
+
+```mermaid
+graph TB
+  AG["MCP client: Claude Code, Codex, Gemini CLI, Pi"]
+  subgraph daemon ["talktrack daemon"]
+    MCP["mcp Python SDK: stdio and HTTP"] --> UV["uvicorn: HTTP, SSE, player files"]
+    subgraph speech ["Speech"]
+      PR["pronounce.py and num2words: code, units, numbers as words"] --> G2P["misaki G2P and spaCy en_core_web_sm"]
+      G2P --> KK["Kokoro-82M voice model"]
+      HF["huggingface-hub: first-run download"] -.-> KK
+      KK --> MA["mlx-audio 0.5.9"]
+      MA --> MLX["MLX on the Apple silicon GPU"]
+      KK --> ORT["ONNX Runtime on the CPU: Linux, Intel Mac"]
+    end
+    subgraph render ["Checks, posters, video"]
+      PW["Playwright"] --> CH["headless Chromium, fetched on first need"]
+      CH --> FF["FFmpeg: H.264 and AAC MP4"]
+    end
+  end
+  subgraph browser ["Player in your browser"]
+    PL["player ES modules"] --> VEN["Mermaid, KaTeX, highlight.js, Rough.js, draw.io viewer"]
+  end
+  subgraph arabic ["Arabic voice, planned"]
+    DI["diacritizer, under test"] --> VX["VoxCPM2 4-bit"]
+    VX --> WH["Whisper large-v3-turbo: word timings by alignment"]
+  end
+  AG --> MCP
+  UV --> PR
+  UV --> PW
+  UV --> PL
+  VX -.->|"same runtime"| MA
+  style arabic stroke-dasharray: 6 4
+```
+
+| Layer | Tool | Why | License |
+|---|---|---|---|
+| Agent link | [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk), [uvicorn](https://github.com/encode/uvicorn) | tools, prompts and resources over stdio and HTTP; the player and live updates | MIT, BSD-3-Clause |
+| Speakable text | [misaki](https://github.com/hexgrad/misaki), [spaCy](https://github.com/explosion/spaCy) with [en_core_web_sm](https://github.com/explosion/spacy-models), [num2words](https://github.com/savoirfairelinux/num2words) | English phonemes, sentence parsing, numbers as words | Apache-2.0, MIT, LGPL |
+| Voice | [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) via [mlx-community/Kokoro-82M-bf16](https://huggingface.co/mlx-community/Kokoro-82M-bf16) or [onnx-community/Kokoro-82M-v1.0-ONNX-timestamped](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX-timestamped) | 27 English voices with word timings | Apache-2.0 |
+| Runtime | [mlx-audio](https://github.com/Blaizzy/mlx-audio) on [MLX](https://github.com/ml-explore/mlx); [ONNX Runtime](https://github.com/microsoft/onnxruntime) | Apple silicon GPU; any CPU | MIT; MIT |
+| Rendering | [Playwright](https://github.com/microsoft/playwright-python), [FFmpeg](https://ffmpeg.org/) | slide checks, posters, MP4 export | Apache-2.0; LGPL/GPL, installed by you |
+| Player | [Mermaid](https://github.com/mermaid-js/mermaid), [KaTeX](https://github.com/KaTeX/KaTeX), [highlight.js](https://github.com/highlightjs/highlight.js), [Rough.js](https://github.com/rough-stuff/rough), [draw.io viewer](https://github.com/jgraph/drawio) | diagrams, formulas, code, sketches, draw.io files | MIT, MIT, BSD-3-Clause, MIT, Apache-2.0 |
+| Arabic, planned | [VoxCPM2](https://huggingface.co/openbmb/VoxCPM2) via [mlx-community/VoxCPM2-4bit](https://huggingface.co/mlx-community/VoxCPM2-4bit); [Whisper large-v3-turbo](https://huggingface.co/mlx-community/whisper-large-v3-turbo); a diacritizer still being chosen | Arabic speech on the same mlx-audio, word timings by alignment, vowels for unvoweled text | Apache-2.0; MIT |
+
+Exact versions and licences of everything bundled are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ---
 
