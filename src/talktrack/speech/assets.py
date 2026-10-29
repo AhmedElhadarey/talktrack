@@ -49,8 +49,14 @@ class Status:
         return self.state
 
 
-def hf_snapshot(repo: str, patterns: list[str], status: Status | None, label: str) -> Path:
-    """Local path of a Hugging Face snapshot, downloading the matching files if needed."""
+_went_offline = False  # go_offline() set HF_HUB_OFFLINE, rather than the user
+
+
+def hf_snapshot(repo: str, patterns: list[str], status: Status | None, label: str, online: bool = False) -> Path:
+    """Local path of a Hugging Face snapshot, downloading the matching files if needed.
+
+    With `online`, a model fetched after speech went offline (the Arabic voice, on first use)
+    may still download, unless the user set HF_HUB_OFFLINE themselves."""
     from huggingface_hub import constants, snapshot_download
 
     try:
@@ -59,20 +65,31 @@ def hf_snapshot(repo: str, patterns: list[str], status: Status | None, label: st
             return path
     except Exception:
         pass
-    if os.environ.get("HF_HUB_OFFLINE") == "1" or constants.HF_HUB_OFFLINE:
+    offline = os.environ.get("HF_HUB_OFFLINE") == "1" or constants.HF_HUB_OFFLINE
+    if offline and not (online and _went_offline):
         raise RuntimeError(f"{repo} is not downloaded and HF_HUB_OFFLINE is set")
     os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")  # downloads only, nothing else
     constants.HF_HUB_DISABLE_TELEMETRY = True
     log.info("Downloading %s from Hugging Face", repo)
     tqdm_class = _progress_tqdm(status, label) if status else None
-    path = snapshot_download(repo, allow_patterns=patterns, tqdm_class=tqdm_class)
+    if offline:
+        os.environ.pop("HF_HUB_OFFLINE", None)
+        constants.HF_HUB_OFFLINE = False
+    try:
+        path = snapshot_download(repo, allow_patterns=patterns, tqdm_class=tqdm_class)
+    finally:
+        if offline:
+            go_offline()
     return Path(path)
 
 
 def go_offline() -> None:
     """Everything needed is cached: stop huggingface_hub from checking for updates."""
+    global _went_offline
     from huggingface_hub import constants
 
+    if os.environ.get("HF_HUB_OFFLINE") != "1" and not constants.HF_HUB_OFFLINE:
+        _went_offline = True
     os.environ["HF_HUB_OFFLINE"] = "1"
     constants.HF_HUB_OFFLINE = True
 

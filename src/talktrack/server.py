@@ -26,7 +26,7 @@ from . import __version__, browser, readers
 from .build import LIMITS
 from .issues import as_dict, line_text, summarize
 from .service import RPC_METHODS, LocalService, mmss
-from .speech.base import VOICES
+from .speech.base import VOICES, lang_of
 
 log = logging.getLogger("talktrack")
 PKG = Path(__file__).parent
@@ -56,6 +56,7 @@ def texts(deliver: str = "link") -> dict:
         "instructions": load("instructions.md", "Narrated slide walkthroughs voiced locally."),
         "tools": load("tools.json", {}),
         "guide": load("guide.md", ""),
+        "guide_ar": load("guide-ar.md", ""),
         "replies": load("replies.json", {}),
         "prompts": load("prompts.json", {}),
     }
@@ -92,9 +93,11 @@ def reply(name: str, default: str, deliver: str = "link", **kw: Any) -> str:
         return default.format(**kw)
 
 
-def guide(frame: str, deliver: str = "link") -> str:
+def guide(frame: str, deliver: str = "link", lang: str = "en") -> str:
     lim = LIMITS.get(frame, LIMITS["landscape"])
     g = texts(deliver)["guide"]
+    if lang == "ar":
+        g = g.rstrip("\n") + "\n" + texts(deliver)["guide_ar"]
     for k, v in {
         "SEND_LINK": reply("guide_send_link", "", deliver),
         "TELL_USER": reply("guide_tell_user", "", deliver),
@@ -153,6 +156,7 @@ def _issues_text(issues: list[dict], player: list[dict]) -> str:
 
 
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False, open_world_hint=False)
+SAVE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
 
 
 def _roots(shared: ListRootsResult | None) -> list[str]:
@@ -189,8 +193,8 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
     def reply(name: str, default: str, **kw: Any) -> str:
         return _reply(name, default, deliver, **kw)
 
-    def guide(frame: str) -> str:
-        return _guide(frame, deliver)
+    def guide(frame: str, lang: str = "en") -> str:
+        return _guide(frame, deliver, lang)
 
     mcp = MCPServer(
         "talktrack",
@@ -253,13 +257,13 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
                 await service.playable(handle, 0, give_up=True)  # later calls return at once
                 parts.append(reply("pending", "Audio is still being made; share this link anyway: {url}", url=r["url"]))
             if p.get("guide"):
-                g = guide(p.get("frame", r["frame"]))
+                g = guide(p.get("frame", r["frame"]), p.get("lang", "en"))
                 if g:
                     parts.append("\n" + g)
         else:
             p = await service.playable(handle, 0)  # the guide, if the first reply went out before the audio
             if p.get("guide"):
-                g = guide(p.get("frame", r["frame"]))
+                g = guide(p.get("frame", r["frame"]), p.get("lang", "en"))
                 if g:
                     parts.append(g)
         parts.append(
@@ -360,6 +364,33 @@ def create_mcp(service, project_dir_default: str | None = None, deliver: str = "
                 "slide_url": _slide_link(r["url"], r["slide"]),
             },
         )
+
+    @mcp.tool(
+        title=tool_text("add_pronunciation", "title", "Add pronunciation"),
+        description=tool_text("add_pronunciation"),
+        annotations=SAVE,
+    )
+    async def add_pronunciation(
+        word: Annotated[str, Field(description=arg_text("add_pronunciation", "word"))],
+        say: Annotated[str, Field(description=arg_text("add_pronunciation", "say"))],
+        handle: Annotated[str, Field(description=arg_text("add_pronunciation", "handle"))] = "",
+    ) -> CallToolResult:
+        try:
+            r = await service.add_pronunciation(word, say, handle)
+        except ValueError as e:
+            return _error(str(e))
+        text = reply(
+            "pronunciation_saved",
+            "Saved {word} = {say} in {file}; narration voiced from now on reads it this way.",
+            word=r["word"],
+            say=r["say"],
+            file=r["file"],
+        )
+        if handle:
+            text += " " + reply(
+                "pronunciation_revoiced", "{revoiced} paragraph(s) of this walkthrough are being voiced again.", revoiced=r["revoiced"]
+            )
+        return _result(text, {"word": r["word"], "say": r["say"], "replaced": r["replaced"], "revoiced": r["revoiced"]})
 
     @mcp.tool(
         title=tool_text("finish_walkthrough", "title", "Finish walkthrough"), description=tool_text("finish_walkthrough"), annotations=WRITE
@@ -760,6 +791,7 @@ def add_routes(mcp: MCPServer, service: LocalService, rpc_token: str, started: f
                 tokens=s.w.tokens,
                 description=s.w.description,
                 poster=f"{s.url}/poster.png" if (store.walk_dir(s.w.id) / "poster.png").is_file() else "",
+                lang=lang_of(s.w.voice),
             ),
             headers={"Cache-Control": "no-store"},
         )
@@ -943,6 +975,7 @@ def render_player(
     tokens: dict | None = None,
     description: str = "",
     poster: str = "",
+    lang: str = "en",
 ) -> str:
     from .themes import THEMES, clean_tokens, style_attr
 
@@ -957,6 +990,8 @@ def render_player(
         page.replace("{{TITLE}}", html.escape(title))
         .replace("{{DESCRIPTION}}\n", meta)
         .replace("{{FRAME}}", frame)
+        .replace("{{LANG}}", "ar" if lang == "ar" else "en")
+        .replace("{{DIR}}", ' dir="rtl"' if lang == "ar" else "")
         .replace("{{THEME}}", theme)
         .replace("{{TOKENS}}", style)
         .replace("{{REPORT_KEY}}", report_key if live else "")

@@ -24,7 +24,7 @@ import soundfile as sf
 
 from ..pronounce import Spoken, speakable
 from .assets import Status
-from .base import SAMPLE_RATE, Backend, Token
+from .base import SAMPLE_RATE, Backend, Token, lang_of
 
 log = logging.getLogger("talktrack.speech")
 
@@ -78,8 +78,10 @@ class Narrator:
         return self.stats["audio_s"] / self.stats["compute_s"]
 
     def prepare(self, display: str, code=(), say=(), voice: str = "af_heart", speed: float = 1.0) -> tuple[str, Spoken]:
-        spoken = speakable(display, code, say, self.lexicon, british=voice.startswith("b"))
-        key = hashlib.sha256(f"{self.backend.model_id}|{voice}|{speed:.2f}|{spoken.text}".encode()).hexdigest()[:24]
+        spoken = speakable(display, code, say, self.lexicon, british=voice.startswith("b"), lang=lang_of(voice))
+        model_for = getattr(self.backend, "model_for", None)
+        model = model_for(voice) if model_for else self.backend.model_id
+        key = hashlib.sha256(f"{model}|{voice}|{speed:.2f}|{spoken.text}".encode()).hexdigest()[:24]
         return key, spoken
 
     def cached(self, key: str) -> dict | None:

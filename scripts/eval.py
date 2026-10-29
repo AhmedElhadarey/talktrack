@@ -11,7 +11,8 @@ pronunciation against speech recognition.
 
 eval/prompts.json is what `--runs all` runs. eval/prompts-walkthrough.json holds before/after pairs
 for the MCP prompts (`feature`, `course`, `bug`, `audience`, `review` with a spec, `explain` on four kinds of source); an entry there
-names the prompt to render with `mcp_prompt` instead of writing the request out.
+names the prompt to render with `mcp_prompt` instead of writing the request out. eval/prompts-arabic.json asks for Egyptian
+Arabic; an Arabic walkthrough is transcribed in Arabic and gets its own table (voice, word match, harakat marks).
 
 Playwright comes from the project environment: `--with playwright` would resolve a newer release
 whose browser build is not installed, and the player watch would fail on launch.
@@ -302,14 +303,37 @@ def heard_as(word: str, token: str) -> bool:
     return len(word) >= 5 and len(token) >= 4 and _distance(word, token) <= 2
 
 
+AR_HARAKAT = re.compile(r"[\u064B-\u0652\u0670]")
+
+
+def norm_ar(s: str) -> list[str]:
+    """Arabic words for matching a transcript: no harakat or tatweel, alif and ta marbuta unified."""
+    s = AR_HARAKAT.sub("", s.lower()).replace("ـ", "")
+    s = re.sub("[إأآ]", "ا", s).replace("ة", "ه").replace("ى", "ي")
+    return re.findall(r"\w+", s)
+
+
+def is_arabic(w: Walkthrough) -> bool:
+    """Narrated in Arabic: an Arabic voice, or (before Arabic voices) narration mostly in Arabic script."""
+    if w.voice.startswith("ar_"):
+        return True
+    text = " ".join(x.text for s in w.slides for x in s.says if x.text)
+    letters = re.findall(r"[^\W\d_]", text)
+    return bool(letters) and sum(1 for c in letters if "\u0600" <= c <= "\u06ff") / len(letters) > 0.5
+
+
 def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
-    """Cue timing against whisper word times, and words missing from the transcript."""
+    """Cue timing against whisper word times, and words missing from the transcript. For an
+    Arabic walkthrough, also how closely the transcript matches the narration (`ar_match`)."""
+    import difflib
+
     import mlx_whisper
 
     cue_total = cue_ok = unlocated = 0
     deltas: list[float] = []
     missing_terms: list[str] = []
     audio_s = 0.0
+    matches: list[float] = []
     for slide in w.slides:
         for say in slide.says:
             if not say.text or say.status != "ready":
@@ -321,9 +345,11 @@ def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
                 str(f),
                 path_or_hf_repo="mlx-community/whisper-large-v3-turbo",
                 word_timestamps=True,
-                language="en",
+                language="ar" if is_arabic(w) else "en",
                 condition_on_previous_text=False,
             )
+            if is_arabic(w):
+                matches.append(difflib.SequenceMatcher(None, norm_ar(say.text), norm_ar(r["text"])).ratio())
             words = [(norm_words(x["word"]), x["start"]) for seg in r["segments"] for x in seg.get("words", [])]
             flat = [(t, s) for ws, s in words for t in ws]
             heard = {t for t, _ in flat}
@@ -370,6 +396,8 @@ def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
         "missing_terms": missing_terms[:20],
         "missing_per_min": round(len(missing_terms) / minutes, 2),
         "audio_min": round(minutes, 2),
+        "ar_match": round(sum(matches) / len(matches), 3) if matches else None,
+        "ar_worst": round(min(matches), 2) if matches else None,
     }
 
 
@@ -436,6 +464,29 @@ def summarize(w: Walkthrough | None, expect: list[str] | None = None) -> dict:
         "icons": sum(1 for s in w.slides for _ in s.icons),
         "alike": sum(1 for a, b in zip(shapes, shapes[1:], strict=False) if a == b and a[0] not in ("text", "svg")),
         "looks": [look(s) for s in w.slides],
+        "voice": w.voice,
+        **(_arabic_marks(w, says) if is_arabic(w) else {}),
+    }
+
+
+def _arabic_marks(w: Walkthrough, says: list) -> dict:
+    """How the agent marked Arabic narration: say= overrides that add harakat, overrides of
+    more than three words (marking a sentence, which the guide says not to do), and words with
+    several readings left unmarked (the arabic_reading finding)."""
+    over = [o for x in says for o in x.overrides if AR_HARAKAT.search(o[2])]
+    try:
+        from talktrack.pronounce import arabic_flags
+    except ImportError:  # main before Arabic voices
+        left = None
+    else:
+        left = sum(len(arabic_flags(x.text, x.overrides)) for x in says)
+    words = sum(len(norm_ar(x.text)) for x in says)
+    return {
+        "ar_marks": len(over),
+        "ar_marked_long": sum(1 for o in over if len(o[2].split()) > 3),
+        "ar_harakat_share": round(sum(1 for x in says if AR_HARAKAT.search(x.text)) / len(says), 2) if says else None,
+        "ar_unmarked": left,
+        "ar_words": words,
     }
 
 
@@ -499,6 +550,7 @@ async def main() -> None:
     path = out / f"{time.strftime('%Y%m%d-%H%M%S')}.json"
     path.write_text(json.dumps(results, indent=1, default=str))
     print_table(results)
+    print_arabic(results)
     print(f"\nresults: {path}\ndata: {data_dir}")
     # stop the eval daemon
     lock = data_dir / "daemon.json"
@@ -542,6 +594,21 @@ def print_table(results: list[dict]) -> None:
             f"{'-' if s.get('fit') is None else 'yes' if s['fit'] else 'no'} | {s.get('variety', '-')} | {s.get('layouts', '-')} | "
             f"{s.get('takeaways', '-')} | {s.get('icons', '-')} | {s.get('alike', '-')} | {', '.join(s.get('features', [])) or '-'} |"
             + (f" {r.get('parts', '-')} | {r.get('playlists', '-')} | {'yes' if r.get('playlist_link') else 'no'} |" if course else "")
+        )
+
+
+def print_arabic(results: list[dict]) -> None:
+    rows = [r for r in results if r.get("summary", {}).get("voice", "").startswith("ar_") or "arabic" in r["id"]]
+    if not rows:
+        return
+    print("\n| run | model | voice | ar match | worst | marks | marked > 3 words | paragraphs with harakat | unmarked ambiguous | words |")
+    print("|---|---|---|---|---|---|---|---|---|---|")
+    for r in sorted(rows, key=lambda r: (r["model"], r["id"])):
+        s, a = r.get("summary", {}), r.get("asr", {})
+        print(
+            f"| {r['id']} | {r['model']} | {s.get('voice', '-')} | {a.get('ar_match', '-')} | {a.get('ar_worst', '-')} | "
+            f"{s.get('ar_marks', '-')} | {s.get('ar_marked_long', '-')} | {s.get('ar_harakat_share', '-')} | "
+            f"{s.get('ar_unmarked', '-')} | {s.get('ar_words', '-')} |"
         )
 
 

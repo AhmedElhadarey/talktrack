@@ -41,3 +41,47 @@ export function splitLines(html) {
 export function norm(s) {
   return String(s ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 }
+
+// A paragraph as caption HTML: each spoken word (display offsets c0, c1) in a span the player
+// lights up as it is said. With `isolate` (right-to-left walkthroughs) each code range is also
+// wrapped in a left-to-right isolate, so `npm run build` or `f(x)` keeps its order and brackets
+// inside Arabic text. A range with an edge inside a word is left unwrapped.
+export function captionHtml(say, isolate = false) {
+  const text = say.text || "";
+  const code = say.code || [];
+  const isCode = (a, b) => code.some(([x, y]) => a >= x && b <= y);
+  const words = [];
+  let pos = 0;
+  (say.words || []).forEach((w, i) => {
+    if (w.c0 < pos || w.c0 < 0 || w.c1 > text.length) return;
+    words.push({ ...w, i });
+    pos = w.c1;
+  });
+  const marks = []; // [offset, tag], in order
+  if (isolate) {
+    const cuts = (k) => words.some((w) => k > w.c0 && k < w.c1);
+    let end = -1;
+    for (const [x, y] of [...code].sort((p, q) => p[0] - q[0])) {
+      if (x < end || x < 0 || y > text.length || x >= y || cuts(x) || cuts(y)) continue;
+      marks.push([x, '<span class="cr" dir="ltr">'], [y, "</span>"]);
+      end = y;
+    }
+  }
+  let m = 0;
+  const plain = (from, to) => {
+    let out = "", at = from;
+    for (; m < marks.length && marks[m][0] <= to; m++) {
+      out += esc(text.slice(at, marks[m][0])) + marks[m][1];
+      at = Math.max(at, marks[m][0]);
+    }
+    return out + esc(text.slice(at, to));
+  };
+  let html = "";
+  pos = 0;
+  for (const w of words) {
+    html += plain(pos, w.c0);
+    html += `<span class="w${isCode(w.c0, w.c1) ? " code" : ""}" data-i="${w.i}">${esc(text.slice(w.c0, w.c1))}</span>`;
+    pos = w.c1;
+  }
+  return html + plain(pos, text.length);
+}

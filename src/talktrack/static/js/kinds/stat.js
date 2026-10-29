@@ -1,7 +1,7 @@
 // Headline numbers that count up, from `before` when given, when the narration reaches them.
 
 import { icon } from "../deco.js";
-import { el, reducedMotion } from "../draw.js";
+import { el, reducedMotion, rtl } from "../draw.js";
 import { esc, inline } from "../util.js";
 
 const STAT_COUNT_S = 1.2;
@@ -33,7 +33,7 @@ export default {
     v.items.forEach((it, i) => {
       const card = el("div", "entry stat",
         `<div class="label">${icon(slide, it.icon)}${inline(it.label)}</div><div class="num" aria-hidden="true">${esc(statText(it, 1))}</div>`
-        + (changed(it) ? `<div class="was">from ${esc(statValue(it, it.before))}</div>` : ""));
+        + (changed(it) ? `<div class="was">${rtl() ? `من <bdi>${esc(statValue(it, it.before))}</bdi>` : `from ${esc(statValue(it, it.before))}`}</div>` : ""));
       card.setAttribute("aria-label", `${it.label}: ${changed(it) ? `from ${statValue(it, it.before)} to ` : ""}${statValue(it, it.after)}`);
       card.dataset.id = it.id;
       card.dataset.idx = i;

@@ -4,7 +4,24 @@
 import { mmss, slideSpans, slideStart, wordAt } from "./timeline.js";
 import { $, body, now, reducedMotion, S, sayOf, store } from "./state.js";
 import { seek } from "./playback.js";
-import { esc } from "./util.js";
+import { rtl } from "./draw.js";
+import { captionHtml, esc } from "./util.js";
+
+// ------------------------------------------------------------------- language
+
+// An Arabic walkthrough reads right to left: lang and dir on <html>, and player.css mirrors the
+// slides. The player's own words are English and stay left to right; the slide list in the menu
+// holds the walkthrough's titles, so it reads right to left again.
+const ENGLISH = ["#controls", "#range-note", "#waiting", "#overlay-meta", ".end-card", "#transcript > header", "#notes > header", "#notes-step", "#notes-next"];
+
+export function setLang(lang) {
+  if (lang !== "ar") return;
+  const root = document.documentElement;
+  root.lang = "ar";
+  root.dir = "rtl";
+  for (const sel of ENGLISH) for (const e of document.querySelectorAll(sel)) { e.lang = "en"; e.dir = "ltr"; }
+  for (const e of document.querySelectorAll("#chapters, #questions")) { e.lang = "ar"; e.dir = "rtl"; }
+}
 
 // ------------------------------------------------------------------- captions and transcript
 
@@ -16,7 +33,7 @@ export function applyCaption(st, slide, force) {
   if (force || key !== S.lastSay) {
     S.lastSay = key;
     S.lastWord = -2;
-    cap.innerHTML = say && say.text ? `<div class="inner">${captionHtml(say)}</div>` : "";
+    cap.innerHTML = say && say.text ? `<div class="inner">${captionHtml(say, rtl())}</div>` : "";
     markTranscript(key);
   }
   if (!say || !st.inAudio) {
@@ -30,25 +47,11 @@ export function applyCaption(st, slide, force) {
   cap.querySelector(`.w[data-i="${i}"]`)?.classList.add("now");
 }
 
-function captionHtml(say) {
-  const text = say.text;
-  const code = say.code || [];
-  const isCode = (a, b) => code.some(([x, y]) => a >= x && b <= y);
-  let html = "", pos = 0;
-  (say.words || []).forEach((w, i) => {
-    if (w.c0 < pos || w.c0 < 0 || w.c1 > text.length) return;
-    html += esc(text.slice(pos, w.c0));
-    html += `<span class="w${isCode(w.c0, w.c1) ? " code" : ""}" data-i="${i}">${esc(text.slice(w.c0, w.c1))}</span>`;
-    pos = w.c1;
-  });
-  return html + esc(text.slice(pos));
-}
-
 function renderTranscript() {
   const box = $("#transcript-body");
   const parts = [];
   S.W.slides.forEach((s, i) => {
-    const paras = s.says.filter((x) => x.text).map((x) => `<p data-say="${esc(x.id)}" tabindex="-1">${esc(x.text)}</p>`).join("");
+    const paras = s.says.filter((x) => x.text).map((x) => `<p data-say="${esc(x.id)}" tabindex="-1">${captionHtml({ text: x.text, code: x.code }, rtl())}</p>`).join("");
     parts.push(`<section data-slide="${i}"><h3><button data-slide="${i}">${i + 1}. ${esc(stripMd(s.title))}</button></h3>${paras}</section>`);
   });
   const notes = Object.entries(S.W.notes || {});

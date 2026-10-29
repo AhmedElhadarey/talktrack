@@ -51,6 +51,6 @@ def test_auto_on_apple_silicon_wraps_mlx(monkeypatch, tmp_path):
     from talktrack.speech import Status
 
     monkeypatch.setattr(mlx_backend, "available", lambda: True)
-    b = make_backend("auto", tmp_path, Status())
+    b = make_backend("auto", tmp_path, Status()).english  # Arabic voices go to b.arabic
     assert isinstance(b, fallback.Fallback) and isinstance(b.active, mlx_backend.MlxBackend)
-    assert isinstance(make_backend("mlx", tmp_path, Status()), mlx_backend.MlxBackend)  # asked for MLX: no fallback
+    assert isinstance(make_backend("mlx", tmp_path, Status()).english, mlx_backend.MlxBackend)  # asked for MLX: no fallback

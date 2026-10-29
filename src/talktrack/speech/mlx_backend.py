@@ -78,10 +78,11 @@ class MlxBackend(KokoroEngine):
         return audio, frames
 
 
-def _limit_memory() -> None:
-    """Cap MLX at the speech share of the memory budget. The call moved from mx.metal in newer
-    mlx; whichever is missing or fails, speech goes on without a limit."""
-    limit = budget().speech_limit()
+def _limit_memory(limit: int | None = None) -> None:
+    """Cap MLX at `limit` bytes, by default the speech share of the memory budget. The call moved
+    from mx.metal in newer mlx; whichever is missing or fails, speech goes on without a limit."""
+    if limit is None:
+        limit = budget().speech_limit()
     if limit is None:
         return
     try:

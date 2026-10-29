@@ -50,6 +50,7 @@ async def test_tools_are_listed_with_titles(mcp):
             "export_walkthrough",
             "create_playlist",
             "read_source",
+            "add_pronunciation",
         }
         assert all(t.title and t.description for t in tools.values())
 

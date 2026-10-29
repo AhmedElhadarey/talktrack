@@ -123,9 +123,17 @@ def test_speech_limit_and_threads():
     assert budget(Machine(16 * GB, 6 * GB, 3), "").speech_threads(6) == 3
 
 
+def test_arabic_speech_limit():
+    assert budget(Machine(16 * GB, 6 * GB, 10), "").arabic_speech_limit() == 6 * GB  # 8 GB ceiling
+    assert budget(Machine(8 * GB, 6 * GB, 10), "").arabic_speech_limit() == 4 * GB  # under the ceiling
+    assert budget(Machine(32 * GB, 6 * GB, 10), "").arabic_speech_limit() == 6 * GB  # never more
+    assert budget(Machine(16 * GB, 6 * GB, 10), "5GB").arabic_speech_limit() == 5 * GB
+    assert budget(Machine(None, None, 2), "").arabic_speech_limit() == 6 * GB
+
+
 def test_describe():
     assert r.describe(budget(Machine(16 * GB, 6 * GB, 10), "")) == (
-        "16 GB RAM (6 GB free), 10 CPUs; export up to 4 workers, speech limit 3 GB"
+        "16 GB RAM (6 GB free), 10 CPUs; export up to 4 workers, speech limit 3 GB (6 GB with the Arabic voice)"
     )
     assert "RAM unknown" in r.describe(budget(Machine(None, None, 2), ""))
 

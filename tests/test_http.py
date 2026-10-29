@@ -238,7 +238,7 @@ async def test_unknown_player_is_404(http):
 async def test_data_json_shape(http, walk):
     async with http() as c:
         d = (await c.get(f"/w/{walk.w.id}/data.json")).json()
-    assert set(d) == {"format", "id", "title", "description", "frame", "theme", "tokens", "status", "questions", "notes", "slides"}
+    assert set(d) == {"format", "id", "title", "description", "frame", "theme", "tokens", "lang", "status", "questions", "notes", "slides"}
     assert (d["format"], d["id"], d["title"], d["frame"], d["status"]) == (1, walk.w.id, "Caching", "landscape", "writing")
     (slide,) = d["slides"]
     assert set(slide) == {"id", "rev", "kind", "title", "classes", "shown", "visual", "says"}

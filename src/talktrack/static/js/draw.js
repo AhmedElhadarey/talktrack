@@ -5,6 +5,8 @@ import { esc } from "./util.js";
 export const STATIC = document.body.dataset.static || "static";
 export const READABLE_PX = 15; // smallest comfortable text on the 1280-wide stage
 export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+// An Arabic walkthrough: main.js sets dir="rtl" on <html> before the first slide is drawn.
+export const rtl = () => document.documentElement.dir === "rtl";
 const loaded = {};
 
 // A single-file export carries the libraries it needs in the page (export_html in export.py),

@@ -6,7 +6,8 @@ import { mmss, stateAt, steps } from "./timeline.js";
 import { $, body, now, PRESENT, S } from "./state.js";
 import { pause, play, seek } from "./playback.js";
 import { setTranscript, stripMd } from "./chrome.js";
-import { esc } from "./util.js";
+import { rtl } from "./draw.js";
+import { captionHtml } from "./util.js";
 
 let channel = null, presentStarted = 0;
 
@@ -56,7 +57,7 @@ export function presenterSync() {
   const paras = slide.says.filter((x) => x.text);
   const current = all[i]?.say ?? -1;
   $("#notes-step").textContent = `Slide ${st.slide + 1} of ${W.slides.length} · step ${i + 1} of ${all.length}`;
-  $("#notes-body").innerHTML = paras.map((x) => `<p class="${slide.says.indexOf(x) === current ? "now" : ""}">${esc(x.text)}</p>`).join("");
+  $("#notes-body").innerHTML = paras.map((x) => `<p class="${slide.says.indexOf(x) === current ? "now" : ""}">${captionHtml({ text: x.text, code: x.code }, rtl())}</p>`).join("");
   const next = W.slides[st.slide + 1];
   $("#notes-next").textContent = next ? `Next: ${stripMd(next.title)}` : "Last slide";
   channel?.postMessage({ t });

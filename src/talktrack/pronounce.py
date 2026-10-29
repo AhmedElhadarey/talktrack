@@ -1386,13 +1386,17 @@ def speakable(
     say: list[tuple[int, int, str]] | tuple = (),
     lexicon: dict[str, str] | None = None,
     british: bool = False,
+    lang: str = "en",
 ) -> Spoken:
     """Spoken text for narration `display`, with segments mapping it back to display offsets.
 
     `code` are display ranges written in backticks, `say` explicit `(start, end, spoken)`
     overrides (they always win), `lexicon` the user's word list {word: spoken}. With
     `british`, the pronunciations given as phonemes are converted for a British voice.
+    `lang` "ar" reads Arabic narration (see `_speakable_ar`).
     """
+    if lang == "ar":
+        return _speakable_ar(display, code, say, lexicon)
     marks: list[tuple[int, int, str]] = [(a, b, _rescue(spoken)) for a, b, spoken in say]
     given = {(a, b) for a, b, _ in marks}  # phonemes in `say` text are kept as written
 
@@ -1440,3 +1444,113 @@ def speakable(
         pos = e
     out.add(display[pos:], pos, len(display), copied=True)
     return out.build()
+
+
+# -- Arabic narration -----------------------------------------------------------------------------
+#
+# VoxCPM2 reads Arabic and the English words inside it as written, so nothing here goes through
+# misaki. What changes the spoken text: the agent's `say` overrides, the user's word list, code
+# read as words, and the words in data/ar_words.txt that have one reading. Words there with
+# several readings are not guessed: `arabic_flags` lists them so the agent marks them itself.
+
+AR_WORDS_FILE = Path(__file__).parent / "data" / "ar_words.txt"
+_AR_PREFIX = "(?:[وف])?(?:[بكل])?"  # and, so; with, like, for
+_HARAKAT = re.compile(r"[\u064B-\u0652\u0670]")
+
+
+@functools.cache
+def _ar_words() -> tuple[dict[str, str], dict[str, list[str]]]:
+    """(words with one reading: their marked form, words with several: their readings)."""
+    one: dict[str, str] = {}
+    several: dict[str, list[str]] = {}
+    for line in AR_WORDS_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if " ? " in line:
+            word, rest = line.split(" ? ", 1)
+            several[word.strip()] = [r.strip() for r in rest.split("|") if r.strip()]
+        elif " = " in line:
+            word, marked = line.split(" = ", 1)
+            one[word.strip()] = marked.strip()
+    return one, several
+
+
+def _ar_matches(word: str, text: str):
+    """(start, end, prefix, form) for `word` in Arabic `text`, after any prefix. A word that
+    starts with ال is also found as لل (ل + ال)."""
+    forms = [(word, word)]
+    if word.startswith("ال") and len(word) > 2:
+        forms.append(("ل" + word[2:], "لل"))  # matched after a ل prefix: "للمؤشر"
+    for form, kind in forms:
+        prefix = "(?:[وف])?ل" if kind == "لل" else _AR_PREFIX
+        for m in re.finditer(rf"(?<!\w)({prefix})({re.escape(form)})(?!\w)", text):
+            yield m.start(2), m.end(2), m.group(1), kind
+
+
+def _ar_value(value: str, kind: str) -> str:
+    """The marked form of a word as found: after a ل prefix, ال loses its alif."""
+    if kind == "لل" and value.startswith("ال"):
+        return value[1:]
+    return value
+
+
+def _ar_code(code: str) -> str:
+    """Code inside Arabic narration, as words: `clear_cache` → clear cache, `a.b` → a dot b."""
+    out = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", code)
+    out = re.sub(r"(?<=\w)\.(?=\w)", " dot ", out)
+    out = re.sub(r"[_/]+", " ", out)
+    return " ".join(out.split())
+
+
+def _speakable_ar(display: str, code, say, lexicon: dict[str, str] | None) -> Spoken:
+    marks: list[tuple[int, int, str]] = [(a, b, spoken) for a, b, spoken in say]
+
+    def free(a: int, b: int) -> bool:
+        return not any(a < tb and ta < b for ta, tb, _ in marks)
+
+    for a, b in code:
+        if a < b and free(a, b):
+            marks.append((a, b, _ar_code(display[a:b])))
+    one, _ = _ar_words()
+    lists = [{k: v for k, v in (lexicon or {}).items() if not (v.startswith("/") and v.endswith("/"))}, one]
+    for words in lists:  # the user's list first, then the shipped one
+        for word, value in words.items():
+            if re.search(r"[A-Za-z]", word):  # English words: the user's list, case as for English
+                flags = re.I if word.islower() else 0
+                found = [(m.start(), m.end(), "", "") for m in re.finditer(rf"(?<!\w){re.escape(word)}(?!\w)", display, flags)]
+            else:
+                found = list(_ar_matches(_HARAKAT.sub("", word), display))
+            for a, b, _prefix, kind in found:
+                if free(a, b):
+                    marks.append((a, b, _ar_value(value, kind)))
+    marks.sort()
+    out = _Builder()
+    pos = 0
+    for a, e, spoken in marks:
+        if a < pos:
+            continue
+        out.add(display[pos:a], pos, a, copied=True)
+        out.add(spoken, a, e)
+        pos = e
+    out.add(display[pos:], pos, len(display), copied=True)
+    return out.build()
+
+
+def arabic_flags(display: str, say=(), lexicon: dict[str, str] | None = None) -> list[tuple[str, list[str]]]:
+    """Words in Arabic narration whose reading depends on their meaning, that no `say` override
+    or word-list entry settles: (word as written, its readings), in order, each word once."""
+    covered = [(a, b) for a, b, _ in say]
+    known = {_HARAKAT.sub("", w) for w in (lexicon or {})}
+    _, several = _ar_words()
+    found: dict[str, tuple[int, list[str]]] = {}
+    for word, readings in several.items():
+        if word in known:
+            continue
+        for a, b, prefix, _kind in _ar_matches(word, display):
+            if any(ca < b and a < cb for ca, cb in covered):
+                continue
+            written = display[a - len(prefix) : b]
+            if written not in found:
+                found[written] = (a, readings)
+    return [(w, r) for w, (_, r) in sorted(found.items(), key=lambda x: x[1][0])]

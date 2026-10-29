@@ -27,7 +27,8 @@ function rng(seed) {
 
 // One of three arrangements, kept to the side away from the text: rings around a disc (or the
 // title's icon), a stack of rounded bars, or arcs from a corner; each with a small grid of dots.
-export function motif(seed, [w, h], iconSvg = "") {
+// `mirror` (right-to-left text) draws it on the left, the icon still the right way round.
+export function motif(seed, [w, h], iconSvg = "", mirror = false) {
   const r = rng(seed || "talktrack");
   const tall = h > w;
   const style = iconSvg ? 0 : Math.floor(r() * 3);
@@ -56,9 +57,10 @@ export function motif(seed, [w, h], iconSvg = "") {
     const p = (a) => `${cx + R * Math.cos(a)} ${cy + R * Math.sin(a)}`;
     const arc = `<path class="arc" d="M${p(start)} A${R} ${R} 0 ${sweep > Math.PI ? 1 : 0} 1 ${p(start + sweep)}" stroke="${ca}"/>`;
     const big = iconSvg
-      ? `<g class="bigicon" transform="translate(${cx - base * 0.62} ${cy - base * 0.62}) scale(${(base * 1.24) / 24})" stroke="${ca}" stroke-width="1.4">${iconSvg}</g>`
+      ? `<g class="bigicon" transform="translate(${mirror ? cx + base * 0.62 : cx - base * 0.62} ${cy - base * 0.62}) scale(${mirror ? -(base * 1.24) / 24 : (base * 1.24) / 24} ${(base * 1.24) / 24})" stroke="${ca}" stroke-width="1.4">${iconSvg}</g>`
       : `<circle class="disc" cx="${cx}" cy="${cy}" r="${base * 0.78}" fill="${cc}"/>`;
     art = rings + arc + big;
   }
-  return `<div class="motif" aria-hidden="true"><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice">${art}<g class="dots" fill="${cb}">${dots}</g></svg></div>`;
+  const drawn = `${art}<g class="dots" fill="${cb}">${dots}</g>`;
+  return `<div class="motif" aria-hidden="true"><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice">${mirror ? `<g transform="matrix(-1 0 0 1 ${w} 0)">${drawn}</g>` : drawn}</svg></div>`;
 }

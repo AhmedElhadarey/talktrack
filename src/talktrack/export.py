@@ -23,6 +23,7 @@ from pathlib import Path
 
 from .config import Config
 from .model import Walkthrough
+from .speech.base import lang_of
 
 GAP, SLIDE_GAP, EMPTY = 0.3, 0.6, 2.5  # keep in step with static/js/timeline.js
 STATIC = Path(__file__).parent / "static"
@@ -173,7 +174,9 @@ def export(
     data["status"] = "finished"
     (out / "data.json").write_text(json.dumps(data))
     (out / "index.html").write_text(
-        render_player(w.title, w.frame, "", static_href, live=False, theme=w.theme, tokens=w.tokens, description=w.description)
+        render_player(
+            w.title, w.frame, "", static_href, live=False, theme=w.theme, tokens=w.tokens, description=w.description, lang=lang_of(w.voice)
+        )
     )
     (out / "captions.vtt").write_text(vtt(w))
     src_md = data_dir / "walkthroughs" / wid / "source.md"
@@ -326,7 +329,9 @@ def export_html(data_dir: Path, wid: str, out: Path) -> Path:
         files["vendor/rough/rough.js"] = _library("vendor/rough/rough.js")
         files["vendor/fonts/Virgil.woff2"] = _data_uri(STATIC / "vendor/fonts/Virgil.woff2")
 
-    page = render_player(w.title, w.frame, "", "__STATIC__", live=False, theme=w.theme, tokens=w.tokens, description=w.description)
+    page = render_player(
+        w.title, w.frame, "", "__STATIC__", live=False, theme=w.theme, tokens=w.tokens, description=w.description, lang=lang_of(w.voice)
+    )
     css = "\n".join((STATIC / n).read_text() for n in ("themes.css", "player.css"))
     # The player's own faces travel inside the stylesheet, as KaTeX's do.
     css = re.sub(r'url\("(vendor/fonts/[^"]+\.woff2)"\)', lambda m: f'url("{_data_uri(STATIC / m.group(1))}")', css)

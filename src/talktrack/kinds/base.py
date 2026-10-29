@@ -62,7 +62,8 @@ def catalogue_format(name: str) -> str:
 
 
 def slug(text: str) -> str:
-    s = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    # Arabic letters are kept (harakat dropped), so Arabic labels get ids of their own
+    s = re.sub(r"[^a-z0-9\u0621-\u064A\u0660-\u0669]+", "-", re.sub(r"[\u064B-\u0652\u0670]", "", text.lower())).strip("-")
     return s[:40] or "item"
 
 

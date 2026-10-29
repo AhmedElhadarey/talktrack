@@ -6,7 +6,7 @@
       "title": "Walkthrough title, shown on the title slide and in the player. Lead with the subject's keywords; under about 50 characters fits the title slide.",
       "description": "One or two sentences on what the walkthrough covers and for whom, up to 200 characters. Shown in the list and gallery and written into exported files as metadata; never spoken or shown on a slide.",
       "frame": "Slide shape: landscape (default, 1280×720), square (960×960) or portrait (720×1280, for phones).",
-      "voice": "English Kokoro voice id. Omit for the default. Voices:",
+      "voice": "Voice id. Omit for the default English voice. For narration in Egyptian Arabic use ar_eg_female or ar_eg_male (Apple silicon) and write the narration in Arabic; the first reply gives the Arabic rules. Voices:",
       "speed": "Speech rate from 0.8 to 1.3; 1.0 is normal.",
       "project_dir": "Absolute path of the project. Code blocks with file= and image paths are read from it and must stay inside it. Defaults to the client's root, then the server's working directory.",
       "opening": "The opening in Markdown, voiced before this call returns: a `#` title heading, an optional `>` subtitle line, then one or two short spoken sentences as a plain paragraph. Nothing more; the body goes in add_slides. Example:\n# How the retry loop works\n> Backoff in the HTTP client\n\nA failed request can be sent up to four times. We'll follow one through the client.",
@@ -28,6 +28,15 @@
       "handle": "Handle from start_walkthrough or list_walkthroughs.",
       "slide": "Id of the slide to replace: its {#id}, or the id generated from its title as named in replies.",
       "markdown": "The complete new slide: heading (optional), visual, shown text and narration. One slide only."
+    }
+  },
+  "add_pronunciation": {
+    "title": "Add pronunciation",
+    "description": "Save how a word is read, in the user's word list, for every walkthrough from now on. Use it when the user says a word was read wrong (\"بتتعرض is wrong\", \"say kubectl as cube control\"). For Arabic, `say` is the word with the harakat that give the reading the user wants, and nothing else changes. With the walkthrough's handle, its narration containing the word is voiced again. For a reading that only fits one sentence, use [word]{say=\"...\"} in that narration instead.",
+    "args": {
+      "word": "The word as written in narration, without harakat. For Arabic, without a prefix such as و or ال unless it belongs to the word.",
+      "say": "How to read it: the word with harakat for Arabic, a spelling that reads right for English, or misaki phonemes between slashes (/kjˈubkˌʌtəl/) for English voices.",
+      "handle": "Optional handle of a walkthrough to voice again with the new reading."
     }
   },
   "finish_walkthrough": {

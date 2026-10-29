@@ -1,4 +1,4 @@
-"""Speech backend interface and the English Kokoro voices."""
+"""Speech backend interface and the voices: English Kokoro, Egyptian Arabic VoxCPM2."""
 
 from __future__ import annotations
 
@@ -38,8 +38,17 @@ VOICES = {
     "bm_fable": "British male",
     "bm_lewis": "British male",
     "bm_daniel": "British male",
+    # Egyptian Arabic on VoxCPM2 (Apple silicon). Designed voices, not cloned from anyone: each is
+    # a VoxCPM2 voice-design clip shipped in data/voices/, used as the reference for every sentence.
+    "ar_eg_female": "Egyptian Arabic female, warm (Apple silicon)",
+    "ar_eg_male": "Egyptian Arabic male, warm (Apple silicon)",
 }
 DEFAULT_VOICE = "af_heart"
+
+
+def lang_of(voice: str) -> str:
+    """The narration language a voice speaks: "ar" or "en"."""
+    return "ar" if voice.startswith("ar_") else "en"
 
 
 @dataclass

@@ -29,6 +29,7 @@ Ask your agent to walk you through a pull request, a module or a concept, or to 
 - **Fast:** the link is playable about 0.3 s after the agent sends its opening, so you start watching while the agent keeps writing.
 - **Grounded:** code slides are read straight from your files and git history, with real line numbers. The agent never retypes code, and the pointer lands on the right line.
 - **Explains anything:** paste notes or an idea, or give an article link, a PDF or an image, and the `explain` prompt turns it into a walkthrough for the audience you name, such as "a grade-10 student". `read_source` gives the agent the source word for word, not a summary; a long document becomes a course.
+- **Egyptian Arabic:** two designed Egyptian voices, `ar_eg_female` and `ar_eg_male`, on Apple silicon. The slides lay out right to left, and the reply names words whose reading depends on their meaning (مهمة: a task or important) so the agent adds the harakat. When you say a word sounds wrong, `add_pronunciation` fixes it in every walkthrough after.
 - **Checked:** every call returns coded findings to the agent: a cue pointing at a missing line, code too big for the frame, narration that reads the screen aloud, a slide that holds still too long, and, from the player, diagrams that failed to render or text shrunk too small to read. `finish_walkthrough` draws every slide in headless Chromium to find them. The agent can also look at pictures of its slides with `preview_slides`.
 - **Shareable:** export a walkthrough as one HTML file that plays offline (send it in Slack or by email), a static folder with captions, or an MP4; embed it with `<talktrack-player>`, link to a range of slides, or present it yourself with speaker notes. An agent in a sandbox or behind WhatsApp sends you the MP4 itself.
 
@@ -143,7 +144,7 @@ graph TB
 | Runtime | [mlx-audio](https://github.com/Blaizzy/mlx-audio) on [MLX](https://github.com/ml-explore/mlx); [ONNX Runtime](https://github.com/microsoft/onnxruntime) | Apple silicon GPU; any CPU | MIT; MIT |
 | Rendering | [Playwright](https://github.com/microsoft/playwright-python), [FFmpeg](https://ffmpeg.org/) | slide checks, posters, MP4 export | Apache-2.0; LGPL/GPL, installed by you |
 | Player | [Mermaid](https://github.com/mermaid-js/mermaid), [KaTeX](https://github.com/KaTeX/KaTeX), [highlight.js](https://github.com/highlightjs/highlight.js), [Rough.js](https://github.com/rough-stuff/rough), [draw.io viewer](https://github.com/jgraph/drawio) | diagrams, formulas, code, sketches, draw.io files | MIT, MIT, BSD-3-Clause, MIT, Apache-2.0 |
-| Arabic, planned | [VoxCPM2](https://huggingface.co/openbmb/VoxCPM2) via [mlx-community/VoxCPM2-4bit](https://huggingface.co/mlx-community/VoxCPM2-4bit); [Whisper large-v3-turbo](https://huggingface.co/mlx-community/whisper-large-v3-turbo); a diacritizer still being chosen | Arabic speech on the same mlx-audio, word timings by alignment, vowels for unvoweled text | Apache-2.0; MIT |
+| Arabic voice | [VoxCPM2](https://huggingface.co/openbmb/VoxCPM2) via [mlx-community/VoxCPM2-4bit](https://huggingface.co/mlx-community/VoxCPM2-4bit) | two designed Egyptian voices on the same mlx-audio, loaded on first use; word timings from the audio's pauses | Apache-2.0 |
 
 Exact versions and licences of everything bundled are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
@@ -409,7 +410,7 @@ The full reference is [docs/format.md](docs/format.md).
 
 ## 🧰 MCP Tools, Prompts and Resources
 
-The server exposes nine tools. Their descriptions, and everything else the agent reads, live in [`src/talktrack/text/`](src/talktrack/text/).
+The server exposes ten tools. Their descriptions, and everything else the agent reads, live in [`src/talktrack/text/`](src/talktrack/text/).
 
 | Tool | What it does |
 |---|---|
@@ -421,6 +422,7 @@ The server exposes nine tools. Their descriptions, and everything else the agent
 | **`create_playlist`** | joins finished walkthroughs, in order, into one page with a table of contents and one link; it plays on to the next entry when one ends. `export_walkthrough` takes the playlist's id and `html` for an offline file |
 | **`list_walkthroughs`** | recent walkthroughs with handles, titles and links |
 | **`preview_slides`** | small pictures of slides as the viewer sees them, plus any layout problems found while drawing them |
+| **`add_pronunciation`** | saves how a word is read in your word list, for every walkthrough after; for Arabic, the word with the harakat you want. With a walkthrough's handle, its narration with the word is voiced again |
 | **`read_source`** | something to explain, word for word: a web page as Markdown (no menus or ads), a PDF's outline and pages (`pages=1-20`), an image to look at, or a text file. Links must be public (the checked address is the one connected to); files must be inside the project |
 
 | Prompt | Argument | Use |
@@ -526,7 +528,7 @@ Environment variables, also listed in [.env.example](.env.example). Command-line
 | **`TALKTRACK_PORT`** | 4747 | daemon port; the next free one is used if taken |
 | **`TALKTRACK_HOST`** | 127.0.0.1 | interface; anything else requires an access token, which is generated and added to links |
 | **`TALKTRACK_DATA`** | `~/.local/share/talktrack` | walkthroughs, audio cache, models, lockfile and log |
-| **`TALKTRACK_VOICE`** | `af_heart` | default voice; any English Kokoro voice, such as `am_michael` or `bf_emma` |
+| **`TALKTRACK_VOICE`** | `af_heart` | default voice; any English Kokoro voice, such as `am_michael` or `bf_emma`, or an Egyptian Arabic one, `ar_eg_female` or `ar_eg_male` |
 | **`TALKTRACK_SPEECH`** | `auto` | `mlx` on Apple silicon (`onnx` if MLX fails to load), `onnx` elsewhere, or `fake` for tests |
 | **`TALKTRACK_PUBLIC_URL`** | | base URL for links when viewing from another device, such as a Tailscale name; links then carry an access token |
 | **`TALKTRACK_ACCESS_TOKEN`** | generated | the access token used when `TALKTRACK_HOST` is not a loopback address or `TALKTRACK_PUBLIC_URL` is set; the only secret here |
@@ -538,7 +540,9 @@ Environment variables, also listed in [.env.example](.env.example). Command-line
 | **`TALKTRACK_FINISH_CHECK`** | 1 | `0` skips drawing every slide headless at `finish_walkthrough` |
 | **`TALKTRACK_AUTO_BROWSER`** | 1 | `0` stops talktrack from downloading Playwright's Chromium on first need; slide checks, posters and MP4 export then ask you to install it |
 
-**Pronunciations:** put `word = spoken form` lines in `~/.local/share/talktrack/lexicon.txt`. A lowercase word matches any capitalisation, and the spoken form may be misaki phonemes between slashes (`kubectl = /kjˈubkˌʌtəl/`). talktrack already knows several hundred technical terms.
+**Pronunciations:** put `word = spoken form` lines in `~/.local/share/talktrack/lexicon.txt`, or ask the agent, which calls `add_pronunciation`. A lowercase word matches any capitalisation, and the spoken form may be misaki phonemes between slashes (`kubectl = /kjˈubkˌʌtəl/`). talktrack already knows several hundred technical terms. For Arabic the spoken form is the word with harakat (`بتتعرض = بِتِتْعِرِض`); it also matches after و، ف، ب، ك، ل and ال.
+
+**Egyptian Arabic:** start a walkthrough with `voice` `ar_eg_female` or `ar_eg_male` on a Mac with Apple silicon. The first Arabic narration downloads VoxCPM2 (2.3 GB). It needs 4 GB of free memory to load, may hold up to 6 GB while speaking, and is unloaded after 10 minutes without Arabic narration. The voices were designed with VoxCPM2's voice design, not cloned from anyone. `speed` does not change them. [`data/ar_words.txt`](src/talktrack/data/ar_words.txt) lists Egyptian words whose reading is fixed or depends on the meaning; it is a starting list for a native speaker to review.
 
 **Project theme:** a `talktrack.theme.json` in the project root picks a theme and may replace single colours, for example `{ "theme": "light", "tokens": { "accent": "#0969da" } }`. See [docs/format.md](docs/format.md#themes).
 
@@ -599,9 +603,9 @@ talktrack/
 │   ├── model.py              # the walkthrough document model and format version
 │   ├── themes.py, icons.py, mermaid.py   # themes, bundled Lucide icons, Mermaid parsing for cues
 │   ├── kinds/                # bundled slide kinds: chart, stat, chat, terminal, tree, svg, drawio
-│   ├── speech/               # Kokoro on MLX or ONNX, fake backend, fallback, narrator queue, downloads
+│   ├── speech/               # Kokoro on MLX or ONNX, VoxCPM2 for Arabic, the voice router, timings from audio, narrator queue, downloads
 │   ├── text/                 # what the agent reads; text/file/ replaces the link parts for --deliver file
-│   ├── data/                 # Lucide icons and the built-in pronunciation word list
+│   ├── data/                 # Lucide icons, the pronunciation word lists (English, Egyptian Arabic) and the Arabic voice clips
 │   └── static/               # the player: HTML, CSS, ES modules, embed.js, vendored libraries
 ├── claude-plugin/            # Claude Code plugin: .mcp.json and the talktrack skill
 ├── .claude-plugin/           # marketplace manifest pointing at claude-plugin/
@@ -694,8 +698,8 @@ Parked work, each with what would settle it, is in [TODO.md](TODO.md).
 
 | Platform | Speech | Status |
 |---|---|---|
-| **macOS, Apple silicon** | Kokoro on MLX; ONNX Runtime if MLX fails to load | primary |
-| **Linux, Intel Mac** | Kokoro on ONNX Runtime (CPU) | supported |
+| **macOS, Apple silicon** | Kokoro on MLX; ONNX Runtime if MLX fails to load; Egyptian Arabic on VoxCPM2 (MLX) | primary |
+| **Linux, Intel Mac** | Kokoro on ONNX Runtime (CPU); no Arabic voices | supported |
 | **Windows** | Kokoro on ONNX Runtime (CPU) | untested, best effort; reports welcome |
 
 ---
