@@ -93,6 +93,26 @@ def test_voxcpm_refuses_to_load_without_free_memory(monkeypatch):
         vox.VoxBackend()._ensure()
 
 
+def test_voxcpm_refuses_over_the_memory_ceiling(monkeypatch):
+    monkeypatch.setattr(vox, "budget", lambda: Budget(Machine(8 * GB, 6 * GB, 8), 4 * GB))
+    with pytest.raises(RuntimeError, match="TALKTRACK_MAX_MEMORY"):
+        vox.VoxBackend()._ensure()
+
+
+def test_a_late_idle_timer_keeps_a_model_in_use():
+    b = vox.VoxBackend()
+    b._model, b._uses = object(), 2
+    b.unload(1)  # fired for use 1, but use 2 came after it
+    assert b._model is not None
+    b.unload(2)
+    assert b._model is None
+
+
+def test_cache_key_names_the_voice_clip():
+    b = vox.VoxBackend()
+    assert b.key_for("ar_eg_male") != b.key_for("ar_eg_female") and b.key_for("ar_eg_male").startswith(b.model_id)
+
+
 def test_voxcpm_rejects_an_unknown_voice():
     with pytest.raises(ValueError, match="unknown voice"):
         vox.VoxBackend().synth("أهلا", "ar_xx", 1.0)
@@ -181,6 +201,15 @@ def test_flags_list_words_whose_reading_depends_on_meaning():
     covered = dict(arabic_flags(text, say=[(a, a + 6, "بِتِتْعِرِض")], lexicon={"المحرر": "الْمُحَرِّر"}))
     assert set(covered) == {"مهمة"}
     assert [w for w, _ in arabic_flags("وللمحرر")] == ["وللمحرر"]  # named as written
+    assert dict(arabic_flags("وللمهمة"))["وللمهمة"][0] == "وللمَهَمَّة (a task)"  # readings keep the prefix
+
+
+def test_saved_word_matches_with_al_and_its_prefixes():
+    lex = {"محرك": "مُحَرِّك", "المؤشر": "اَلْمُؤَشِّر"}
+    said = {t: speakable(t, lexicon=lex, lang="ar").text for t in ("المحرك", "بالمحرك", "للمحرك", "ومحرك", "محركات", "للمؤشر")}
+    assert said["المحرك"] == "المُحَرِّك" and said["بالمحرك"] == "بالمُحَرِّك" and said["للمحرك"] == "للمُحَرِّك"
+    assert said["ومحرك"] == "ومُحَرِّك" and said["محركات"] == "محركات"
+    assert said["للمؤشر"] == "للْمُؤَشِّر"  # ال after ل loses its alif, marks and all
 
 
 def test_shipped_word_list_parses():
@@ -227,6 +256,8 @@ async def test_add_pronunciation_saves_replaces_and_revoices(store, service, voi
     assert lex.read_text(encoding="utf-8") == "بتتعرض = بِتِتْعِرِض\n" and not out["replaced"]
     assert out["revoiced"] == 1 and s.w.slides[0].says[0].key != before
     assert store.narrator.lexicon["بتتعرض"] == "بِتِتْعِرِض"
+    marked = await service.add_pronunciation("بِتِتْعِرِض", "بِتِتْعِرِض", r["handle"])  # given with harakat
+    assert marked["word"] == "بتتعرض" and marked["replaced"]
     again = await service.add_pronunciation("بتتعرض", "بِتِتْعَرَّض")
     assert again["replaced"] and lex.read_text(encoding="utf-8") == "بتتعرض = بِتِتْعَرَّض\n"
 
@@ -236,6 +267,8 @@ async def test_add_pronunciation_checks_before_writing(store, service):
         await service.add_pronunciation("كلمة", "كِلْمَة", "nope.nope")
     with pytest.raises(ValueError, match="'='"):
         await service.add_pronunciation("a=b", "x")
+    with pytest.raises(ValueError, match="'#'"):
+        await service.add_pronunciation("#كلمة", "x")
     assert not (store.data_dir / "lexicon.txt").exists()
 
 

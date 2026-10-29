@@ -629,3 +629,4 @@ body.capture.burn-captions #caption {
   display: flex !important; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
   min-height: 0; padding: 10px 40px 14px; font-size: 24px; background: var(--scrim);
 }
+:lang(ar) .list.cards .entry h3 { letter-spacing: 0; }

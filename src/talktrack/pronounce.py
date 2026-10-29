@@ -1455,7 +1455,9 @@ def speakable(
 
 AR_WORDS_FILE = Path(__file__).parent / "data" / "ar_words.txt"
 _AR_PREFIX = "(?:[وف])?(?:[بكل])?"  # and, so; with, like, for
-_HARAKAT = re.compile(r"[\u064B-\u0652\u0670]")
+# A word saved without ال is also found with it: المحرك, بالمحرك, and للمحرك (ل + ال).
+_AR_PREFIX_AL = "(?:[وف])?(?:[بك]?ال|لل|[بكل])?"
+_HARAKAT = re.compile(r"[\u064B-\u0652\u0670\u0640]")  # harakat and tatweel
 
 
 @functools.cache
@@ -1483,15 +1485,17 @@ def _ar_matches(word: str, text: str):
     if word.startswith("ال") and len(word) > 2:
         forms.append(("ل" + word[2:], "لل"))  # matched after a ل prefix: "للمؤشر"
     for form, kind in forms:
-        prefix = "(?:[وف])?ل" if kind == "لل" else _AR_PREFIX
+        prefix = "(?:[وف])?ل" if kind == "لل" else _AR_PREFIX if word.startswith("ال") else _AR_PREFIX_AL
         for m in re.finditer(rf"(?<!\w)({prefix})({re.escape(form)})(?!\w)", text):
             yield m.start(2), m.end(2), m.group(1), kind
 
 
 def _ar_value(value: str, kind: str) -> str:
-    """The marked form of a word as found: after a ل prefix, ال loses its alif."""
-    if kind == "لل" and value.startswith("ال"):
-        return value[1:]
+    """The marked form of a word as found: after a ل prefix, ال loses its alif (and any mark on it)."""
+    if kind == "لل":
+        m = re.match(r"[اٱ][\u064B-\u0652\u0670]*(?=ل)", value)
+        if m:
+            return value[m.end() :]
     return value
 
 
@@ -1541,16 +1545,23 @@ def arabic_flags(display: str, say=(), lexicon: dict[str, str] | None = None) ->
     """Words in Arabic narration whose reading depends on their meaning, that no `say` override
     or word-list entry settles: (word as written, its readings), in order, each word once."""
     covered = [(a, b) for a, b, _ in say]
-    known = {_HARAKAT.sub("", w) for w in (lexicon or {})}
+    for w in lexicon or {}:  # a word-list entry settles the words it matches, wherever they are
+        if not re.search(r"[A-Za-z]", w):
+            covered += [(a, b) for a, b, _p, _k in _ar_matches(_HARAKAT.sub("", w), display)]
     _, several = _ar_words()
     found: dict[str, tuple[int, list[str]]] = {}
     for word, readings in several.items():
-        if word in known:
-            continue
-        for a, b, prefix, _kind in _ar_matches(word, display):
+        for a, b, prefix, kind in _ar_matches(word, display):
             if any(ca < b and a < cb for ca, cb in covered):
                 continue
             written = display[a - len(prefix) : b]
             if written not in found:
-                found[written] = (a, readings)
+                found[written] = (a, [_with_prefix(prefix, kind, r) for r in readings])
     return [(w, r) for w, (_, r) in sorted(found.items(), key=lambda x: x[1][0])]
+
+
+def _with_prefix(prefix: str, kind: str, reading: str) -> str:
+    """A reading as the word is written, prefix included, so it can go straight into say=:
+    "الْمَهَمَّة (the task)" for "وللمهمة" becomes "وللْمَهَمَّة (the task)"."""
+    marked, _, gloss = reading.partition(" ")
+    return f"{prefix}{_ar_value(marked, kind)}" + (f" {gloss}" if gloss else "")

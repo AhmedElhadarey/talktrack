@@ -76,16 +76,28 @@ class VoxBackend:
         self.status = status
         self.idle_s = idle_s
         self._model = None
-        self._lock = threading.Lock()
         self._timer: threading.Timer | None = None
+        self._uses = 0  # an unload timer that fires after a newer use does nothing
 
     def load(self) -> None:
         """Nothing up front: the model loads with the first Arabic sentence."""
 
+    def key_for(self, voice: str) -> str:
+        """Part of the audio cache key: the model and the voice's clip, so a new clip is new audio."""
+        clip = VOICE_DIR / f"{voice}.flac"
+        digest = hashlib.sha256(clip.read_bytes()).hexdigest()[:8] if clip.is_file() else "none"
+        return f"{self.model_id}:{digest}"
+
     def _ensure(self):
         if self._model is not None:
             return self._model
-        free = budget().machine.available
+        b = budget()
+        if b.ceiling is not None and b.ceiling < PEAK_BYTES:
+            raise RuntimeError(
+                f"the Arabic voice peaks near {PEAK_BYTES / GB:.1f} GB, over talktrack's memory ceiling of "
+                f"{b.ceiling / GB:.1f} GB; raise TALKTRACK_MAX_MEMORY to use it"
+            )
+        free = b.machine.available
         if free is not None and free < LOAD_MIN_FREE:
             raise RuntimeError(
                 f"the Arabic voice needs at least {LOAD_MIN_FREE / GB:.0f} GB of free memory (it peaks near "
@@ -112,13 +124,16 @@ class VoxBackend:
         clip = VOICE_DIR / f"{voice}.flac"
         if not clip.is_file():
             raise ValueError(f"unknown voice {voice!r}")
-        with self._lock:
+        from .mlx_backend import MLX_LOCK
+
+        with MLX_LOCK:
             if self._timer:
                 self._timer.cancel()
+            self._uses += 1
             try:
                 return self._speak(text, str(clip))
             finally:
-                self._timer = threading.Timer(self.idle_s, self.unload)
+                self._timer = threading.Timer(self.idle_s, self.unload, args=(self._uses,))
                 self._timer.daemon = True
                 self._timer.start()
 
@@ -148,10 +163,13 @@ class VoxBackend:
         audio = np.concatenate(parts) if parts else np.zeros(int(0.1 * SAMPLE_RATE), dtype=np.float32)
         return audio, tokens
 
-    def unload(self) -> None:
-        """Give the memory back; the next Arabic sentence loads the model again."""
-        with self._lock:
-            if self._model is None:
+    def unload(self, use: int | None = None) -> None:
+        """Give the memory back; the next Arabic sentence loads the model again. From the idle
+        timer, `use` is the use it was started after: a later use keeps the model."""
+        from .mlx_backend import MLX_LOCK
+
+        with MLX_LOCK:
+            if self._model is None or (use is not None and use != self._uses):
                 return
             self._model = None
             try:

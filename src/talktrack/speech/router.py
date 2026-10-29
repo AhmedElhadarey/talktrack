@@ -32,7 +32,8 @@ class Voices:
     def model_for(self, voice: str) -> str:
         """The model a voice speaks with: part of its audio cache key."""
         if lang_of(voice) == "ar" and self.arabic is not None:
-            return self.arabic.model_id
+            key_for = getattr(self.arabic, "key_for", None)
+            return key_for(voice) if key_for else self.arabic.model_id
         return self.english.model_id
 
     def unavailable(self, voice: str) -> str:

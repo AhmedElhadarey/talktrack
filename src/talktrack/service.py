@@ -441,7 +441,9 @@ def export_path(title: str, root: str | None, path: str, format: str) -> Path:
     else:
         if not root:
             raise ValueError("no project folder to save in; pass an absolute path")
-        slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:60].strip("-") or "walkthrough"
+        # Arabic letters are kept, so two Arabic titles do not both save as walkthrough.mp4
+        bare = re.sub(r"[\u064B-\u0652\u0670\u0640]", "", title.lower())
+        slug = re.sub(r"[^a-z0-9\u0621-\u064A\u0660-\u0669]+", "-", bare).strip("-")[:60].strip("-") or "walkthrough"
         p = Path(root) / f"{slug}.{format}"
     p = p.resolve()
     want = (".mp4",) if format == "mp4" else (".html", ".htm")

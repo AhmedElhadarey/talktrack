@@ -37,6 +37,14 @@ TARGET_S = 240.0  # the guide aims for 2 to 4 minutes of narration
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
 
 
+_INVISIBLE = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]")
+
+
+def _bare(text: str) -> str:
+    """Text for finding a word in narration: lowercase, without harakat or tatweel."""
+    return re.sub(r"[\u064B-\u0652\u0670\u0640]", "", text.lower())
+
+
 class Session:
     """A walkthrough loaded in memory, with its builder and live subscribers."""
 
@@ -237,9 +245,10 @@ class Session:
     def revoice_with(self, word: str) -> int:
         """Voice again every narration that contains `word`; returns how many need new audio."""
         changed, voiced = set(), 0
+        bare = _bare(word)
         for slide in self.w.slides:
             for say in slide.says:
-                if say.text and not say.pause and word.lower() in say.text.lower():
+                if say.text and not say.pause and bare in _bare(say.text):
                     voiced += self._voice(slide, say)
                     changed.add(slide.id)
         if changed:
@@ -517,11 +526,14 @@ class Store:
     def add_pronunciation(self, word: str, say: str, handle: str = "") -> dict:
         """Save `word = say` in the user's word list (lexicon.txt), used from now on; with
         `handle`, voice that walkthrough's narration containing the word again."""
-        word, say = " ".join(word.split()), " ".join(say.split())
+        # direction marks pasted with Arabic would keep the word from ever matching
+        word, say = (" ".join(_INVISIBLE.sub("", x).split()) for x in (word, say))
+        if re.search(r"[\u0621-\u064A]", word):  # Arabic is matched without harakat: save it that way
+            word = re.sub(r"[\u064B-\u0652\u0670\u0640]", "", word)
         if not word or not say:
             raise ValueError("word and say must both be given")
-        if "=" in word or len(word) > 64 or len(say) > 200:
-            raise ValueError("word must be at most 64 characters with no '=', and say at most 200")
+        if "=" in word or word.startswith("#") or len(word) > 64 or len(say) > 200:
+            raise ValueError("word must be at most 64 characters, with no '=' and not starting with '#', and say at most 200")
         session = self.by_handle(handle) if handle else None  # a bad handle fails before anything is written
         path = self.data_dir / "lexicon.txt"
         lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []

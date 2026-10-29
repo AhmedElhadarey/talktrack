@@ -367,7 +367,8 @@ def asr_checks(w: Walkthrough, audio_dir: Path) -> dict:
                 if not (all_heard(spoken_words(term, [(0, b - a)])) or all_heard(norm_words(term))):
                     missing_terms.append(term)
             for c in say.cues:
-                if c.get("inferred") or "t" not in c:
+                # cue labels are matched as English words; for Arabic, ar_match measures the voice
+                if c.get("inferred") or "t" not in c or is_arabic(w):
                     continue
                 cue_total += 1
                 a, b = c["at"], c["end"]
@@ -480,11 +481,12 @@ def _arabic_marks(w: Walkthrough, says: list) -> dict:
         left = None
     else:
         left = sum(len(arabic_flags(x.text, x.overrides)) for x in says)
-    words = sum(len(norm_ar(x.text)) for x in says)
+    words = sum(len(x.text.split()) for x in says)
     return {
         "ar_marks": len(over),
         "ar_marked_long": sum(1 for o in over if len(o[2].split()) > 3),
-        "ar_harakat_share": round(sum(1 for x in says if AR_HARAKAT.search(x.text)) / len(says), 2) if says else None,
+        # words written with harakat in the narration itself (a shadda as usually written counts)
+        "ar_marked_share": round(sum(1 for x in says for t in x.text.split() if AR_HARAKAT.search(t)) / words, 3) if words else None,
         "ar_unmarked": left,
         "ar_words": words,
     }
@@ -601,13 +603,13 @@ def print_arabic(results: list[dict]) -> None:
     rows = [r for r in results if r.get("summary", {}).get("voice", "").startswith("ar_") or "arabic" in r["id"]]
     if not rows:
         return
-    print("\n| run | model | voice | ar match | worst | marks | marked > 3 words | paragraphs with harakat | unmarked ambiguous | words |")
+    print("\n| run | model | voice | ar match | worst | say= marks | marked > 3 words | words with harakat | unmarked ambiguous | words |")
     print("|---|---|---|---|---|---|---|---|---|---|")
     for r in sorted(rows, key=lambda r: (r["model"], r["id"])):
         s, a = r.get("summary", {}), r.get("asr", {})
         print(
             f"| {r['id']} | {r['model']} | {s.get('voice', '-')} | {a.get('ar_match', '-')} | {a.get('ar_worst', '-')} | "
-            f"{s.get('ar_marks', '-')} | {s.get('ar_marked_long', '-')} | {s.get('ar_harakat_share', '-')} | "
+            f"{s.get('ar_marks', '-')} | {s.get('ar_marked_long', '-')} | {s.get('ar_marked_share', '-')} | "
             f"{s.get('ar_unmarked', '-')} | {s.get('ar_words', '-')} |"
         )
 
