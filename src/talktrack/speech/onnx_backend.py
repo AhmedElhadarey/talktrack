@@ -20,6 +20,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ..resources import budget
 from .assets import Status, ensure_spacy, go_offline, hf_snapshot
 from .kokoro import KokoroEngine
 
@@ -102,8 +103,4 @@ def _threads() -> int:
     env = os.environ.get("TALKTRACK_THREADS", "")
     if env.isdigit() and int(env) > 0:
         return int(env)
-    try:
-        cpus = len(os.sched_getaffinity(0))  # respects container and taskset limits
-    except AttributeError:  # macOS, Windows
-        cpus = os.cpu_count() or 4
-    return max(1, min(MAX_THREADS, cpus))
+    return budget().speech_threads(MAX_THREADS)  # CPUs and RAM from resources.py

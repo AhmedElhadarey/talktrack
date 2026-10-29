@@ -16,6 +16,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ..resources import budget
 from .assets import Status, ensure_spacy, go_offline, hf_snapshot
 from .kokoro import KokoroEngine
 
@@ -48,6 +49,7 @@ class MlxBackend(KokoroEngine):
         self._vocab: dict[str, int] = json.loads((self.path / "config.json").read_text(encoding="utf-8"))["vocab"]
         self._phoneme = {i: c for c, i in self._vocab.items()}
         self._model = load_model(self.path)
+        _limit_memory()
 
     def _voice(self, voice: str):
         if voice not in self._voices:
@@ -74,3 +76,18 @@ class MlxBackend(KokoroEngine):
         if len(frames) != len(ids) + 2:
             raise RuntimeError(f"mlx-audio returned {len(frames)} durations for {len(ids)} phonemes")
         return audio, frames
+
+
+def _limit_memory() -> None:
+    """Cap MLX at the speech share of the memory budget. The call moved from mx.metal in newer
+    mlx; whichever is missing or fails, speech goes on without a limit."""
+    limit = budget().speech_limit()
+    if limit is None:
+        return
+    try:
+        import mlx.core as mx
+
+        setter = getattr(mx, "set_memory_limit", None) or mx.metal.set_memory_limit
+        setter(limit)
+    except Exception:
+        pass
